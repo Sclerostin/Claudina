@@ -187,12 +187,12 @@ clock(int t) =>
     int h12  = hh24 % 12 == 0 ? 12 : hh24 % 12
     str.tostring(h12) + ":" + (mm < 10 ? "0" : "") + str.tostring(mm) + (hh24 < 12 ? " AM" : " PM")
 
-// Webhook messages in the common TradersPost-style format
+// Webhook order messages (read by the moomoo bridge; TradersPost-compatible)
 jsonEntry(string act, float q, float tgt, float stp) =>
-    '{"ticker":"' + syminfo.ticker + '","action":"' + act + '","quantity":' + qtyStr(q) + ',"takeProfit":{"limitPrice":' + px(tgt) + '},"stopLoss":{"type":"stop","stopPrice":' + px(stp) + '}}'
+    '{"ticker":"' + syminfo.ticker + '","action":"' + act + '","quantity":' + qtyStr(q) + ',"price":' + px(close) + ',"takeProfit":{"limitPrice":' + px(tgt) + '},"stopLoss":{"type":"stop","stopPrice":' + px(stp) + '}}'
 
 jsonExit() =>
-    '{"ticker":"' + syminfo.ticker + '","action":"exit"}'
+    '{"ticker":"' + syminfo.ticker + '","action":"exit","price":' + px(close) + '}'
 
 // ----- Trade engine -----
 bool xUp = ta.crossover(close, orH)

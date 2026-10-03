@@ -479,12 +479,12 @@ clock(<span class="tk-k">int</span> t) =&gt;
     <span class="tk-k">int</span> h12  = hh24 % <span class="tk-n">12</span> == <span class="tk-n">0</span> ? <span class="tk-n">12</span> : hh24 % <span class="tk-n">12</span>
     str.tostring(h12) + <span class="tk-s">":"</span> + (mm &lt; <span class="tk-n">10</span> ? <span class="tk-s">"0"</span> : <span class="tk-s">""</span>) + str.tostring(mm) + (hh24 &lt; <span class="tk-n">12</span> ? <span class="tk-s">" AM"</span> : <span class="tk-s">" PM"</span>)
 
-<span class="tk-c">// Webhook messages in the common TradersPost-style format</span>
+<span class="tk-c">// Webhook order messages (read by the moomoo bridge; TradersPost-compatible)</span>
 jsonEntry(<span class="tk-k">string</span> act, <span class="tk-k">float</span> q, <span class="tk-k">float</span> tgt, <span class="tk-k">float</span> stp) =&gt;
-    <span class="tk-s">'{"ticker":"'</span> + syminfo.ticker + <span class="tk-s">'","action":"'</span> + act + <span class="tk-s">'","quantity":'</span> + qtyStr(q) + <span class="tk-s">',"takeProfit":{"limitPrice":'</span> + px(tgt) + <span class="tk-s">'},"stopLoss":{"type":"stop","stopPrice":'</span> + px(stp) + <span class="tk-s">'}}'</span>
+    <span class="tk-s">'{"ticker":"'</span> + syminfo.ticker + <span class="tk-s">'","action":"'</span> + act + <span class="tk-s">'","quantity":'</span> + qtyStr(q) + <span class="tk-s">',"price":'</span> + px(close) + <span class="tk-s">',"takeProfit":{"limitPrice":'</span> + px(tgt) + <span class="tk-s">'},"stopLoss":{"type":"stop","stopPrice":'</span> + px(stp) + <span class="tk-s">'}}'</span>
 
 jsonExit() =&gt;
-    <span class="tk-s">'{"ticker":"'</span> + syminfo.ticker + <span class="tk-s">'","action":"exit"}'</span>
+    <span class="tk-s">'{"ticker":"'</span> + syminfo.ticker + <span class="tk-s">'","action":"exit","price":'</span> + px(close) + <span class="tk-s">'}'</span>
 
 <span class="tk-c">// ----- Trade engine -----</span>
 <span class="tk-k">bool</span> xUp = ta.crossover(close, orH)
@@ -699,17 +699,17 @@ plot(close)</pre>
   </section>
 
   <section id="execute">
-    <div class="eyebrow">Open chart → see signal → execute</div>
-    <h2>Three ways to execute</h2>
-    <p>Pick the level you're comfortable with. Each one builds on the last.</p>
+    <div class="eyebrow">Open chart → see signal → execute · moomoo</div>
+    <h2>Three ways to execute with moomoo</h2>
+    <p>moomoo is an official TradingView broker for US stocks and options, so you can trade straight from the chart. Each level builds on the last.</p>
 
     <div class="levels">
-      <div class="level"><b class="n">1</b><div><b>Tap to trade on the chart</b><p>For a broker connected to TradingView, or TradingView's Paper Trading account. When BUY prints, tap the chart's Buy button. Copy the share count, take-profit and stop-loss from the status panel's Plan and Size rows into the order ticket, and confirm. About 15 seconds.</p></div></div>
-      <div class="level"><b class="n">2</b><div><b>Get pinged, then one bracket order</b><p>Any broker. Add one alert per stock (below) and your phone shows "BUY NVDA @ 102.00 - stop 100.75 - target 104.50 - 100 shares". Place it as a bracket (OCO) order in your broker's app. The exit then runs without you.</p></div></div>
-      <div class="level"><b class="n">3</b><div><b>Fully automatic</b><p>Your paid TradingView plan includes webhooks. Each simulated fill on DT Core sends a ready-made order with its stop and target to a bridge service such as TradersPost, which places it at your broker. You don't touch anything.</p></div></div>
+      <div class="level"><b class="n">1</b><div><b>Tap to trade on the TradingView chart</b><p>Connect once: open the chart's trading panel, choose <b>moomoo</b>, and log in. When BUY prints, tap Buy → Market, enter the share count from the panel's Size row, turn on <b>Take profit</b> and <b>Stop loss</b> with the prices from the Plan row, and confirm. moomoo receives it as one bracket order. About 15 seconds.</p></div></div>
+      <div class="level"><b class="n">2</b><div><b>Get pinged, then use the moomoo app</b><p>Add the plain-language alert below. When it arrives, open the stock in moomoo → Trade → Pro mode → Attached orders → <b>Bracket</b>, and enter the share count, take-profit and stop-loss from the alert.</p></div></div>
+      <div class="level"><b class="n">3</b><div><b>Fully automatic with the DT Core bridge</b><p>Automation services like TradersPost don't support moomoo, so this kit includes its own bridge. It's a small program on a computer that's on during market hours. DT Core sends each order to the bridge through a webhook, and the bridge places it in your moomoo account through moomoo's official OpenAPI, with a protective stop. Nothing to tap.</p></div></div>
     </div>
 
-    <h3>Alerts for levels 1 and 2: plain-language pings</h3>
+    <h3>Alert for levels 1 and 2</h3>
     <ol class="steps">
       <li><div><b>Open the stock's 5-minute chart.</b> DT Core must be on it.</div></li>
       <li><div><b>Add an alert.</b> Tap the alarm-clock button, or long-press the chart → Add alert.</div></li>
@@ -719,24 +719,24 @@ plot(close)</pre>
     <div class="msg">BUY NVDA @ 102.00 - stop 100.75 - target 104.50 - 100 shares (risk $125)
 EXIT NVDA @ 104.50 - TARGET +2.0R</div>
 
-    <h3>Level 3 setup: fully automatic</h3>
+    <h3>Level 3: the moomoo bridge</h3>
+    <p>It needs a Mac, Windows or Linux computer that stays awake from 9:25 AM to 4:05 PM New York time, or a small cloud server. Full instructions are in <span class="mono">tradingview/moomoo_bridge/README.md</span> on your GitHub branch.</p>
     <ol class="steps">
-      <li><div><b>Open a bridge account and connect a paper broker first.</b> TradersPost connects to Alpaca, TradeStation, Tradier, Interactive Brokers, Webull, tastytrade and others, and lists Robinhood for stocks. Check its page for your broker's current limits.</div></li>
-      <li><div><b>Create a strategy in the bridge</b> and copy its webhook URL. Turn on "use signal quantity" and bracket orders if your broker supports them.</div></li>
-      <li><div><b>In TradingView, add an alert on the stock's 5-minute chart:</b> Condition DT Core → <span class="path">Order fills only</span>.</div></li>
-      <li><div><b>Message:</b> delete the default text and enter exactly <span class="path">{{strategy.order.alert_message}}</span></div></li>
-      <li><div><b>Notifications:</b> turn on Webhook URL and paste the bridge's URL. Create. Repeat for each stock you trade.</div></li>
-      <li><div><b>Watch a week of paper fills</b> in the bridge's log before switching it to a live account.</div></li>
+      <li><div><b>On the computer:</b> install moomoo's OpenD gateway and log in, install Python and <span class="mono">moomoo-api</span>, then start <span class="mono">bridge.py</span>.</div></li>
+      <li><div><b>Give it an HTTPS address</b> with a free ngrok static domain. TradingView only sends webhooks over HTTPS.</div></li>
+      <li><div><b>In TradingView, on each stock's 5-minute chart:</b> add an alert with Condition DT Core → <span class="path">Order fills only</span>, Message exactly <span class="path">{{strategy.order.alert_message}}</span>, and your bridge URL under Webhook URL.</div></li>
+      <li><div><b>Roll out in three stages:</b> dry run (logs only) → moomoo paper account → live with small size.</div></li>
     </ol>
-    <p>What the bridge receives for each order:</p>
-    <div class="msg">{"ticker":"NVDA","action":"buy","quantity":100,"takeProfit":{"limitPrice":104.50},"stopLoss":{"type":"stop","stopPrice":100.75}}
-{"ticker":"NVDA","action":"exit"}</div>
+    <p>What DT Core sends, and what the bridge does with it:</p>
+    <div class="msg">{"ticker":"NVDA","action":"buy","quantity":100,"price":102.00,"takeProfit":{"limitPrice":104.50},"stopLoss":{"type":"stop","stopPrice":100.75}}
+  → market BUY US.NVDA x100, then stop SELL x100 at 100.75
+{"ticker":"NVDA","action":"exit","price":104.50}
+  → cancel US.NVDA open orders, market SELL x100</div>
     <ul class="rules">
-      <li><b>One alert per stock</b><span>Strategy alerts run per symbol. Create them on the chart timeframe you trade.</span></li>
-      <li><b>Settings freeze</b><span>An alert keeps the settings it was made with. Change a setting, delete and recreate the alert.</span></li>
-      <li><b>SELL means short</b><span>Configure the bridge for long and short, or turn off "Take SELL signals" if your account can't short.</span></li>
-      <li><b>Exits are doubled up</b><span>The bracket at your broker exits on its own. The extra "exit" message closes anything left open, such as at the end of the day.</span></li>
-      <li><b>Not a guarantee</b><span>Real fills differ from simulated ones: slippage, partial fills and outages happen. Keep the risk per trade small.</span></li>
+      <li><b>Safety limits</b><span>The bridge refuses orders above your max shares or max dollar value, tickers outside your list, shorts if you turn them off, and a second entry while you already hold the stock.</span></li>
+      <li><b>Keep it awake</b><span>If the computer sleeps, entries and exits are missed. The stop at moomoo still protects you, but it is a day order, so check moomoo before the close on any day you're unsure.</span></li>
+      <li><b>Settings freeze</b><span>An alert keeps the DT Core settings it was made with. Change a setting, then delete and recreate the alert.</span></li>
+      <li><b>Not a guarantee</b><span>Real fills differ from simulated ones. Start in paper mode and keep the risk per trade small.</span></li>
     </ul>
   </section>
 
@@ -871,9 +871,13 @@ EXIT NVDA @ 104.50 - TARGET +2.0R</div>
 
 
   <section id="extras">
-    <div class="eyebrow">Not needed for the signals</div>
+    <div class="eyebrow">DT Momentum and DT Volume</div>
     <h2>Optional extras</h2>
-    <p>Add these only if your plan has room for more indicators.</p>
+    <p>DT Core's signals don't depend on either one. Your plan has plenty of indicator room, so it comes down to what helps you read the chart.</p>
+    <ul class="rules">
+      <li><b>DT Volume: keep</b><span>Its bright bars now light up at 1.5× average volume, the same test DT Core uses. A BUY or SELL candle always has a bright volume bar under it, so you can see why the signal fired. Paste the new version below over your saved copy.</span></li>
+      <li><b>DT Momentum: optional</b><span>DT Core doesn't use it. Keep it if the squeeze dots help you; otherwise tap its name on the chart → remove. You don't need to delete the saved script; it sits unused in Personal.</span></li>
+    </ul>
     <details class="extra">
       <summary>DT Momentum · squeeze, 3/10 or RSI in one pane</summary>
       <article class="script">
@@ -978,9 +982,9 @@ alertcondition(rsDn, <span class="tk-s">"RSI leaves overbought"</span>, <span cl
       </article>
     </details>
     <details class="extra">
-      <summary>DT Volume · volume bars that light up on spikes</summary>
+      <summary>DT Volume · bright bars at DT Core's 1.5× volume</summary>
       <article class="script">
-        <div class="script-head"><p>Replaces the built-in Volume. Bars at 2× the recent average print in full color.</p></div>
+        <div class="script-head"><p>Replaces the built-in Volume. Bars at 1.5× the 20-bar average print in full color, matching DT Core's volume test.</p></div>
         <div class="codebar"><span class="mono">DT_Volume.pine · 33 lines</span><div class="btns"><button class="ghost" data-expand="code-vol" type="button">Expand</button><button class="copy" data-copy="code-vol" type="button">Copy</button></div></div>
         <p class="copy-note" hidden></p>
         <pre class="code" id="code-vol"><span class="tk-c">//@version=6</span>
@@ -994,7 +998,7 @@ alertcondition(rsDn, <span class="tk-s">"RSI leaves overbought"</span>, <span cl
 indicator(<span class="tk-s">"DT Volume"</span>, format = format.volume)
 
 <span class="tk-k">int</span>   avgLen = input.<span class="tk-k">int</span>(<span class="tk-n">20</span>, <span class="tk-s">"Average length"</span>, minval = <span class="tk-n">1</span>)
-<span class="tk-k">float</span> spikeX = input.<span class="tk-k">float</span>(<span class="tk-n">2.0</span>, <span class="tk-s">"Spike threshold (x average)"</span>, minval = <span class="tk-n">1</span>, step = <span class="tk-n">0.1</span>)
+<span class="tk-k">float</span> spikeX = input.<span class="tk-k">float</span>(<span class="tk-n">1.5</span>, <span class="tk-s">"Spike threshold (x average)"</span>, minval = <span class="tk-n">1</span>, step = <span class="tk-n">0.1</span>, tooltip = <span class="tk-s">"1.5 matches the volume DT Core requires for a BUY or SELL."</span>)
 <span class="tk-k">color</span> cUp    = input.<span class="tk-k">color</span>(<span class="tk-n">#26a69a</span>, <span class="tk-s">"Up"</span>, inline = <span class="tk-s">"c"</span>)
 <span class="tk-k">color</span> cDn    = input.<span class="tk-k">color</span>(<span class="tk-n">#ef5350</span>, <span class="tk-s">"Down"</span>, inline = <span class="tk-s">"c"</span>)
 <span class="tk-k">color</span> cAvg   = input.<span class="tk-k">color</span>(<span class="tk-n">#f5a623</span>, <span class="tk-s">"Average"</span>, inline = <span class="tk-s">"c"</span>)

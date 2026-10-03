@@ -1,0 +1,13 @@
+{
+  "secret": "CHANGE-ME-to-a-long-random-string",
+  "mode": "dry_run",
+  "trade_password": "",
+  "opend_host": "127.0.0.1",
+  "opend_port": 11111,
+  "listen_host": "127.0.0.1",
+  "listen_port": 8080,
+  "max_qty": 1000,
+  "max_order_value": 25000,
+  "allowed_tickers": [],
+  "allow_short": true
+}

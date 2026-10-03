@@ -1,19 +1,19 @@
 //@version=6
-// ═══════════════════════════════════════════════════════════════════════════
-//  DT Momentum · three classic day-trading oscillators in ONE pane
-//  Squeeze  — John Carter, Mastering the Trade (Bollinger inside Keltner)
-//  3/10     — Linda Bradford Raschke's 3/10 oscillator (SMA3 − SMA10, 16 signal)
-//  RSI      — J. Welles Wilder, New Concepts in Technical Trading Systems
+// ======================================================================
+//  DT Momentum - three classic day-trading oscillators in ONE pane
+//  Squeeze  - John Carter, Mastering the Trade (Bollinger inside Keltner)
+//  3/10     - Linda Bradford Raschke's 3/10 oscillator (SMA3 - SMA10, 16 signal)
+//  RSI      - J. Welles Wilder, New Concepts in Technical Trading Systems
 //  Pick one in settings; alerts follow the selected oscillator.
 //  Educational tool. Not financial advice.
-// ═══════════════════════════════════════════════════════════════════════════
+// ======================================================================
 indicator("DT Momentum", overlay = false, precision = 2)
 
 string mode = input.string("Squeeze", "Oscillator", options = ["Squeeze", "3/10", "RSI"])
 
 string G_SQ = "Squeeze (Carter)"
 int   sqLen  = input.int(20, "Length", minval = 2, group = G_SQ)
-float bbMult = input.float(2.0, "Bollinger σ", minval = 0.1, step = 0.1, group = G_SQ)
+float bbMult = input.float(2.0, "Bollinger std dev", minval = 0.1, step = 0.1, group = G_SQ)
 float kcMult = input.float(1.5, "Keltner ATR multiple", minval = 0.1, step = 0.1, group = G_SQ)
 
 string G_310 = "3/10 oscillator (Raschke)"
@@ -38,7 +38,7 @@ bool isSq  = mode == "Squeeze"
 bool is310 = mode == "3/10"
 bool isRsi = mode == "RSI"
 
-// ───── Squeeze: Bollinger Bands inside Keltner Channels = volatility coiled ──
+// ----- Squeeze: Bollinger Bands inside Keltner Channels = volatility coiled
 float basis = ta.sma(close, sqLen)
 float bbDev = bbMult * ta.stdev(close, sqLen)
 float kcDev = kcMult * ta.atr(sqLen)
@@ -51,14 +51,14 @@ color momCol = mom >= 0 ? (mom >= momPrev ? cUp : color.new(cUp, 60)) : (mom <= 
 plot(isSq ? mom : na, "Squeeze momentum", momCol, 4, plot.style_columns)
 plot(isSq ? 0.0 : na, "Squeeze state", sqzOn ? cSqz : cFree, 3, plot.style_circles)
 
-// ───── 3/10 oscillator ────────────────────────────────────────────────────
+// ----- 3/10 oscillator
 float osc    = ta.sma(close, fastLen) - ta.sma(close, slowLen)
 float oscSig = ta.sma(osc, sigLen)
 plot(is310 ? osc - oscSig : na, "3/10 histogram", osc >= oscSig ? color.new(cUp, 70) : color.new(cDn, 70), 4, plot.style_columns)
 plot(is310 ? osc : na, "3/10 fast line", cLine, 2)
 plot(is310 ? oscSig : na, "3/10 slow line", cSig, 2)
 
-// ───── RSI ────────────────────────────────────────────────────────────────
+// ----- RSI
 float rsi = ta.rsi(close, rsiLen)
 plot(isRsi ? rsi : na, "RSI", cLine, 2)
 hline(rsiHi, "Overbought", color.new(cDn, 40), hline.style_dashed, display = isRsi ? display.all : display.none)
@@ -66,7 +66,7 @@ hline(50, "Midline", color.new(color.gray, 50), hline.style_dotted, display = is
 hline(rsiLo, "Oversold", color.new(cUp, 40), hline.style_dashed, display = isRsi ? display.all : display.none)
 hline(0, "Zero", color.new(color.gray, 60), hline.style_dotted, display = isRsi ? display.none : display.all)
 
-// ───── Signals ────────────────────────────────────────────────────────────
+// ----- Signals
 bool x310Up = ta.crossover(osc, oscSig)
 bool x310Dn = ta.crossunder(osc, oscSig)
 bool xRsiUp = ta.crossover(rsi, rsiLo)
@@ -82,10 +82,10 @@ bool rsDn  = isRsi and xRsiDn
 plotshape(sqUp or t3Up or rsUp, "Bullish trigger", shape.triangleup, location.bottom, cUp, size = size.tiny)
 plotshape(sqDn or t3Dn or rsDn, "Bearish trigger", shape.triangledown, location.top, cDn, size = size.tiny)
 
-// ───── Alerts ─────────────────────────────────────────────────────────────
+// ----- Alerts
 string msg = sqUp ? "squeeze fired UP" : sqDn ? "squeeze fired DOWN" : t3Up ? "3/10 crossed above signal" : t3Dn ? "3/10 crossed below signal" : rsUp ? "RSI back above " + str.tostring(rsiLo) : rsDn ? "RSI back below " + str.tostring(rsiHi) : ""
 if msg != ""
-    alert(syminfo.ticker + " " + timeframe.period + ": " + msg + " · last " + str.tostring(close, format.mintick), alert.freq_once_per_bar_close)
+    alert(syminfo.ticker + " " + timeframe.period + ": " + msg + " - last " + str.tostring(close, format.mintick), alert.freq_once_per_bar_close)
 
 alertcondition(sqUp, "Squeeze fired up", "{{ticker}} {{interval}}: squeeze fired UP at {{close}}")
 alertcondition(sqDn, "Squeeze fired down", "{{ticker}} {{interval}}: squeeze fired DOWN at {{close}}")

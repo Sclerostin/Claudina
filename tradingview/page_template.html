@@ -250,7 +250,7 @@ details.extra .script { border: 0; border-top: 1px solid var(--rule); border-rad
   <header class="hero">
     <div class="eyebrow">Pine Script v6 · TradingView for iPhone and iPad</div>
     <h1>DT Core Day-Trading Kit</h1>
-    <p class="lede">DT Core prints BUY and SELL on your chart, draws the stop and target for each trade, closes it for you, and keeps score. Version 2 needs almost no chart settings.</p>
+    <p class="lede">Open the chart, see BUY or SELL, execute. DT Core 3 finds the trade, sizes it, draws the stop and target, and can send the order to your broker on its own.</p>
     <figure>
       <div class="chart-box" id="schematic" role="img" aria-label="Schematic five-minute chart: an opening range box forms after 9:30, a candle closes above it and a green BUY label appears, red stop and green target lines extend to the right, and a TARGET label marks a two-R win later in the morning."></div>
       <figcaption>A typical BUY on a 5-minute chart: range forms, breakout closes above it, the target is hit two hours later. Illustrative data.</figcaption>
@@ -259,74 +259,94 @@ details.extra .script { border: 0; border-top: 1px solid var(--rule); border-rad
 
   <nav class="nav" aria-label="Sections">
     <ul>
-      <li><a href="#questions">Your questions</a></li>
-      <li><a href="#install">Install</a></li>
+      <li><a href="#install">Get it running</a></li>
+      <li><a href="#execute">Execute</a></li>
       <li><a href="#signals">Read the signals</a></li>
       <li><a href="#panel">Status panel</a></li>
       <li><a href="#settings">Settings</a></li>
-      <li><a href="#alerts">Alerts &amp; automation</a></li>
       <li><a href="#rules">Rules</a></li>
+      <li><a href="#questions">Earlier questions</a></li>
       <li><a href="#extras">Extras</a></li>
     </ul>
   </nav>
 
-  <section id="questions">
-    <div class="eyebrow">Answers first</div>
-    <h2>Your three questions</h2>
-    <div class="qa">
-      <article class="q">
-        <h3>I saved the script. Why is nothing on the chart?</h3>
-        <p><b>Saving and adding are two separate steps, and you need both.</b> Saving stores the code in your TradingView account. If it saved without a red error message, the code compiled fine. Adding puts it on a chart:</p>
-        <p>On the chart, tap <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> (some versions say <span class="path">My scripts</span>) → tap <b>DT Core</b>. Its name appears in the top-left corner of the chart.</p>
-        <p><b>Added but still blank?</b></p>
-        <ul>
-          <li><b>Daily chart.</b> DT Core only draws on intraday charts. Switch to 5 minutes; the panel says so if you forget.</li>
-          <li><b>Indicator limit.</b> The free plan fits very few indicators per chart. Remove Volume or anything else you're not using (tap its name → remove).</li>
-          <li><b>Hidden.</b> Tap DT Core's name at the top left and make sure the eye icon is on.</li>
-          <li><b>Before the open or on a weekend.</b> You'll see earlier days' lines and signals; today's start at 9:30.</li>
-        </ul>
-      </article>
-      <article class="q">
-        <h3>What do "0930-1000" and "0930-0935" mean?</h3>
-        <p>They were time windows on a 24-hour clock in New York time, written start-end without colons. Version 2 no longer asks for them: you pick <b>Opening range length: Auto, 5, 15 or 30 minutes</b>, and it measures from the opening bell on its own.</p>
-        <div class="table-scroll">
-          <table class="stack">
-            <thead><tr><th>Code</th><th>Clock time</th><th>Meaning</th></tr></thead>
-            <tbody>
-              <tr><td class="set">0930-0935</td><td>9:30 – 9:35 AM</td><td class="why">First 5 minutes after the open</td></tr>
-              <tr><td class="set">0930-0945</td><td>9:30 – 9:45 AM</td><td class="why">First 15 minutes</td></tr>
-              <tr><td class="set">0930-1000</td><td>9:30 – 10:00 AM</td><td class="why">First 30 minutes</td></tr>
-              <tr><td class="set">1130-1330</td><td>11:30 AM – 1:30 PM</td><td class="why">The midday lull, now shaded automatically</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </article>
-      <article class="q">
-        <h3>The chart settings didn't match my app.</h3>
-        <p>Menus differ between app versions, and most of those settings didn't affect the signals. Version 2 handles timezone and pre-market data inside the script. <b>The only chart settings you need: Candles, and the 5-minute timeframe.</b></p>
-        <p>To reach chart settings for anything else, long-press the price numbers on the right edge of the chart, then tap Settings.</p>
-      </article>
-    </div>
-  </section>
-
   <section id="install">
-    <div class="eyebrow">Install or update</div>
-    <h2>Four steps</h2>
+    <div class="eyebrow">Fixes the compile error</div>
+    <h2>Get it running</h2>
+    <div class="callout">
+      <p><b>About "Script could not be translated from: |B|W|E|".</b> TradingView shows this when it can't read the script's first line, <span class="mono">//@version=6</span>, or when its translator chokes on an unusual construct. DT Core 3 is rewritten in plain ASCII text using only long-established Pine functions. Paste it into an <b>empty</b> editor so nothing old is left above line 1.</p>
+    </div>
     <ol class="steps">
-      <li><div><b>Copy DT Core.</b> Use the Copy button below.</div></li>
-      <li><div><b>Paste over the old version.</b> Pine Editor → open your saved DT Core → select all → paste → Save. Keeping the name replaces the old code. No saved copy yet? Create a new indicator, paste, and save it as DT Core.</div></li>
-      <li><div><b>Add it to the chart:</b> <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> → DT Core. If it's already on the chart, saving updates it in place.</div></li>
-      <li><div><b>Set the chart to 5-minute candles, then enter your numbers.</b> Tap DT Core's name on the chart → Settings → Risk and alerts: account size and risk per trade.</div></li>
+      <li><div><b>Copy DT Core 3</b> with the button below.</div></li>
+      <li><div><b>Empty the editor completely.</b> Pine Editor → open DT Core → Select All → Delete. Scroll up and down: the editor must be blank.</div></li>
+      <li><div><b>Paste and check line 1.</b> It must read exactly <span class="mono">//@version=6</span>, with nothing before it on the line. Then Save.</div></li>
+      <li><div><b>Re-add it to the chart.</b> DT Core is now a strategy, so remove the old copy from the chart (tap its name → remove), then <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> → DT Core.</div></li>
+      <li><div><b>5-minute candles, then your numbers.</b> Tap DT Core → Settings → Inputs → Risk: account size and risk per trade. Under Properties, set Initial capital to the same account size.</div></li>
     </ol>
     <article class="script" id="core">
       <div class="script-head">
-        <div class="row"><h3>DT Core 2</h3><span class="pill">overlay · %%DT_CORE_LINES%% lines</span></div>
-        <p>BUY/SELL signals with automatic stop, target and exit, a plain-English status panel, a running scorecard, and alerts ready for automation.</p>
+        <div class="row"><h3>DT Core 3</h3><span class="pill">strategy · %%DT_CORE_LINES%% lines</span></div>
+        <p>BUY/SELL signals with automatic stop, target and exit; simulated fills and a scorecard; plain-language phone alerts; broker-ready order messages for webhooks.</p>
       </div>
       <div class="codebar"><span class="mono">DT_Core.pine</span><div class="btns"><button class="ghost" data-expand="code-core" type="button">Expand</button><button class="copy" data-copy="code-core" type="button">Copy</button></div></div>
       <p class="copy-note" hidden></p>
       <pre class="code" id="code-core">%%DT_CORE%%</pre>
     </article>
+    <details class="extra">
+      <summary>Still an error? Run the 3-line paste test</summary>
+      <article class="script">
+        <div class="script-head">
+          <p>Paste this into a brand-new script and save. <b>If it fails too,</b> the paste is the problem, not DT Core: create the script from the editor's New → Indicator menu, clear the template, and paste again. <b>If it works but DT Core doesn't,</b> send me the exact error text and the line number the editor highlights.</p>
+        </div>
+        <div class="codebar"><span class="mono">Paste test</span><div class="btns"><button class="copy" data-copy="code-test" type="button">Copy</button></div></div>
+        <p class="copy-note" hidden></p>
+        <pre class="code" id="code-test">//@version=6
+indicator("Paste test", overlay = true)
+plot(close)</pre>
+      </article>
+    </details>
+  </section>
+
+  <section id="execute">
+    <div class="eyebrow">Open chart → see signal → execute</div>
+    <h2>Three ways to execute</h2>
+    <p>Pick the level you're comfortable with. Each one builds on the last.</p>
+
+    <div class="levels">
+      <div class="level"><b class="n">1</b><div><b>Tap to trade on the chart</b><p>For a broker connected to TradingView, or TradingView's Paper Trading account. When BUY prints, tap the chart's Buy button. Copy the share count, take-profit and stop-loss from the status panel's Plan and Size rows into the order ticket, and confirm. About 15 seconds.</p></div></div>
+      <div class="level"><b class="n">2</b><div><b>Get pinged, then one bracket order</b><p>Any broker. Add one alert per stock (below) and your phone shows "BUY NVDA @ 102.00 - stop 100.75 - target 104.50 - 100 shares". Place it as a bracket (OCO) order in your broker's app. The exit then runs without you.</p></div></div>
+      <div class="level"><b class="n">3</b><div><b>Fully automatic</b><p>Your paid TradingView plan includes webhooks. Each simulated fill on DT Core sends a ready-made order with its stop and target to a bridge service such as TradersPost, which places it at your broker. You don't touch anything.</p></div></div>
+    </div>
+
+    <h3>Alerts for levels 1 and 2: plain-language pings</h3>
+    <ol class="steps">
+      <li><div><b>Open the stock's 5-minute chart.</b> DT Core must be on it.</div></li>
+      <li><div><b>Add an alert.</b> Tap the alarm-clock button, or long-press the chart → Add alert.</div></li>
+      <li><div><b>Condition:</b> DT Core → <span class="path">alert() function calls only</span>.</div></li>
+      <li><div><b>Notify:</b> app push and sound on. Create.</div></li>
+    </ol>
+    <div class="msg">BUY NVDA @ 102.00 - stop 100.75 - target 104.50 - 100 shares (risk $125)
+EXIT NVDA @ 104.50 - TARGET +2.0R</div>
+
+    <h3>Level 3 setup: fully automatic</h3>
+    <ol class="steps">
+      <li><div><b>Open a bridge account and connect a paper broker first.</b> TradersPost connects to Alpaca, TradeStation, Tradier, Interactive Brokers, Webull, tastytrade and others, and lists Robinhood for stocks. Check its page for your broker's current limits.</div></li>
+      <li><div><b>Create a strategy in the bridge</b> and copy its webhook URL. Turn on "use signal quantity" and bracket orders if your broker supports them.</div></li>
+      <li><div><b>In TradingView, add an alert on the stock's 5-minute chart:</b> Condition DT Core → <span class="path">Order fills only</span>.</div></li>
+      <li><div><b>Message:</b> delete the default text and enter exactly <span class="path">{{strategy.order.alert_message}}</span></div></li>
+      <li><div><b>Notifications:</b> turn on Webhook URL and paste the bridge's URL. Create. Repeat for each stock you trade.</div></li>
+      <li><div><b>Watch a week of paper fills</b> in the bridge's log before switching it to a live account.</div></li>
+    </ol>
+    <p>What the bridge receives for each order:</p>
+    <div class="msg">{"ticker":"NVDA","action":"buy","quantity":100,"takeProfit":{"limitPrice":104.50},"stopLoss":{"type":"stop","stopPrice":100.75}}
+{"ticker":"NVDA","action":"exit"}</div>
+    <ul class="rules">
+      <li><b>One alert per stock</b><span>Strategy alerts run per symbol. Create them on the chart timeframe you trade.</span></li>
+      <li><b>Settings freeze</b><span>An alert keeps the settings it was made with. Change a setting, delete and recreate the alert.</span></li>
+      <li><b>SELL means short</b><span>Configure the bridge for long and short, or turn off "Take SELL signals" if your account can't short.</span></li>
+      <li><b>Exits are doubled up</b><span>The bracket at your broker exits on its own. The extra "exit" message closes anything left open, such as at the end of the day.</span></li>
+      <li><b>Not a guarantee</b><span>Real fills differ from simulated ones: slippage, partial fills and outages happen. Keep the risk per trade small.</span></li>
+    </ul>
   </section>
 
   <section id="signals">
@@ -335,19 +355,20 @@ details.extra .script { border: 0; border-top: 1px solid var(--rule); border-rad
     <p>Labels appear when a candle closes and never move or disappear afterward.</p>
     <ul class="key">
       <li><span><span class="sw buy">BUY</span></span><span>A candle closed above the opening range, above VWAP, on strong volume. Entry is that candle's closing price.</span></li>
-      <li><span><span class="sw sell">SELL</span></span><span>The mirror image below the range. SELL means sell short. If you only buy stocks, read it as "no longs today" or turn it off in settings.</span></li>
-      <li><span><span class="ln stop"></span></span><span><b>Stop.</b> Where the trade is wrong. Put this stop order in at your broker the moment you enter.</span></li>
+      <li><span><span class="sw sell">SELL</span></span><span>The mirror image below the range. SELL means sell short. If you only buy stocks, turn it off in settings.</span></li>
+      <li><span><span class="ln stop"></span></span><span><b>Stop.</b> Where the trade is wrong.</span></li>
       <li><span><span class="ln tgt"></span></span><span><b>Target.</b> Twice as far from entry as the stop, so a win pays 2× what a loss costs.</span></li>
       <li><span><span class="ln entry"></span></span><span>Entry price.</span></li>
-      <li><span><span class="sw buy">TARGET ✓</span></span><span>Target hit: <b>+2.0R</b>. R means "times your risk". +2R on $125 risk is +$250.</span></li>
-      <li><span><span class="sw sell">STOP ✗</span></span><span>Stop hit: <b>−1.0R</b>, a planned, limited loss.</span></li>
+      <li><span><span class="sw buy">TARGET +2.0R</span></span><span>Target hit. R means "times your risk": +2R on $125 risk is +$250.</span></li>
+      <li><span><span class="sw sell">STOP -1.0R</span></span><span>Stop hit: a planned, limited loss.</span></li>
       <li><span><span class="sw grey">EXIT</span></span><span>Neither was hit, so the trade closed 5 minutes before the market close.</span></li>
-      <li><span><span class="ln vw"></span></span><span><b>VWAP</b>, the day's average price weighted by volume. Green when price is above it (buyers in control), red when below.</span></li>
-      <li><span><span class="box or"></span></span><span><b>Opening range.</b> High and low of the first minutes after the open. Breakouts from this box are the signals.</span></li>
-      <li><span><span class="ln pd"></span></span><span>Yesterday's high and low. Price often pauses here.</span></li>
-      <li><span><span class="ln pm"></span></span><span>Pre-market high and low (overnight on futures). Shown even if your chart hides extended hours.</span></li>
-      <li><span><span class="box mid"></span></span><span><b>Midday</b>, 2 to 4 hours after the open. Volume dries up and breakouts fail more often.</span></li>
+      <li><span><span class="ln vw"></span></span><span><b>VWAP</b>, the day's volume-weighted average price. Green when price is above it, red when below.</span></li>
+      <li><span><span class="box or"></span></span><span><b>Opening range.</b> Breakouts from this box are the signals.</span></li>
+      <li><span><span class="ln pd"></span></span><span>Yesterday's high and low.</span></li>
+      <li><span><span class="ln pm"></span></span><span>Pre-market high and low. Tap <b>ETH</b> at the bottom right of the chart to show extended hours; futures show the overnight range automatically.</span></li>
+      <li><span><span class="box mid"></span></span><span><b>Midday</b>, 2 to 4 hours after the open. Breakouts fail more often here.</span></li>
     </ul>
+    <p class="fine">TradingView also draws its own small order arrows for strategies. To hide them, open DT Core's settings → Style and turn off the trades-on-chart option.</p>
   </section>
 
   <section id="panel">
@@ -370,9 +391,10 @@ details.extra .script { border: 0; border-top: 1px solid var(--rule); border-rad
       <li><b>Plan</b><span>While watching, it shows the exact trigger prices ("BUY above 101.60 · SELL below 99.90"). In a trade, it shows entry, stop and target.</span></li>
       <li><b>Size</b><span>Shares to buy so that hitting the stop loses exactly your risk per trade (Tharp's position sizing). "≈" means an estimate before the trade exists.</span></li>
       <li><b>Volume</b><span>Today's volume against the same time on the last 10 days. 2× or more means the stock is "in play" (Bellafiore, Aziz); breakouts work best then.</span></li>
-      <li><b>Results</b><span>How DT Core's rules did on the days loaded on this chart. A rough test: it ignores commissions and slippage, and if one candle touches both stop and target, it counts the stop.</span></li>
+      <li><b>Results</b><span>TradingView's own simulation of every DT Core trade on the days loaded on this chart, with one tick of slippage and no commissions. The full report is in the Strategy Tester on the desktop site.</span></li>
     </ul>
   </section>
+
 
   <section id="settings">
     <div class="eyebrow">Tap DT Core → Settings</div>
@@ -389,39 +411,15 @@ details.extra .script { border: 0; border-top: 1px solid var(--rule); border-rad
           <tr><td>Target (× risk)</td><td class="set">2</td><td class="why">Aziz's 2-to-1 minimum. With 2R wins, winning 40% of trades still comes out ahead before costs.</td></tr>
           <tr><td>Only on strong volume</td><td class="set">On</td><td class="why">The breakout candle needs 1.5× the average volume of the last 20 candles.</td></tr>
           <tr><td>Only on the right side of VWAP</td><td class="set">On</td><td class="why">BUY only above VWAP, SELL only below it.</td></tr>
-          <tr><td>Show SELL (short) signals</td><td class="set">On</td><td class="why">Turn off if you only buy.</td></tr>
+          <tr><td>Take SELL (short) signals</td><td class="set">On</td><td class="why">Turn off if you only buy.</td></tr>
           <tr><td>Account size, risk per trade</td><td class="set">$25,000 · 0.5%</td><td class="why">Drive the Size row and the share count in alerts.</td></tr>
-          <tr><td>Alert message</td><td class="set">Plain text</td><td class="why">Switch to JSON only if you connect an automation service.</td></tr>
-          <tr><td>Show on chart</td><td class="set">—</td><td class="why">Turn lines on or off. VWAP bands and the 9/20 EMA start hidden.</td></tr>
+          <tr><td>Properties → Initial capital</td><td class="set">$25,000</td><td class="why">Set it to your account size so simulated results match your sizing.</td></tr>
+          <tr><td>Show on chart</td><td class="set">—</td><td class="why">Turn lines and the panel on or off.</td></tr>
         </tbody>
       </table>
     </div>
   </section>
 
-  <section id="alerts">
-    <div class="eyebrow">Hands-off</div>
-    <h2>Alerts and automation</h2>
-    <p><b>One alert per stock</b> sends every BUY, SELL and exit to your phone with prices and share count.</p>
-    <ol class="steps">
-      <li><div><b>Open the stock's 5-minute chart.</b> DT Core must be on it.</div></li>
-      <li><div><b>Add an alert.</b> Tap the alarm-clock button, or long-press the chart → Add alert.</div></li>
-      <li><div><b>Condition:</b> DT Core → <span class="path">Any alert() function call</span>.</div></li>
-      <li><div><b>Notify:</b> app push on, sound on. Create.</div></li>
-    </ol>
-    <p>What arrives on your phone:</p>
-    <div class="msg">BUY NVDA @ 102.00 · stop 100.75 · target 104.50 · 100 shares (risk $125)
-EXIT NVDA @ 104.50 · TARGET ✓ +2.0R</div>
-    <p class="fine">Change a setting and old alerts keep the old settings: delete and recreate them. iPhone: Settings → Notifications → TradingView → allow notifications and sounds, and keep it out of Scheduled Summary.</p>
-
-    <h3>Three levels of automation</h3>
-    <div class="levels">
-      <div class="level"><b class="n">1</b><div><b>Alert → you place the order.</b><p>Works on any plan that includes indicator alerts. Copy the stop and target from the message into your order.</p></div></div>
-      <div class="level"><b class="n">2</b><div><b>One bracket order at your broker.</b><p>Enter with a bracket (OCO) order: entry, stop and target in one ticket. The exit then happens without you, even if you look away. This is the biggest step toward hands-off trading and needs nothing extra.</p></div></div>
-      <div class="level"><b class="n">3</b><div><b>Webhook → automation service → broker.</b><p>Needs a paid TradingView plan for webhooks. Set Alert message to JSON, paste the service's webhook URL into the alert, and it places orders for you. Run it on a paper account for weeks before real money.</p></div></div>
-    </div>
-    <div class="msg">{"action":"buy","ticker":"NVDA","price":102.00,"stop":100.75,"target":104.50,"qty":100}
-{"action":"exit","ticker":"NVDA","price":104.50,"reason":"target","r":2.00}</div>
-  </section>
 
   <section id="rules">
     <div class="eyebrow">What it does, in order</div>
@@ -439,6 +437,47 @@ EXIT NVDA @ 104.50 · TARGET ✓ +2.0R</div>
       <li><b>Check your broker's rules</b><span>US margin accounts face pattern-day-trader requirements.</span></li>
     </ul>
   </section>
+
+
+  <section id="questions">
+    <div class="eyebrow">From earlier</div>
+    <h2>Earlier questions</h2>
+    <div class="qa">
+      <article class="q">
+        <h3>I saved the script. Why is nothing on the chart?</h3>
+        <p><b>Saving and adding are two separate steps, and you need both.</b> Saving stores the code in your TradingView account. If it saved without a red error message, the code compiled fine. Adding puts it on a chart:</p>
+        <p>On the chart, tap <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> (some versions say <span class="path">My scripts</span>) → tap <b>DT Core</b>. Its name appears in the top-left corner of the chart.</p>
+        <p><b>Added but still blank?</b></p>
+        <ul>
+          <li><b>Daily chart.</b> DT Core only draws on intraday charts. Switch to 5 minutes; the panel says so if you forget.</li>
+          <li><b>Indicator limit.</b> The free plan fits very few indicators per chart. Remove Volume or anything else you're not using (tap its name → remove).</li>
+          <li><b>Hidden.</b> Tap DT Core's name at the top left and make sure the eye icon is on.</li>
+          <li><b>Before the open or on a weekend.</b> You'll see earlier days' lines and signals; today's start at 9:30.</li>
+        </ul>
+      </article>
+      <article class="q">
+        <h3>What do "0930-1000" and "0930-0935" mean?</h3>
+        <p>They were time windows on a 24-hour clock in New York time, written start-end without colons. DT Core no longer asks for them: you pick <b>Opening range length: Auto, 5, 15 or 30 minutes</b>, and it measures from the opening bell on its own.</p>
+        <div class="table-scroll">
+          <table class="stack">
+            <thead><tr><th>Code</th><th>Clock time</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="set">0930-0935</td><td>9:30 – 9:35 AM</td><td class="why">First 5 minutes after the open</td></tr>
+              <tr><td class="set">0930-0945</td><td>9:30 – 9:45 AM</td><td class="why">First 15 minutes</td></tr>
+              <tr><td class="set">0930-1000</td><td>9:30 – 10:00 AM</td><td class="why">First 30 minutes</td></tr>
+              <tr><td class="set">1130-1330</td><td>11:30 AM – 1:30 PM</td><td class="why">The midday lull, now shaded automatically</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="q">
+        <h3>The chart settings didn't match my app.</h3>
+        <p>Menus differ between app versions, and most of those settings didn't affect the signals. DT Core handles the timezone inside the script. <b>The only chart settings you need: Candles, the 5-minute timeframe, and ETH on if you want pre-market lines.</b></p>
+        <p>To reach chart settings for anything else, long-press the price numbers on the right edge of the chart, then tap Settings.</p>
+      </article>
+    </div>
+  </section>
+
 
   <section id="extras">
     <div class="eyebrow">Not needed for the signals</div>
@@ -574,7 +613,7 @@ EXIT NVDA @ 104.50 · TARGET ✓ +2.0R</div>
   function x(k) { return X0 + step * (k + 0.5); }
   function y(p) { return Y1 - (p - lo) / (hi - lo) * (Y1 - Y0); }
   var s = [];
-  s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12">');
+  s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11">');
   s.push('<rect x="' + (X0 + step * LUNCH).toFixed(1) + '" y="' + Y0 + '" width="' + (step * (N - LUNCH)).toFixed(1) + '" height="' + (Y1 - Y0) + '" fill="var(--shade)"/>');
   function hl(p, from, to, col, extra) {
     s.push('<line x1="' + (X0 + step * from).toFixed(1) + '" x2="' + (X0 + step * to).toFixed(1) + '" y1="' + y(p).toFixed(1) + '" y2="' + y(p).toFixed(1) + '" stroke="' + col + '" ' + (extra || 'stroke-width="1.2"') + '/>');
@@ -599,11 +638,11 @@ EXIT NVDA @ 104.50 · TARGET ✓ +2.0R</div>
     s.push('<rect x="' + (x(k) - cw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + Math.max(1, bot - top).toFixed(1) + '" fill="' + c + '" fill-opacity="' + (k < OPEN ? 0.5 : 1) + '"/>');
   });
   function tagBox(cx, yTop, text, fill, pointUp) {
-    var w = text.length * 7.6 + 12, hgt = 20, bx = Math.min(Math.max(cx - w / 2, X0), X1 - w);
+    var w = text.length * 6.9 + 12, hgt = 18, bx = Math.min(Math.max(cx - w / 2, X0), X1 - w);
     var by = pointUp ? yTop + 6 : yTop - 6 - hgt;
     s.push('<path d="M' + cx.toFixed(1) + ' ' + (pointUp ? yTop + 1 : yTop - 1).toFixed(1) + ' l-5 ' + (pointUp ? 5 : -5) + ' h10 Z" fill="' + fill + '"/>');
     s.push('<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + hgt + '" rx="3" fill="' + fill + '"/>');
-    s.push('<text x="' + (bx + w / 2).toFixed(1) + '" y="' + (by + 14).toFixed(1) + '" text-anchor="middle" fill="#fff" font-weight="600" font-size="13" font-family="Public Sans, -apple-system, sans-serif">' + text + '</text>');
+    s.push('<text x="' + (bx + w / 2).toFixed(1) + '" y="' + (by + 12.5).toFixed(1) + '" text-anchor="middle" fill="#fff" font-weight="600" font-family="Public Sans, -apple-system, sans-serif">' + text + '</text>');
   }
   tagBox(x(ENTRY), y(bars[ENTRY].l) + 4, "BUY", "#26a69a", true);
   tagBox(x(exitBar), y(bars[exitBar].h) - 4, "TARGET ✓ +2.0R", "#26a69a", false);
@@ -620,9 +659,9 @@ EXIT NVDA @ 104.50 · TARGET ✓ +2.0R</div>
     { p: PDH, t: "Prior high", c: "var(--pd)" },
     { p: pmH, t: "PM high", c: "var(--muted)" }, { p: pmL, t: "PM low", c: "var(--muted)" }
   ].map(function (g) { g.y = y(g.p); return g; }).sort(function (a, b) { return a.y - b.y; });
-  for (var j = 1; j < tags.length; j++) if (tags[j].y - tags[j - 1].y < 15) tags[j].y = tags[j - 1].y + 15;
+  for (var j = 1; j < tags.length; j++) if (tags[j].y - tags[j - 1].y < 14) tags[j].y = tags[j - 1].y + 14;
   tags.forEach(function (g) {
-    s.push('<text x="' + (X1 + 5) + '" y="' + (g.y + 4).toFixed(1) + '" fill="' + g.c + '" font-weight="500" font-size="12.5">' + g.t + '</text>');
+    s.push('<text x="' + (X1 + 6) + '" y="' + (g.y + 4).toFixed(1) + '" fill="' + g.c + '" font-weight="500">' + g.t + '</text>');
   });
   s.push('</svg>');
   document.getElementById("schematic").innerHTML = s.join("");

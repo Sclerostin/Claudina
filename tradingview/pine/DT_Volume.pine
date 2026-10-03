@@ -1,0 +1,33 @@
+//@version=6
+// ═══════════════════════════════════════════════════════════════════════════
+//  DT Volume · volume columns that light up on spikes
+//  Replaces the built-in Volume indicator. Faded bars are ordinary volume;
+//  full-color bars traded at least N× the recent average (institutional
+//  participation; Aziz and Bellafiore look for it on breakouts).
+//  Educational tool. Not financial advice.
+// ═══════════════════════════════════════════════════════════════════════════
+indicator("DT Volume", format = format.volume)
+
+int   avgLen = input.int(20, "Average length", minval = 1)
+float spikeX = input.float(2.0, "Spike threshold (× average)", minval = 1, step = 0.1)
+color cUp    = input.color(#26a69a, "Up", inline = "c")
+color cDn    = input.color(#ef5350, "Down", inline = "c")
+color cAvg   = input.color(#f5a623, "Average", inline = "c")
+
+float v     = nz(volume)
+float vAvg  = ta.sma(v, avgLen)
+bool  up    = close >= open
+bool  spike = not na(vAvg) and vAvg > 0 and v >= spikeX * vAvg
+color col   = spike ? (up ? cUp : cDn) : color.new(up ? cUp : cDn, 65)
+
+plot(v, "Volume", col, style = plot.style_columns)
+plot(vAvg, "Average", cAvg, 1)
+plot(vAvg * spikeX, "Spike threshold", color.new(cAvg, 70), 1, display = display.none)
+
+bool spikeUp = spike and up
+bool spikeDn = spike and not up
+if spike
+    alert(syminfo.ticker + " " + timeframe.period + ": volume spike " + str.tostring(v / vAvg, "0.0") + "× average on a " + (up ? "green" : "red") + " bar · last " + str.tostring(close, format.mintick), alert.freq_once_per_bar_close)
+
+alertcondition(spikeUp, "Volume spike on up bar", "{{ticker}} {{interval}}: volume spike on an up bar at {{close}}")
+alertcondition(spikeDn, "Volume spike on down bar", "{{ticker}} {{interval}}: volume spike on a down bar at {{close}}")

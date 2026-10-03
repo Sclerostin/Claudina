@@ -1,0 +1,399 @@
+//@version=6
+// ═══════════════════════════════════════════════════════════════════════════
+//  DT Core · all-in-one intraday overlay (uses ONE indicator slot)
+//  VWAP ±σ · 9/20 EMA · 200 SMA · Opening range · Prior-day H/L/C
+//  Pre-open H/L · Central pivot range · Time-of-day RVOL · R-based sizing
+//
+//  Methods: Crabel (opening range breakout), Shannon & Aziz (VWAP, 9/20 EMA),
+//  Fisher & Ochoa (pivot range), Bellafiore (stocks in play / RVOL),
+//  Tharp & Elder (fixed-fractional risk, R-multiples).
+//  Educational tool. Not financial advice.
+// ═══════════════════════════════════════════════════════════════════════════
+indicator("DT Core", overlay = true, max_labels_count = 50)
+
+// ───── Inputs ─────────────────────────────────────────────────────────────
+string G_SES = "Session (exchange time)"
+string tz        = input.string("America/New_York", "Timezone", options = ["America/New_York", "America/Chicago", "Europe/London", "Europe/Berlin", "Asia/Tokyo", "Asia/Kolkata", "Australia/Sydney", "UTC"], group = G_SES)
+string orSess    = input.session("0930-0945", "Opening range", group = G_SES, tooltip = "Crabel / Aziz ORB. 0930-0935 = 5-min, 0930-0945 = 15-min, 0930-1000 = 30-min. Use a chart timeframe no larger than the range.")
+string sigSess   = input.session("0930-1130", "Breakout signal window", group = G_SES, tooltip = "ORB signals only fire inside this window. Opening-range breakouts lose their edge after the morning session.")
+bool   shadeLunch = input.bool(true, "Shade midday chop", inline = "lunch", group = G_SES)
+string lunchSess = input.session("1130-1330", "", inline = "lunch", group = G_SES)
+
+string G_VW = "VWAP"
+bool   showVwap   = input.bool(true, "Show VWAP", group = G_VW)
+string vwapAnchor = input.string("Session", "Anchor", options = ["Session", "RTH open"], group = G_VW, tooltip = "Session: resets at the start of the trading day (includes pre-market when Extended hours is on). RTH open: resets at the start of the opening range.")
+bool   showBand1  = input.bool(true, "Inner band", inline = "b1", group = G_VW)
+float  band1Mult  = input.float(1.0, "inner σ", minval = 0.1, step = 0.1, inline = "b1", group = G_VW)
+bool   showBand2  = input.bool(true, "Outer band", inline = "b2", group = G_VW)
+float  band2Mult  = input.float(2.0, "outer σ", minval = 0.1, step = 0.1, inline = "b2", group = G_VW)
+
+string G_MA = "Moving averages"
+bool showFast  = input.bool(true, "Fast EMA", inline = "f", group = G_MA)
+int  fastLen   = input.int(9, "", minval = 1, inline = "f", group = G_MA)
+bool showSlow  = input.bool(true, "Slow EMA", inline = "s", group = G_MA)
+int  slowLen   = input.int(20, "", minval = 1, inline = "s", group = G_MA)
+bool showTrend = input.bool(true, "Trend SMA", inline = "t", group = G_MA)
+int  trendLen  = input.int(200, "", minval = 1, inline = "t", group = G_MA)
+
+string G_LV = "Key levels"
+bool showOR   = input.bool(true, "Opening range", group = G_LV)
+bool showORX  = input.bool(false, "OR measured-move targets (1× and 2×)", group = G_LV)
+bool showPD   = input.bool(true, "Prior day high / low / close", group = G_LV)
+bool showPM   = input.bool(true, "Pre-open high / low (pre-market or overnight)", group = G_LV, tooltip = "High and low of the bars between the start of the trading day and the opening range. Stocks need Extended hours on.")
+bool showCPR  = input.bool(false, "Central pivot range", group = G_LV, tooltip = "Fisher (The Logical Trader) / Ochoa (Secrets of a Pivot Boss). A narrow range often precedes a trend day.")
+bool showTags = input.bool(true, "Price tags on the right edge", group = G_LV)
+
+string G_SG = "Signals and alerts"
+bool  sigORB  = input.bool(true, "Opening range breakout", group = G_SG)
+bool  fVwap   = input.bool(true, "ORB must agree with VWAP side", group = G_SG)
+float volMult = input.float(1.5, "ORB minimum volume (× 20-bar average)", minval = 0, step = 0.1, group = G_SG, tooltip = "0 turns the volume filter off.")
+bool  sigPD   = input.bool(true, "Prior-day high / low break", group = G_SG)
+bool  sigVWAP = input.bool(false, "VWAP reclaim / loss", group = G_SG)
+bool  sigEMA  = input.bool(false, "Fast / slow EMA cross", group = G_SG)
+bool  sigExt  = input.bool(false, "Outer-band stretch (don't chase)", group = G_SG)
+
+string G_RK = "Dashboard and risk"
+bool   showDash = input.bool(true, "Show dashboard", group = G_RK)
+string dashPos  = input.string("Top right", "Position", options = ["Top right", "Bottom right", "Bottom left", "Top left"], group = G_RK)
+float  acct     = input.float(25000, "Account size", minval = 0, group = G_RK)
+float  riskPct  = input.float(0.5, "Risk per trade (%)", minval = 0.01, step = 0.05, group = G_RK, tooltip = "Tharp / Elder: risk a small fixed fraction per trade. 0.5–1% is common; 2% is Elder's ceiling.")
+string stopMode = input.string("ATR", "Stop basis", options = ["ATR", "Opening range", "VWAP"], group = G_RK)
+float  atrMult  = input.float(1.5, "ATR multiple (chart timeframe)", minval = 0.1, step = 0.1, group = G_RK)
+int    rvolDays = input.int(10, "RVOL lookback (days)", minval = 2, maxval = 50, group = G_RK)
+
+string G_CL = "Colors"
+color cBull  = input.color(#26a69a, "Bull", inline = "c1", group = G_CL)
+color cBear  = input.color(#ef5350, "Bear", inline = "c1", group = G_CL)
+color cVwap  = input.color(#f5a623, "VWAP", inline = "c1", group = G_CL)
+color cFast  = input.color(#42a5f5, "Fast", inline = "c2", group = G_CL)
+color cSlow  = input.color(#ab47bc, "Slow", inline = "c2", group = G_CL)
+color cTrend = input.color(#9e9e9e, "Trend", inline = "c2", group = G_CL)
+color cOR    = input.color(#29b6f6, "OR", inline = "c3", group = G_CL)
+color cPD    = input.color(#ffca28, "Prior day", inline = "c3", group = G_CL)
+color cPM    = input.color(#b0bec5, "Pre-open", inline = "c3", group = G_CL)
+color cCPR   = input.color(#7e57c2, "CPR", inline = "c4", group = G_CL)
+
+// ───── Session state ──────────────────────────────────────────────────────
+bool intra   = timeframe.isintraday
+bool newDay  = timeframe.change("D")
+bool inOR    = not na(time(timeframe.period, orSess, tz))
+bool inSig   = not na(time(timeframe.period, sigSess, tz))
+bool inLunch = not na(time(timeframe.period, lunchSess, tz))
+bool inMkt   = session.ismarket
+float vol    = nz(volume)
+
+// Opening range, pre-open range and regular-session day stats
+var float orH    = na
+var float orL    = na
+var bool  orSeen = false
+var bool  orDone = false
+var float pmH    = na
+var float pmL    = na
+var float dayO   = na
+var float dayH   = na
+var float dayL   = na
+
+if newDay
+    orH    := na
+    orL    := na
+    orSeen := false
+    orDone := false
+    pmH    := na
+    pmL    := na
+    dayO   := na
+    dayH   := na
+    dayL   := na
+
+bool orStart = inOR and not orSeen
+if inOR
+    orH    := na(orH) ? high : math.max(orH, high)
+    orL    := na(orL) ? low : math.min(orL, low)
+    orSeen := true
+else if orSeen
+    orDone := true
+
+if not orSeen
+    pmH := na(pmH) ? high : math.max(pmH, high)
+    pmL := na(pmL) ? low : math.min(pmL, low)
+
+if orStart
+    dayO := open
+    dayH := high
+    dayL := low
+else if orSeen and inMkt
+    dayH := math.max(dayH, high)
+    dayL := math.min(dayL, low)
+
+float orRange = orH - orL
+
+// ───── VWAP with volume-weighted σ bands ──────────────────────────────────
+var float sPV  = 0.0
+var float sV   = 0.0
+var float sPV2 = 0.0
+bool vwapReset = newDay or (vwapAnchor == "RTH open" and orStart)
+if vwapReset
+    sPV  := 0.0
+    sV   := 0.0
+    sPV2 := 0.0
+sPV  += hlc3 * vol
+sV   += vol
+sPV2 += hlc3 * hlc3 * vol
+float vwapVal = sV > 0 ? sPV / sV : na
+float sd      = sV > 0 ? math.sqrt(math.max(sPV2 / sV - vwapVal * vwapVal, 0.0)) : na
+float up1 = vwapVal + band1Mult * sd
+float dn1 = vwapVal - band1Mult * sd
+float up2 = vwapVal + band2Mult * sd
+float dn2 = vwapVal - band2Mult * sd
+
+// ───── Moving averages, ATR, volume ───────────────────────────────────────
+float emaFast  = ta.ema(close, fastLen)
+float emaSlow  = ta.ema(close, slowLen)
+float smaTrend = ta.sma(close, trendLen)
+float atrTF    = ta.atr(14)
+float volAvg   = ta.sma(vol, 20)
+bool  volOK    = volMult <= 0 or na(volAvg) or volAvg == 0 or vol >= volMult * volAvg
+
+// ───── Prior-day levels and daily ATR (regular session, no repaint) ───────
+string dailyId = ticker.modify(syminfo.tickerid, session.regular)
+[pdh, pdl, pdc, dAtr] = request.security(dailyId, "D", [high[1], low[1], close[1], ta.atr(14)[1]], lookahead = barmerge.lookahead_on)
+
+float cprP   = (pdh + pdl + pdc) / 3
+float cprBC  = (pdh + pdl) / 2
+float cprTC  = 2 * cprP - cprBC
+float cprTop = math.max(cprTC, cprBC)
+float cprBot = math.min(cprTC, cprBC)
+
+// ───── Time-of-day relative volume ────────────────────────────────────────
+// Today's cumulative volume divided by the average cumulative volume at the
+// same clock time over the last N sessions.
+type VolHist
+    array<float> vals
+
+var map<int, VolHist> volByTime = map.new<int, VolHist>()
+var float cumVol = 0.0
+if newDay
+    cumVol := 0.0
+cumVol += vol
+
+bool  rvolOn = intra and timeframe.in_seconds() >= 60
+int   todKey = hour * 60 + minute
+float avgCum = na
+if rvolOn and map.contains(volByTime, todKey)
+    VolHist h = map.get(volByTime, todKey)
+    if array.size(h.vals) > 0
+        avgCum := array.avg(h.vals)
+float rvol = not na(avgCum) and avgCum > 0 ? cumVol / avgCum : na
+
+if rvolOn and barstate.isconfirmed
+    if not map.contains(volByTime, todKey)
+        map.put(volByTime, todKey, VolHist.new(array.new<float>()))
+    VolHist hh = map.get(volByTime, todKey)
+    array.push(hh.vals, cumVol)
+    if array.size(hh.vals) > rvolDays
+        array.shift(hh.vals)
+
+// ───── Signals (computed every bar, confirmed at bar close by the alert) ──
+bool xUpOR  = ta.crossover(close, orH)
+bool xDnOR  = ta.crossunder(close, orL)
+bool xUpVW  = ta.crossover(close, vwapVal)
+bool xDnVW  = ta.crossunder(close, vwapVal)
+bool xUpPDH = ta.crossover(close, pdh)
+bool xDnPDL = ta.crossunder(close, pdl)
+bool xUpEMA = ta.crossover(emaFast, emaSlow)
+bool xDnEMA = ta.crossunder(emaFast, emaSlow)
+bool xUpExt = ta.crossover(close, up2)
+bool xDnExt = ta.crossunder(close, dn2)
+
+var bool orbLongDone  = false
+var bool orbShortDone = false
+if newDay
+    orbLongDone  := false
+    orbShortDone := false
+
+bool vwapLongOK  = not fVwap or na(vwapVal) or close > vwapVal
+bool vwapShortOK = not fVwap or na(vwapVal) or close < vwapVal
+bool orbLong  = intra and sigORB and orDone and inSig and xUpOR and volOK and vwapLongOK and not orbLongDone
+bool orbShort = intra and sigORB and orDone and inSig and xDnOR and volOK and vwapShortOK and not orbShortDone
+if orbLong
+    orbLongDone := true
+if orbShort
+    orbShortDone := true
+
+bool pdhBreak = intra and sigPD and inMkt and xUpPDH
+bool pdlBreak = intra and sigPD and inMkt and xDnPDL
+bool vwapUp   = intra and sigVWAP and inMkt and not vwapReset and xUpVW
+bool vwapDn   = intra and sigVWAP and inMkt and not vwapReset and xDnVW
+bool emaUp    = intra and sigEMA and xUpEMA
+bool emaDn    = intra and sigEMA and xDnEMA
+bool extUp    = intra and sigExt and inMkt and not vwapReset and xUpExt
+bool extDn    = intra and sigExt and inMkt and not vwapReset and xDnExt
+
+// ───── Plots ──────────────────────────────────────────────────────────────
+bool vwOn = intra and showVwap
+pVw  = plot(vwOn and not vwapReset ? vwapVal : na, "VWAP", cVwap, 2, plot.style_linebr)
+pU1  = plot(vwOn and showBand1 and not vwapReset ? up1 : na, "VWAP upper inner", color.new(cVwap, 55), 1, plot.style_linebr)
+pD1  = plot(vwOn and showBand1 and not vwapReset ? dn1 : na, "VWAP lower inner", color.new(cVwap, 55), 1, plot.style_linebr)
+pU2  = plot(vwOn and showBand2 and not vwapReset ? up2 : na, "VWAP upper outer", color.new(cBear, 45), 1, plot.style_linebr)
+pD2  = plot(vwOn and showBand2 and not vwapReset ? dn2 : na, "VWAP lower outer", color.new(cBull, 45), 1, plot.style_linebr)
+fill(pU1, pD1, color.new(cVwap, 93), "VWAP inner fill")
+
+plot(showFast ? emaFast : na, "Fast EMA", cFast, 1)
+plot(showSlow ? emaSlow : na, "Slow EMA", cSlow, 2)
+plot(showTrend ? smaTrend : na, "Trend SMA", cTrend, 2)
+
+pOH = plot(intra and showOR ? orH : na, "OR high", cOR, 2, plot.style_linebr)
+pOL = plot(intra and showOR ? orL : na, "OR low", cOR, 2, plot.style_linebr)
+fill(pOH, pOL, color.new(cOR, 90), "OR fill")
+plot(intra and showORX and orDone ? orH + orRange : na, "OR target +1×", color.new(cOR, 30), 1, plot.style_circles)
+plot(intra and showORX and orDone ? orH + 2 * orRange : na, "OR target +2×", color.new(cOR, 30), 1, plot.style_circles)
+plot(intra and showORX and orDone ? orL - orRange : na, "OR target −1×", color.new(cOR, 30), 1, plot.style_circles)
+plot(intra and showORX and orDone ? orL - 2 * orRange : na, "OR target −2×", color.new(cOR, 30), 1, plot.style_circles)
+
+plot(intra and showPD and not newDay ? pdh : na, "Prior day high", cPD, 1, plot.style_linebr)
+plot(intra and showPD and not newDay ? pdl : na, "Prior day low", cPD, 1, plot.style_linebr)
+plot(intra and showPD and not newDay ? pdc : na, "Prior day close", color.new(cPD, 40), 1, plot.style_circles)
+
+plot(intra and showPM ? pmH : na, "Pre-open high", cPM, 1, plot.style_linebr)
+plot(intra and showPM ? pmL : na, "Pre-open low", cPM, 1, plot.style_linebr)
+
+pCT = plot(intra and showCPR and not newDay ? cprTop : na, "CPR top", color.new(cCPR, 30), 1, plot.style_linebr)
+pCB = plot(intra and showCPR and not newDay ? cprBot : na, "CPR bottom", color.new(cCPR, 30), 1, plot.style_linebr)
+fill(pCT, pCB, color.new(cCPR, 85), "CPR fill")
+
+bgcolor(intra and shadeLunch and inLunch ? color.new(color.gray, 92) : na, title = "Midday chop")
+
+plotshape(orbLong, "ORB long", shape.triangleup, location.belowbar, cBull, text = "ORB", textcolor = cBull, size = size.small)
+plotshape(orbShort, "ORB short", shape.triangledown, location.abovebar, cBear, text = "ORB", textcolor = cBear, size = size.small)
+plotshape(pdhBreak, "PDH break", shape.diamond, location.belowbar, cPD, text = "PDH", textcolor = cPD, size = size.tiny)
+plotshape(pdlBreak, "PDL break", shape.diamond, location.abovebar, cPD, text = "PDL", textcolor = cPD, size = size.tiny)
+plotshape(vwapUp, "VWAP reclaim", shape.circle, location.belowbar, cVwap, text = "VW", textcolor = cVwap, size = size.tiny)
+plotshape(vwapDn, "VWAP loss", shape.circle, location.abovebar, cVwap, text = "VW", textcolor = cVwap, size = size.tiny)
+plotshape(emaUp, "EMA cross up", shape.arrowup, location.belowbar, cFast, size = size.tiny)
+plotshape(emaDn, "EMA cross down", shape.arrowdown, location.abovebar, cFast, size = size.tiny)
+plotshape(extUp, "Stretch above outer band", shape.xcross, location.abovebar, cBear, text = "2σ", textcolor = cBear, size = size.tiny)
+plotshape(extDn, "Stretch below outer band", shape.xcross, location.belowbar, cBull, text = "2σ", textcolor = cBull, size = size.tiny)
+
+// ───── Right-edge price tags ──────────────────────────────────────────────
+addTag(array<label> arr, float y, string name, color col) =>
+    if not na(y)
+        array.push(arr, label.new(bar_index + 3, y, name + " " + str.tostring(y, format.mintick), style = label.style_label_left, color = color.new(col, 100), textcolor = col, size = size.small))
+
+var array<label> tags = array.new<label>()
+if barstate.islast
+    for l in tags
+        label.delete(l)
+    array.clear(tags)
+    if intra and showTags
+        if showVwap
+            addTag(tags, vwapVal, "VWAP", cVwap)
+        if showOR and orDone
+            addTag(tags, orH, "ORH", cOR)
+            addTag(tags, orL, "ORL", cOR)
+        if showPD
+            addTag(tags, pdh, "PDH", cPD)
+            addTag(tags, pdl, "PDL", cPD)
+        if showPM
+            addTag(tags, pmH, "PMH", cPM)
+            addTag(tags, pmL, "PML", cPM)
+
+// ───── Dashboard ──────────────────────────────────────────────────────────
+posOf(string p) =>
+    switch p
+        "Top left"     => position.top_left
+        "Bottom left"  => position.bottom_left
+        "Bottom right" => position.bottom_right
+        => position.top_right
+
+float riskUsd = acct * riskPct / 100
+float pv      = syminfo.pointvalue
+float stopL = switch stopMode
+    "Opening range" => orL
+    "VWAP"          => vwapVal
+    => close - atrMult * atrTF
+float stopS = switch stopMode
+    "Opening range" => orH
+    "VWAP"          => vwapVal
+    => close + atrMult * atrTF
+float distL = close - stopL
+float distS = stopS - close
+float qtyL  = not na(distL) and distL > 0 ? riskUsd / (distL * pv) : na
+float qtyS  = not na(distS) and distS > 0 ? riskUsd / (distS * pv) : na
+bool  fracQty = syminfo.type == "crypto" or syminfo.type == "forex"
+string unit   = syminfo.type == "futures" ? " ct" : fracQty ? " units" : " sh"
+
+qtyText(float q, float stop) =>
+    na(q) ? "stop on wrong side" : "stop " + str.tostring(stop, format.mintick) + " · " + (fracQty ? str.tostring(q, "0.####") : str.tostring(math.floor(q))) + unit
+
+var table dash = table.new(posOf(dashPos), 2, 9, bgcolor = color.new(chart.bg_color, 8), border_color = color.new(chart.fg_color, 85), border_width = 1)
+
+row(int r, string k, string v, color vc) =>
+    table.cell(dash, 0, r, k, text_color = color.new(chart.fg_color, 30), text_size = size.small, text_halign = text.align_left)
+    table.cell(dash, 1, r, v, text_color = vc, text_size = size.small, text_halign = text.align_right)
+
+if barstate.islast and showDash
+    color fg = chart.fg_color
+    row(0, "DT Core", syminfo.ticker + " · " + timeframe.period, fg)
+    if not intra
+        row(1, "Timeframe", "use an intraday chart (1–15 min)", cBear)
+    else
+        bool aboveV = not na(vwapVal) and close > vwapVal
+        bool belowV = not na(vwapVal) and close < vwapVal
+        bool emaBull = emaFast > emaSlow
+        string biasTxt = (na(vwapVal) ? "no volume" : aboveV ? "above VWAP" : "below VWAP") + " · " + str.tostring(fastLen) + (emaBull ? " > " : " < ") + str.tostring(slowLen)
+        color biasCol = aboveV and emaBull ? cBull : belowV and not emaBull ? cBear : fg
+        row(1, "Bias", biasTxt, biasCol)
+
+        string rvTxt = na(rvol) ? "no history yet" : str.tostring(rvol, "0.00") + "×" + (rvol >= 2 ? "  in play" : "")
+        color rvCol = na(rvol) ? fg : rvol >= 2 ? cBull : rvol >= 1 ? fg : color.new(fg, 45)
+        row(2, "RVOL (time of day)", rvTxt, rvCol)
+
+        float gapRef = na(dayO) ? close : dayO
+        float gap = not na(pdc) and pdc > 0 ? (gapRef - pdc) / pdc * 100 : na
+        string gapTxt = na(gap) ? "—" : (gap >= 0 ? "+" : "") + str.tostring(gap, "0.00") + "%" + (na(dayO) ? " pre-open" : "")
+        row(3, "Gap vs prior close", gapTxt, na(gap) ? fg : gap >= 0 ? cBull : cBear)
+
+        float used = na(dayH) or na(dAtr) or dAtr == 0 ? na : (dayH - dayL) / dAtr * 100
+        string atrTxt = na(dAtr) ? "—" : str.tostring(dAtr, format.mintick) + (na(used) ? "" : " · " + str.tostring(used, "0") + "% used")
+        row(4, "Daily ATR(14)", atrTxt, not na(used) and used >= 100 ? cBear : fg)
+
+        string orTxt = na(orH) ? "waiting for open" : str.tostring(orRange, format.mintick) + " (" + str.tostring(orRange / close * 100, "0.00") + "%)" + (orDone ? "" : " forming")
+        row(5, "Opening range", orTxt, cOR)
+
+        row(6, "Risk per trade", str.tostring(riskUsd, "#,##0") + " (" + str.tostring(riskPct) + "%)", fg)
+        row(7, "Long ▲", qtyText(qtyL, stopL), cBull)
+        row(8, "Short ▼", qtyText(qtyS, stopS), cBear)
+
+// ───── Alerts ─────────────────────────────────────────────────────────────
+// Easiest: one alert on "Any alert() function call" covers every enabled signal.
+string msg = ""
+if orbLong
+    msg += "ORB long · "
+if orbShort
+    msg += "ORB short · "
+if pdhBreak
+    msg += "PDH break · "
+if pdlBreak
+    msg += "PDL break · "
+if vwapUp
+    msg += "VWAP reclaim · "
+if vwapDn
+    msg += "VWAP lost · "
+if emaUp
+    msg += "EMA cross up · "
+if emaDn
+    msg += "EMA cross down · "
+if extUp
+    msg += "stretched above outer band · "
+if extDn
+    msg += "stretched below outer band · "
+if msg != ""
+    alert(syminfo.ticker + " " + timeframe.period + ": " + msg + "last " + str.tostring(close, format.mintick) + (na(rvol) ? "" : " · RVOL " + str.tostring(rvol, "0.0") + "×"), alert.freq_once_per_bar_close)
+
+alertcondition(orbLong, "ORB long", "{{ticker}} {{interval}}: opening range breakout LONG at {{close}}")
+alertcondition(orbShort, "ORB short", "{{ticker}} {{interval}}: opening range breakdown SHORT at {{close}}")
+alertcondition(pdhBreak, "Prior day high break", "{{ticker}} {{interval}}: closed above prior day high at {{close}}")
+alertcondition(pdlBreak, "Prior day low break", "{{ticker}} {{interval}}: closed below prior day low at {{close}}")
+alertcondition(vwapUp, "VWAP reclaim", "{{ticker}} {{interval}}: reclaimed VWAP at {{close}}")
+alertcondition(vwapDn, "VWAP lost", "{{ticker}} {{interval}}: lost VWAP at {{close}}")
+alertcondition(emaUp, "EMA cross up", "{{ticker}} {{interval}}: fast EMA crossed above slow EMA")
+alertcondition(emaDn, "EMA cross down", "{{ticker}} {{interval}}: fast EMA crossed below slow EMA")

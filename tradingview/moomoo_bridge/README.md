@@ -7,7 +7,7 @@ TradersPost and similar services don't support moomoo, which is why this bridge 
 | DT Core sends | The bridge does |
 |---|---|
 | `buy` | Market buy, then a protective stop-loss order at moomoo |
-| `sell` | Market short sale, then a protective buy-to-cover stop |
+| `sell` | Market short sale, then a protective buy-to-cover stop (DT Core 4 only sends buys) |
 | `exit` (target, stop or 3:55 PM) | Cancels the ticker's open orders and closes the position at market |
 
 The take-profit is handled by DT Core: when TradingView's simulation reaches the target, DT Core
@@ -19,7 +19,7 @@ sends `exit`. The stop order at moomoo is a safety net if an alert arrives late 
   or a small cloud server.
 - A moomoo account. US stocks; short selling needs a margin account.
 - Your paid TradingView plan, for webhook alerts.
-- DT Core 3 on the chart of each stock you want traded.
+- DT Core 4 on the 5-minute chart of each stock you want traded.
 
 ## Setup
 

@@ -248,55 +248,54 @@ details.extra .script { border: 0; border-top: 1px solid var(--rule); border-rad
 
 <div class="wrap">
   <header class="hero">
-    <div class="eyebrow">Pine Script v6 · TradingView for iPhone and iPad</div>
+    <div class="eyebrow">Pine Script v6 · TradingView for iPhone and iPad · moomoo</div>
     <h1>DT Core Day-Trading Kit</h1>
-    <p class="lede">Open the chart, see BUY or SELL, execute. DT Core 3 finds the trade, sizes it, draws the stop and target, and can send the order to your broker on its own.</p>
+    <p class="lede">DT Core 4 buys the shakeout: when an in-play stock dips below its lower VWAP band and snaps back, it buys, targets 2R, exits, and waits for the next one. Up to three trades a day on each stock you watch, sent straight to moomoo if you want.</p>
     <figure>
-      <div class="chart-box" id="schematic" role="img" aria-label="Schematic five-minute chart: an opening range box forms after 9:30, a candle closes above it and a green BUY label appears, red stop and green target lines extend to the right, and a TARGET label marks a two-R win later in the morning."></div>
-      <figcaption>A typical BUY on a 5-minute chart: range forms, breakout closes above it, the target is hit two hours later. Illustrative data.</figcaption>
+      <div class="chart-box" id="schematic" role="img" aria-label="Schematic five-minute chart: price drifts down to the lower VWAP band, one candle wicks below it and closes back above, a green BUY SPRING label appears, and price rallies to a TARGET plus two R label within the hour."></div>
+      <figcaption>A VWAP spring on a 5-minute chart: the shakeout below the band, the reclaim, the BUY, and the 2R target about an hour later. Illustrative data.</figcaption>
     </figure>
   </header>
 
   <nav class="nav" aria-label="Sections">
     <ul>
       <li><a href="#install">Get it running</a></li>
+      <li><a href="#setup">The setup</a></li>
+      <li><a href="#evidence">Evidence</a></li>
+      <li><a href="#phase">Phase monitor</a></li>
+      <li><a href="#routine">Daily routine</a></li>
       <li><a href="#execute">Execute</a></li>
-      <li><a href="#signals">Read the signals</a></li>
-      <li><a href="#panel">Status panel</a></li>
+      <li><a href="#signals">Read the chart</a></li>
       <li><a href="#settings">Settings</a></li>
-      <li><a href="#rules">Rules</a></li>
       <li><a href="#questions">Earlier questions</a></li>
       <li><a href="#extras">Extras</a></li>
     </ul>
   </nav>
 
   <section id="install">
-    <div class="eyebrow">Fixes the compile error</div>
+    <div class="eyebrow">Update to DT Core 4</div>
     <h2>Get it running</h2>
-    <div class="callout">
-      <p><b>About "Script could not be translated from: |B|W|E|".</b> TradingView shows this when it can't read the script's first line, <span class="mono">//@version=6</span>, or when its translator chokes on an unusual construct. DT Core 3 is rewritten in plain ASCII text using only long-established Pine functions. Paste it into an <b>empty</b> editor so nothing old is left above line 1.</p>
-    </div>
     <ol class="steps">
-      <li><div><b>Copy DT Core 3</b> with the button below.</div></li>
-      <li><div><b>Empty the editor completely.</b> Pine Editor → open DT Core → Select All → Delete. Scroll up and down: the editor must be blank.</div></li>
-      <li><div><b>Paste and check line 1.</b> It must read exactly <span class="mono">//@version=6</span>, with nothing before it on the line. Then Save.</div></li>
-      <li><div><b>Re-add it to the chart.</b> DT Core is now a strategy, so remove the old copy from the chart (tap its name → remove), then <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> → DT Core.</div></li>
-      <li><div><b>5-minute candles, then your numbers.</b> Tap DT Core → Settings → Inputs → Risk: account size and risk per trade. Under Properties, set Initial capital to the same account size.</div></li>
+      <li><div><b>Copy DT Core 4</b> with the button below.</div></li>
+      <li><div><b>Empty the editor completely.</b> Pine Editor → open DT Core → Select All → Delete, until the editor is blank.</div></li>
+      <li><div><b>Paste and check line 1.</b> It must read exactly <span class="mono">//@version=6</span>. Save. If DT Core 3 is on the chart, it updates in place.</div></li>
+      <li><div><b>Use 5-minute candles.</b> The rules were tested on 5-minute charts. Tap DT Core → Settings → Risk and alerts: account size and risk per trade. Under Properties, set Initial capital to the same amount.</div></li>
+      <li><div><b>Give it 5 trading days of chart history.</b> The "in play" test compares today's volume with the same time on earlier days. Scroll the chart back if the panel says "building history".</div></li>
     </ol>
     <article class="script" id="core">
       <div class="script-head">
-        <div class="row"><h3>DT Core 3</h3><span class="pill">strategy · %%DT_CORE_LINES%% lines</span></div>
-        <p>BUY/SELL signals with automatic stop, target and exit; simulated fills and a scorecard; plain-language phone alerts; broker-ready order messages for webhooks.</p>
+        <div class="row"><h3>DT Core 4</h3><span class="pill">strategy · %%DT_CORE_LINES%% lines</span></div>
+        <p>VWAP spring entries on in-play stocks, automatic 2R target and stop, up to 3 trades a day, a market-phase monitor, phone alerts, and moomoo-ready order messages.</p>
       </div>
       <div class="codebar"><span class="mono">DT_Core.pine</span><div class="btns"><button class="ghost" data-expand="code-core" type="button">Expand</button><button class="copy" data-copy="code-core" type="button">Copy</button></div></div>
       <p class="copy-note" hidden></p>
       <pre class="code" id="code-core">%%DT_CORE%%</pre>
     </article>
     <details class="extra">
-      <summary>Still an error? Run the 3-line paste test</summary>
+      <summary>Compile error? Run the 3-line paste test</summary>
       <article class="script">
         <div class="script-head">
-          <p>Paste this into a brand-new script and save. <b>If it fails too,</b> the paste is the problem, not DT Core: create the script from the editor's New → Indicator menu, clear the template, and paste again. <b>If it works but DT Core doesn't,</b> send me the exact error text and the line number the editor highlights.</p>
+          <p>Paste this into a brand-new script and save. <b>If it fails too,</b> the paste is the problem: create the script from the editor's New → Indicator menu, clear the template, and paste again. <b>If it works but DT Core doesn't,</b> send me the exact error and the line number the editor highlights.</p>
         </div>
         <div class="codebar"><span class="mono">Paste test</span><div class="btns"><button class="copy" data-copy="code-test" type="button">Copy</button></div></div>
         <p class="copy-note" hidden></p>
@@ -307,137 +306,167 @@ plot(close)</pre>
     </details>
   </section>
 
+  <section id="setup">
+    <div class="eyebrow">What DT Core 4 trades</div>
+    <h2>The VWAP spring</h2>
+    <p>Wyckoff called it a spring, Linda Raschke called it Turtle Soup, and ICT calls it the manipulation leg. Price is pushed below an obvious support to trip stops, then buyers take it straight back. DT Core 4 trades that shakeout at the lower VWAP band, a statistical extreme for the day, and only on stocks with real volume behind them.</p>
+    <ol class="steps">
+      <li><div><b>The stock is in play.</b> Volume since the open is at least 1.5× normal for this time of day.</div></li>
+      <li><div><b>A candle dips below the lower VWAP band</b> (2 standard deviations below VWAP) and closes back above it.</div></li>
+      <li><div><b>The candle is green and closes near its high,</b> in the top 40% of its range. Buyers won the candle.</div></li>
+      <li><div><b>BUY at the close.</b> The stop goes just under the candle's low; the target is 2× the risk.</div></li>
+      <li><div><b>Out in about an hour on average,</b> at the target, the stop or 3:55 PM. Then it looks for the next spring. Up to 3 trades per stock per day, entries 9:45 AM to 3:00 PM, and it stops for the day after losing 2R.</div></li>
+    </ol>
+    <div class="callout">
+      <p><b>Why the opening range breakout is gone.</b> I backtested DT Core 3's breakout rules on four months of real data and they lost money: −0.17R per trade in the test period and −0.20R afterwards. It's still in the settings as an experimental option, off by default.</p>
+    </div>
+  </section>
+
+  <section id="evidence">
+    <div class="eyebrow">Backtest on real data</div>
+    <h2>What the testing showed</h2>
+    <p>The test data was 5-minute candles for 20 liquid stocks and ETFs (NVDA, AAPL, TSLA, SPY, QQQ and others) from June 1 to October 2, 2026, or 87 trading days. Each candle was replayed the way TradingView runs the strategy, with slippage. Rules were chosen on June–August, then checked on September onward.</p>
+    <div class="table-scroll">
+      <table class="stack">
+        <thead><tr><th>Setup</th><th>June–Aug</th><th>Sept–Oct</th><th>Verdict</th></tr></thead>
+        <tbody>
+          <tr><td>DT Core 3 opening range breakout</td><td class="set off">−0.17R</td><td class="set off">−0.20R</td><td class="why">Losing. Removed.</td></tr>
+          <tr><td>Pullback to 20 EMA in a trend</td><td class="set off">−0.11R</td><td class="set off">−0.11R</td><td class="why">Losing</td></tr>
+          <tr><td>Breakout on in-play stocks</td><td class="set on">+0.61R</td><td class="set off">−0.05R</td><td class="why">Failed later. Optional, off.</td></tr>
+          <tr><td><b>VWAP spring on in-play stocks</b></td><td class="set on">+0.18R</td><td class="set on">+0.22R</td><td class="why"><b>Held up. DT Core 4's setup.</b></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="mock" aria-label="VWAP spring results">
+      <div class="mock-row"><span class="k">Trades</span><span class="v">101 in 87 days across 20 stocks (about 1.2 a day)</span></div>
+      <div class="mock-row"><span class="k">Win rate</span><span class="v">42.6%, average +0.19R per trade</span></div>
+      <div class="mock-row"><span class="k">Exits</span><span class="v">37 targets, 57 stops, 7 at the close; average hold about 1 hour</span></div>
+      <div class="mock-row"><span class="k">Worst run</span><span class="v">8.4R drawdown; 8 losses in a row</span></div>
+      <div class="mock-row"><span class="k">At 0.5% risk</span><span class="v up">about +9.7% over 4 months, worst drawdown 4.2% (before fees)</span></div>
+    </div>
+    <ul class="rules">
+      <li><b>Small, unproven edge</b><span>Statistically, there's still about an 8% chance the true average is zero or worse. Four months is a short history.</span></li>
+      <li><b>Lopsided</b><span>Two stocks (AAPL, NFLX) produced about three quarters of the profit. Losing streaks of 8 happen; size so they don't hurt.</span></li>
+      <li><b>Consistent where it counts</b><span>8 of 9 nearby settings were profitable, more volume consistently helped, and 4 of 5 months were positive. August lost 3.4R.</span></li>
+      <li><b>Real fills are worse</b><span>Expect results below the backtest. Paper trade for at least a month before going live.</span></li>
+    </ul>
+    <p class="fine">The backtest code and full write-up are in <span class="mono">tradingview/research/</span> on your GitHub branch. Your paid plan also lets you check DT Core on any stock in TradingView's Strategy Tester (with Deep Backtesting for longer history).</p>
+  </section>
+
+  <section id="phase">
+    <div class="eyebrow">Accumulation · manipulation · distribution</div>
+    <h2>The phase monitor</h2>
+    <p>The panel's Phase row labels what the order flow looks like right now. It uses 1-minute volume delta (buying volume minus selling volume), which your paid plan provides through lower-timeframe data. It's a reading aid: it wasn't part of the test, so it doesn't trigger trades.</p>
+    <div class="table-scroll">
+      <table class="stack">
+        <thead><tr><th>Phase</th><th>What the monitor sees</th><th>What it means for you</th></tr></thead>
+        <tbody>
+          <tr><td class="on">ACCUMULATION</td><td class="why">Price near VWAP, volume delta rising for 30 minutes</td><td class="why">Buyers are absorbing supply. Springs from here are the best ones.</td></tr>
+          <tr><td class="on">MANIPULATION ↓ spring</td><td class="why">In the last 3 candles, price broke below the lower band, the opening range low or yesterday's low, then closed back above</td><td class="why">The shakeout. If the stock is in play and the candle qualifies, DT Core buys. Otherwise a grey diamond marks it.</td></tr>
+          <tr><td class="on">EXPANSION UP</td><td class="why">Above VWAP + 1σ, 9 EMA over 20 EMA</td><td class="why">The move after accumulation (ICT calls this "distribution"). Let open trades work; don't chase.</td></tr>
+          <tr><td class="off">DISTRIBUTION</td><td class="why">Price at the day's high, volume delta falling</td><td class="why">Wyckoff's distribution: sellers unloading into strength. Expect a pullback.</td></tr>
+          <tr><td class="off">MANIPULATION ↑ upthrust</td><td class="why">A spike above the upper band that closes back below it on a red candle (red diamond)</td><td class="why">A bull trap. Don't buy here.</td></tr>
+          <tr><td class="off">EXPANSION DOWN</td><td class="why">Below VWAP − 1σ, 9 EMA under 20 EMA</td><td class="why">Sellers in control. Wait for a spring at the lower band.</td></tr>
+          <tr><td>BALANCE</td><td class="why">None of the above</td><td class="why">No edge. Wait.</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="fine">Turn on "Phone alert when the phase changes" in settings to get a ping on each change.</p>
+  </section>
+
+  <section id="routine">
+    <div class="eyebrow">Continuous execution</div>
+    <h2>Daily routine</h2>
+    <p>More trades come from watching more in-play stocks, not from loosening the rules. A watchlist of 5 to 10 names with DT Core on each gives you several chances a day.</p>
+    <ol class="steps">
+      <li><div><b>9:00 AM: build today's list in TradingView's Stock Screener.</b> Filters: Relative Volume ≥ 1.5, Pre-market Change ≥ 2% (or ≤ −2%), Price ≥ $5, Average Volume (10 day) ≥ 1M. Add a catalyst check: news or earnings.</div></li>
+      <li><div><b>Save the top 5–10 as a watchlist</b> named "In play today".</div></li>
+      <li><div><b>Open each on a 5-minute chart with DT Core 4</b> and create one alert per stock: alert() calls for phone pings, or Order fills → webhook for the moomoo bridge.</div></li>
+      <li><div><b>Trade the signals, nothing else.</b> The panel's Today row tracks trades and R. DT Core stops itself after 3 trades or −2R on each stock.</div></li>
+      <li><div><b>After the close, delete today's alerts</b> and review the BUY and EXIT labels. Tomorrow's list will be different.</div></li>
+    </ol>
+    <ul class="rules">
+      <li><b>Webhooks</b><span>Send every fill to the moomoo bridge for hands-off orders.</span></li>
+      <li><b>Many active alerts</b><span>One per in-play stock, every day.</span></li>
+      <li><b>Intrabar data</b><span>1-minute volume delta for the phase monitor.</span></li>
+      <li><b>Multi-chart layouts</b><span>Watch several in-play stocks at once on iPad or desktop.</span></li>
+      <li><b>Deep Backtesting, Bar Replay</b><span>Test DT Core on a new stock before trading it, and practice by replaying past sessions candle by candle.</span></li>
+    </ul>
+    <p class="fine">Which of these your plan includes, and the limits, depend on the tier; check Profile → Subscription.</p>
+  </section>
+
   <section id="execute">
     <div class="eyebrow">Open chart → see signal → execute · moomoo</div>
     <h2>Three ways to execute with moomoo</h2>
-    <p>moomoo is an official TradingView broker for US stocks and options, so you can trade straight from the chart. Each level builds on the last.</p>
-
+    <p>moomoo is an official TradingView broker for US stocks, so you can trade straight from the chart.</p>
     <div class="levels">
-      <div class="level"><b class="n">1</b><div><b>Tap to trade on the TradingView chart</b><p>Connect once: open the chart's trading panel, choose <b>moomoo</b>, and log in. When BUY prints, tap Buy → Market, enter the share count from the panel's Size row, turn on <b>Take profit</b> and <b>Stop loss</b> with the prices from the Plan row, and confirm. moomoo receives it as one bracket order. About 15 seconds.</p></div></div>
-      <div class="level"><b class="n">2</b><div><b>Get pinged, then use the moomoo app</b><p>Add the plain-language alert below. When it arrives, open the stock in moomoo → Trade → Pro mode → Attached orders → <b>Bracket</b>, and enter the share count, take-profit and stop-loss from the alert.</p></div></div>
-      <div class="level"><b class="n">3</b><div><b>Fully automatic with the DT Core bridge</b><p>Automation services like TradersPost don't support moomoo, so this kit includes its own bridge. It's a small program on a computer that's on during market hours. DT Core sends each order to the bridge through a webhook, and the bridge places it in your moomoo account through moomoo's official OpenAPI, with a protective stop. Nothing to tap.</p></div></div>
+      <div class="level"><b class="n">1</b><div><b>Tap to trade on the TradingView chart</b><p>Connect moomoo once in the chart's trading panel. When BUY SPRING prints, tap Buy → Market, enter the share count from the Size row, turn on <b>Take profit</b> and <b>Stop loss</b> with the prices from the Plan row, and confirm. moomoo receives it as one bracket order.</p></div></div>
+      <div class="level"><b class="n">2</b><div><b>Get pinged, then use the moomoo app</b><p>The phone alert reads "BUY NVDA (SPRING) @ 98.25 - stop 97.82 - target 99.11 - 290 shares". In moomoo: Trade → Pro mode → Attached orders → <b>Bracket</b>.</p></div></div>
+      <div class="level"><b class="n">3</b><div><b>Fully automatic with the DT Core bridge</b><p>A small program on a computer that stays on during market hours places every DT Core trade in your moomoo account through moomoo's official OpenAPI, with a protective stop. It handles several trades a day per stock. Setup is in <span class="mono">tradingview/moomoo_bridge/README.md</span>; start in dry-run, then paper.</p></div></div>
     </div>
-
-    <h3>Alert for levels 1 and 2</h3>
+    <h3>Alerts</h3>
     <ol class="steps">
-      <li><div><b>Open the stock's 5-minute chart.</b> DT Core must be on it.</div></li>
-      <li><div><b>Add an alert.</b> Tap the alarm-clock button, or long-press the chart → Add alert.</div></li>
-      <li><div><b>Condition:</b> DT Core → <span class="path">alert() function calls only</span>.</div></li>
-      <li><div><b>Notify:</b> app push and sound on. Create.</div></li>
+      <li><div><b>Phone (levels 1 and 2):</b> on the stock's 5-minute chart, add an alert with Condition DT Core → <span class="path">alert() function calls only</span>, app push and sound on.</div></li>
+      <li><div><b>moomoo bridge (level 3):</b> Condition DT Core → <span class="path">Order fills only</span>, Message exactly <span class="path">{{strategy.order.alert_message}}</span>, and your bridge URL under Webhook URL.</div></li>
     </ol>
-    <div class="msg">BUY NVDA @ 102.00 - stop 100.75 - target 104.50 - 100 shares (risk $125)
-EXIT NVDA @ 104.50 - TARGET +2.0R</div>
-
-    <h3>Level 3: the moomoo bridge</h3>
-    <p>It needs a Mac, Windows or Linux computer that stays awake from 9:25 AM to 4:05 PM New York time, or a small cloud server. Full instructions are in <span class="mono">tradingview/moomoo_bridge/README.md</span> on your GitHub branch.</p>
-    <ol class="steps">
-      <li><div><b>On the computer:</b> install moomoo's OpenD gateway and log in, install Python and <span class="mono">moomoo-api</span>, then start <span class="mono">bridge.py</span>.</div></li>
-      <li><div><b>Give it an HTTPS address</b> with a free ngrok static domain. TradingView only sends webhooks over HTTPS.</div></li>
-      <li><div><b>In TradingView, on each stock's 5-minute chart:</b> add an alert with Condition DT Core → <span class="path">Order fills only</span>, Message exactly <span class="path">{{strategy.order.alert_message}}</span>, and your bridge URL under Webhook URL.</div></li>
-      <li><div><b>Roll out in three stages:</b> dry run (logs only) → moomoo paper account → live with small size.</div></li>
-    </ol>
-    <p>What DT Core sends, and what the bridge does with it:</p>
-    <div class="msg">{"ticker":"NVDA","action":"buy","quantity":100,"price":102.00,"takeProfit":{"limitPrice":104.50},"stopLoss":{"type":"stop","stopPrice":100.75}}
-  → market BUY US.NVDA x100, then stop SELL x100 at 100.75
-{"ticker":"NVDA","action":"exit","price":104.50}
-  → cancel US.NVDA open orders, market SELL x100</div>
-    <ul class="rules">
-      <li><b>Safety limits</b><span>The bridge refuses orders above your max shares or max dollar value, tickers outside your list, shorts if you turn them off, and a second entry while you already hold the stock.</span></li>
-      <li><b>Keep it awake</b><span>If the computer sleeps, entries and exits are missed. The stop at moomoo still protects you, but it is a day order, so check moomoo before the close on any day you're unsure.</span></li>
-      <li><b>Settings freeze</b><span>An alert keeps the DT Core settings it was made with. Change a setting, then delete and recreate the alert.</span></li>
-      <li><b>Not a guarantee</b><span>Real fills differ from simulated ones. Start in paper mode and keep the risk per trade small.</span></li>
-    </ul>
+    <div class="msg">BUY NVDA (SPRING) @ 98.25 - stop 97.82 - target 99.11 - 290 shares (risk $125)
+EXIT NVDA @ 99.11 - TARGET +2.0R - today +2.0R</div>
+    <p class="fine">An alert keeps the settings it was made with. Change a setting, then delete and recreate the alert.</p>
   </section>
 
   <section id="signals">
     <div class="eyebrow">Legend</div>
-    <h2>Reading the signals</h2>
-    <p>Labels appear when a candle closes and never move or disappear afterward.</p>
+    <h2>Reading the chart</h2>
     <ul class="key">
-      <li><span><span class="sw buy">BUY</span></span><span>A candle closed above the opening range, above VWAP, on strong volume. Entry is that candle's closing price.</span></li>
-      <li><span><span class="sw sell">SELL</span></span><span>The mirror image below the range. SELL means sell short. If you only buy stocks, turn it off in settings.</span></li>
-      <li><span><span class="ln stop"></span></span><span><b>Stop.</b> Where the trade is wrong.</span></li>
-      <li><span><span class="ln tgt"></span></span><span><b>Target.</b> Twice as far from entry as the stop, so a win pays 2× what a loss costs.</span></li>
-      <li><span><span class="ln entry"></span></span><span>Entry price.</span></li>
-      <li><span><span class="sw buy">TARGET +2.0R</span></span><span>Target hit. R means "times your risk": +2R on $125 risk is +$250.</span></li>
+      <li><span><span class="sw buy">BUY SPRING</span></span><span>All the spring rules passed on this candle. Entry is its closing price.</span></li>
+      <li><span><span class="ln stop"></span></span><span><b>Stop</b>, just under the spring candle's low.</span></li>
+      <li><span><span class="ln tgt"></span></span><span><b>Target</b>, 2× the risk above entry.</span></li>
+      <li><span><span class="sw buy">TARGET +2.0R</span></span><span>Target hit. +2R on $125 risk is +$250.</span></li>
       <li><span><span class="sw sell">STOP -1.0R</span></span><span>Stop hit: a planned, limited loss.</span></li>
-      <li><span><span class="sw grey">EXIT</span></span><span>Neither was hit, so the trade closed 5 minutes before the market close.</span></li>
-      <li><span><span class="ln vw"></span></span><span><b>VWAP</b>, the day's volume-weighted average price. Green when price is above it, red when below.</span></li>
-      <li><span><span class="box or"></span></span><span><b>Opening range.</b> Breakouts from this box are the signals.</span></li>
-      <li><span><span class="ln pd"></span></span><span>Yesterday's high and low.</span></li>
-      <li><span><span class="ln pm"></span></span><span>Pre-market high and low. Tap <b>ETH</b> at the bottom right of the chart to show extended hours; futures show the overnight range automatically.</span></li>
-      <li><span><span class="box mid"></span></span><span><b>Midday</b>, 2 to 4 hours after the open. Breakouts fail more often here.</span></li>
+      <li><span><span class="sw grey">EXIT</span></span><span>Closed at 3:55 PM without reaching either.</span></li>
+      <li><span><span class="ln vw"></span></span><span><b>VWAP</b>: green when price is above it, red below.</span></li>
+      <li><span><span class="ln" style="border-color: var(--accent)"></span></span><span><b>Lower band, the spring line.</b> Thicker orange line 2 standard deviations below VWAP. The faint one above is the upper band.</span></li>
+      <li><span><span class="sw grey">◆ grey</span></span><span>A spring that wasn't a trade: the stock isn't in play, the candle is weak, or it's outside trading hours.</span></li>
+      <li><span><span class="sw sell">◆ red</span></span><span>Upthrust above the upper band. A warning, not a trade.</span></li>
+      <li><span><span class="box or"></span></span><span>Opening range (first 15 minutes). Yellow lines are yesterday's high and low.</span></li>
+      <li><span><span class="box mid"></span></span><span>Midday shading, 2 to 4 hours after the open.</span></li>
     </ul>
-    <p class="fine">TradingView also draws its own small order arrows for strategies. To hide them, open DT Core's settings → Style and turn off the trades-on-chart option.</p>
-  </section>
 
-  <section id="panel">
-    <div class="eyebrow">Top-right corner</div>
-    <h2>The status panel</h2>
-    <p>It tells you what DT Core is doing right now, in words.</p>
+    <h3>The status panel</h3>
     <div class="example">Example, matching the chart above</div>
     <div class="mock" aria-label="Example status panel">
-      <div class="mock-row"><span class="k">DT Core</span><span class="v">NVDA · 5 min</span></div>
-      <div class="mock-row"><span class="k">Trend</span><span class="v up">UP · price above VWAP</span></div>
-      <div class="mock-row"><span class="k">Status</span><span class="v up">IN A BUY TRADE</span></div>
-      <div class="mock-row"><span class="k">Plan</span><span class="v">entry 102.00 · stop 100.75 · target 104.50</span></div>
-      <div class="mock-row"><span class="k">Size</span><span class="v">100 shares · risk $125</span></div>
-      <div class="mock-row"><span class="k">Volume</span><span class="v up">2.4× normal · in play</span></div>
-      <div class="mock-row"><span class="k">Results</span><span class="v up">22 days · 15 trades · 53% wins · +4.5R</span></div>
+      <div class="mock-row"><span class="k">DT Core 4</span><span class="v">NVDA - 5 min</span></div>
+      <div class="mock-row"><span class="k">Trend</span><span class="v">below VWAP</span></div>
+      <div class="mock-row"><span class="k">Phase</span><span class="v up">MANIPULATION - spring below support (bullish)</span></div>
+      <div class="mock-row"><span class="k">In play</span><span class="v up">2.1x normal - IN PLAY</span></div>
+      <div class="mock-row"><span class="k">Status</span><span class="v up">IN A BUY TRADE (SPRING)</span></div>
+      <div class="mock-row"><span class="k">Plan</span><span class="v">entry 98.25 - stop 97.82 - target 99.11</span></div>
+      <div class="mock-row"><span class="k">Size</span><span class="v">290 shares - risk $125</span></div>
+      <div class="mock-row"><span class="k">Today</span><span class="v">1 of 3 trades - +0.0R</span></div>
+      <div class="mock-row"><span class="k">Results</span><span class="v up">60 days - 7 trades - 43% wins - +1.4R</span></div>
     </div>
-    <p><b>Status</b> moves through the day like this:</p>
-    <div class="flow"><span>Waiting for the open</span><i>→</i><span>Opening range forming</span><i>→</i><span>Watching until 11:30 AM</span><i>→</i><span>IN A BUY / SELL TRADE</span><i>→</i><span>No new signals today</span></div>
-    <ul class="rules">
-      <li><b>Plan</b><span>While watching, it shows the exact trigger prices ("BUY above 101.60 · SELL below 99.90"). In a trade, it shows entry, stop and target.</span></li>
-      <li><b>Size</b><span>Shares to buy so that hitting the stop loses exactly your risk per trade (Tharp's position sizing). "≈" means an estimate before the trade exists.</span></li>
-      <li><b>Volume</b><span>Today's volume against the same time on the last 10 days. 2× or more means the stock is "in play" (Bellafiore, Aziz); breakouts work best then.</span></li>
-      <li><b>Results</b><span>TradingView's own simulation of every DT Core trade on the days loaded on this chart, with one tick of slippage and no commissions. The full report is in the Strategy Tester on the desktop site.</span></li>
-    </ul>
+    <p class="fine">When no trade is open, Status walks through: Waiting for the open → Opening range forming → Watching for a spring (or "not in play") → Done for today. While watching, Plan shows the exact price the candle must dip below.</p>
   </section>
-
 
   <section id="settings">
     <div class="eyebrow">Tap DT Core → Settings</div>
     <h2>Settings that matter</h2>
-    <p>The defaults are sensible. These are the ones worth knowing.</p>
     <div class="table-scroll">
       <table class="stack">
         <thead><tr><th>Setting</th><th>Default</th><th>What it does</th></tr></thead>
         <tbody>
-          <tr><td>Opening range length</td><td class="set">Auto</td><td class="why">How long to wait after the open. Auto picks 5 minutes on a 1-minute chart, 15 on a 5-minute chart, 30 on a 15-minute chart.</td></tr>
-          <tr><td>Market open</td><td class="set">Auto</td><td class="why">The exchange's opening bell for stocks; 9:30 New York for futures, crypto and forex.</td></tr>
-          <tr><td>Stop new signals</td><td class="set">2 hours after open</td><td class="why">No new entries after 11:30 AM for US stocks. Open trades keep running.</td></tr>
-          <tr><td>Stop placement</td><td class="set">Middle of range</td><td class="why">Smaller risk, so more shares. "Other side of range" gives the trade more room.</td></tr>
-          <tr><td>Target (× risk)</td><td class="set">2</td><td class="why">Aziz's 2-to-1 minimum. With 2R wins, winning 40% of trades still comes out ahead before costs.</td></tr>
-          <tr><td>Only on strong volume</td><td class="set">On</td><td class="why">The breakout candle needs 1.5× the average volume of the last 20 candles.</td></tr>
-          <tr><td>Only on the right side of VWAP</td><td class="set">On</td><td class="why">BUY only above VWAP, SELL only below it.</td></tr>
-          <tr><td>Take SELL (short) signals</td><td class="set">On</td><td class="why">Turn off if you only buy.</td></tr>
-          <tr><td>Account size, risk per trade</td><td class="set">$25,000 · 0.5%</td><td class="why">Drive the Size row and the share count in alerts.</td></tr>
-          <tr><td>Properties → Initial capital</td><td class="set">$25,000</td><td class="why">Set it to your account size so simulated results match your sizing.</td></tr>
-          <tr><td>Show on chart</td><td class="set">—</td><td class="why">Turn lines and the panel on or off.</td></tr>
+          <tr><td>Selectivity</td><td class="set">Normal</td><td class="why">Normal needs 1.5× volume. Strict needs 2×: fewer trades, higher average in testing (+0.46R), but only 12 trades in Sept–Oct.</td></tr>
+          <tr><td>Lower band</td><td class="set">2.0</td><td class="why">How far below VWAP the spring line sits, in standard deviations.</td></tr>
+          <tr><td>Target (× risk)</td><td class="set">2</td><td class="why">The +2R exit. A fixed 2R target beat partial exits and trailing stops in testing.</td></tr>
+          <tr><td>Max trades per day</td><td class="set">3</td><td class="why">Per stock. It keeps looking after each exit.</td></tr>
+          <tr><td>Stop for the day after losing</td><td class="set">2R</td><td class="why">Two full losses and that stock is done for the day.</td></tr>
+          <tr><td>Opening range breakouts</td><td class="set off">Off</td><td class="why">Experimental: failed in the Sept–Oct check.</td></tr>
+          <tr><td>Account size, risk per trade</td><td class="set">$25,000 · 0.5%</td><td class="why">Drive the share count. Set Properties → Initial capital to match.</td></tr>
+          <tr><td>Phone alert on phase change</td><td class="set off">Off</td><td class="why">A ping each time the Phase row changes.</td></tr>
         </tbody>
       </table>
     </div>
   </section>
-
-
-  <section id="rules">
-    <div class="eyebrow">What it does, in order</div>
-    <h2>The rules behind the signals</h2>
-    <ol class="steps">
-      <li><div><b>Mark the opening range.</b> The high and low of the first minutes after the open. Toby Crabel showed in 1990 that breakouts from it carry follow-through; Andrew Aziz teaches the same trade for stocks.</div></li>
-      <li><div><b>Wait for a candle to close outside it.</b> With strong volume, and on the side of VWAP that agrees (Shannon: VWAP is the day's fair price).</div></li>
-      <li><div><b>Size from the stop.</b> Stop at the middle of the range; shares = dollars at risk ÷ distance to the stop (Tharp).</div></li>
-      <li><div><b>Let the trade end itself.</b> Target at 2× risk, stop, or 5 minutes before the close. At most one BUY and one SELL a day, none after the cutoff.</div></li>
-    </ol>
-    <ul class="rules">
-      <li><b>0.5–1% per trade</b><span>Elder's ceiling is 2%. Start small while you learn.</span></li>
-      <li><b>Daily stop at −3R</b><span>Three full losses and you're done for the day.</span></li>
-      <li><b>Paper trade first</b><span>Run 20 or more signals on TradingView's Paper Trading account before using real money. Many days produce no signal; that's by design.</span></li>
-      <li><b>Check your broker's rules</b><span>US margin accounts face pattern-day-trader requirements.</span></li>
-    </ul>
-  </section>
-
 
   <section id="questions">
     <div class="eyebrow">From earlier</div>
@@ -445,7 +474,7 @@ EXIT NVDA @ 104.50 - TARGET +2.0R</div>
     <div class="qa">
       <article class="q">
         <h3>I saved the script. Why is nothing on the chart?</h3>
-        <p><b>Saving and adding are two separate steps, and you need both.</b> Saving stores the code in your TradingView account. If it saved without a red error message, the code compiled fine. Adding puts it on a chart:</p>
+        <p><b>Saving and adding are two separate steps, and you need both.</b> Saving stores the code in your TradingView account; if it saved without a red error message, the code compiled. Adding puts it on a chart:</p>
         <p>On the chart, tap <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> (some versions say <span class="path">My scripts</span>) → tap <b>DT Core</b>. Its name appears in the top-left corner of the chart.</p>
         <p><b>Added but still blank?</b></p>
         <ul>
@@ -477,7 +506,6 @@ EXIT NVDA @ 104.50 - TARGET +2.0R</div>
       </article>
     </div>
   </section>
-
 
   <section id="extras">
     <div class="eyebrow">DT Momentum and DT Volume</div>
@@ -511,16 +539,18 @@ EXIT NVDA @ 104.50 - TARGET +2.0R</div>
     <div class="eyebrow">Literature</div>
     <h2>Sources</h2>
     <ul class="sources">
-      <li><cite>Toby Crabel, <i>Day Trading with Short Term Price Patterns and Opening Range Breakout</i> (1990)</cite><span>The opening range breakout.</span></li>
-      <li><cite>Andrew Aziz, <i>How to Day Trade for a Living</i> (2015)</cite><span>ORB for stocks, VWAP, relative volume, 2:1 targets.</span></li>
-      <li><cite>Brian Shannon, <i>Maximum Trading Gains with Anchored VWAP</i> (2023)</cite><span>VWAP as the day's fair price.</span></li>
-      <li><cite>Mike Bellafiore, <i>One Good Trade</i> (2010)</cite><span>Trade stocks in play.</span></li>
-      <li><cite>Van K. Tharp, <i>Trade Your Way to Financial Freedom</i> (1998)</cite><span>R-multiples and position sizing.</span></li>
-      <li><cite>Alexander Elder, <i>The New Trading for a Living</i> (2014)</cite><span>The 2% per-trade ceiling.</span></li>
-      <li><cite>John F. Carter, <i>Mastering the Trade</i>; Linda Raschke and Laurence Connors, <i>Street Smarts</i>; J. Welles Wilder, <i>New Concepts in Technical Trading Systems</i></cite><span>The optional DT Momentum oscillators.</span></li>
+      <li><cite>Richard D. Wyckoff's method, as laid out in Rubén Villahermosa, <i>The Wyckoff Methodology in Depth</i> (2019)</cite><span>Accumulation, distribution, springs and upthrusts.</span></li>
+      <li><cite>Linda Bradford Raschke and Laurence Connors, <i>Street Smarts</i> (1995)</cite><span>Turtle Soup: trading the failed break of a prior low.</span></li>
+      <li><cite>Michael J. Huddleston (ICT), "Power of Three" course material</cite><span>Accumulation, manipulation and distribution within a session.</span></li>
+      <li><cite>Brian Shannon, <i>Maximum Trading Gains with Anchored VWAP</i> (2023); John Bollinger, <i>Bollinger on Bollinger Bands</i> (2001)</cite><span>VWAP as fair value; standard-deviation bands as statistical extremes.</span></li>
+      <li><cite>Andrew Aziz, <i>How to Day Trade for a Living</i> (2015); Mike Bellafiore, <i>One Good Trade</i> (2010)</cite><span>Stocks in play, relative volume, 2:1 reward to risk.</span></li>
+      <li><cite>Marc Chaikin, Accumulation/Distribution line</cite><span>Reading buying versus selling pressure from volume.</span></li>
+      <li><cite>Zarattini, Barbon and Aziz, "A Profitable Day Trading Strategy for the U.S. Equity Market" (SSRN, 2024); Zarattini, Aziz and Barbon, "Beat the Market" (SSRN, 2024)</cite><span>Both tested here; results in the research write-up.</span></li>
+      <li><cite>Van K. Tharp, <i>Trade Your Way to Financial Freedom</i> (1998); Alexander Elder, <i>The New Trading for a Living</i> (2014)</cite><span>R-multiples, position sizing, the 2% ceiling.</span></li>
+      <li><cite>Barber, Lee, Liu and Odean, "The Cross-Section of Speculator Skill: Evidence from Day Trading," <i>Journal of Financial Markets</i> (2014)</cite><span>Fewer than 1% of day traders were predictably profitable.</span></li>
     </ul>
     <hr>
-    <p class="fine">Educational material, not financial advice. The signals follow fixed rules; they don't predict the future, and the Results row ignores trading costs. Most day traders lose money. Paper trade first and risk only what you can afford to lose.</p>
+    <p class="fine">Educational material, not financial advice. The backtest covers four months of 20 stocks; past results don't guarantee future ones, and real fills are worse than simulated ones. Most day traders lose money. Paper trade first and risk only what you can afford to lose.</p>
   </section>
 </div>
 
@@ -575,97 +605,104 @@ EXIT NVDA @ 104.50 - TARGET +2.0R</div>
     });
   });
 
-  // ── Schematic: one BUY from range to target (illustrative 5-minute data) ──
-  var closes = [99.8, 100.1, 99.9, 100.4, 100.2, 100.0, 100.3, 100.2,
-    101.2, 100.5, 101.0,
-    101.1, 101.3, 102.0,
-    102.4, 102.8, 102.5, 102.2, 102.7, 103.4,
-    103.7, 104.0, 103.6, 103.4, 103.8, 104.3, 104.1, 104.5,
-    104.8, 104.6, 104.9, 104.7,
-    104.5, 104.7, 104.4, 104.6, 104.3, 104.5, 104.4, 104.6];
-  var vols = [20, 25, 18, 30, 22, 26, 35, 40,
-    300, 220, 180, 120, 110, 260, 150, 140, 90, 80, 130, 210,
-    140, 120, 90, 80, 110, 150, 100, 130, 90, 80, 85, 70,
-    50, 45, 40, 55, 45, 40, 50, 45];
+  // ── Schematic: a VWAP spring from shakeout to 2R target (illustrative 5-minute data) ──
+  var closes = [100.6, 100.1, 100.4,
+    100.2, 99.9, 99.7, 99.8, 99.5, 99.3, 99.4, 99.1, 98.9, 99.0, 98.8, 98.6, 98.7, 98.5, 98.3,
+    0,
+    98.9, 99.3, 99.2, 99.6, 99.9, 99.8, 100.2, 100.5, 100.4, 100.8, 101.0, 101.2,
+    101.0, 101.1, 100.9, 101.0, 100.8, 100.9, 101.0, 100.9, 101.1];
+  var vols = [420, 300, 260, 200, 180, 170, 160, 190, 210, 150, 200, 220, 160, 180, 210, 150, 190, 230,
+    520, 330, 280, 220, 260, 240, 200, 250, 230, 180, 210, 200, 190, 120, 110, 100, 105, 95, 100, 110, 100, 105];
   var wick = [0.15, 0.25, 0.1, 0.3, 0.2, 0.12, 0.22];
-  var bars = closes.map(function (c, i) {
-    var o = i === 0 ? 99.7 : (i === 8 ? 100.6 : closes[i - 1]);
-    var w = wick[i % wick.length];
-    var h = Math.max(o, c) + w, l = Math.min(o, c) - w;
-    if (i === 8) { h = 101.6; l = 100.4; }
-    if (i === 9) { h = 101.4; l = 99.9; }
-    if (i === 10) { h = 101.2; l = 100.4; }
-    if (i === 11) { h = 101.35; }
-    if (i === 12) { h = 101.45; }
-    return { o: o, h: h, l: l, c: c, v: vols[i] };
-  });
-  var OPEN = 8, ENTRY = 13, LUNCH = 32, N = bars.length, PDH = 103.1;
-  var orH = Math.max(bars[8].h, bars[9].h, bars[10].h), orL = Math.min(bars[8].l, bars[9].l, bars[10].l);
-  var pmH = -1e9, pmL = 1e9, i;
-  for (i = 0; i < OPEN; i++) { pmH = Math.max(pmH, bars[i].h); pmL = Math.min(pmL, bars[i].l); }
-  var entry = bars[ENTRY].c, stop = (orH + orL) / 2, target = entry + 2 * (entry - stop), exitBar = N - 1;
-  for (i = ENTRY + 1; i < N; i++) { if (bars[i].h >= target) { exitBar = i; break; } }
-  var vw = [], sPV = 0, sV = 0;
-  bars.forEach(function (b, k) {
-    if (k === OPEN) { sPV = 0; sV = 0; }
-    var src = (b.h + b.l + b.c) / 3; sPV += src * b.v; sV += b.v; vw.push(sPV / sV);
-  });
+  var SPRING = 18, LUNCH = 24, N = closes.length;
+  function makeBar(i, prevClose) {
+    var c = closes[i], o = i === 0 ? 100.0 : prevClose, w = wick[i % wick.length];
+    return { o: o, h: Math.max(o, c) + w, l: Math.min(o, c) - w, c: c, v: vols[i] };
+  }
+  function vwapBands(bars) {
+    var sPV = 0, sV = 0, sPV2 = 0, vw = [], lo = [], hi = [];
+    bars.forEach(function (b) {
+      var src = (b.h + b.l + b.c) / 3;
+      sPV += src * b.v; sV += b.v; sPV2 += src * src * b.v;
+      var m = sPV / sV, sd = Math.sqrt(Math.max(sPV2 / sV - m * m, 0));
+      vw.push(m); lo.push(m - 2 * sd); hi.push(m + 2 * sd);
+    });
+    return { vw: vw, lo: lo, hi: hi };
+  }
+  var bars = [], i;
+  for (i = 0; i < N; i++) {
+    if (i === SPRING) {
+      // shake out below the band, close back above it near the high
+      var band = vwapBands(bars).lo[SPRING - 1];
+      bars.push({ o: band - 0.02, h: band + 0.2, l: band - 0.32, c: band + 0.16, v: vols[i] });
+      closes[i] = bars[i].c;
+      continue;
+    }
+    bars.push(makeBar(i, i === 0 ? 100 : bars[i - 1].c));
+  }
+  var vb = vwapBands(bars);
+  var orH = Math.max(bars[0].h, bars[1].h, bars[2].h), orL = Math.min(bars[0].l, bars[1].l, bars[2].l);
+  var entry = bars[SPRING].c, stop = bars[SPRING].l - 0.04, target = entry + 2 * (entry - stop), exitBar = N - 1;
+  for (i = SPRING + 1; i < N; i++) { if (bars[i].h >= target) { exitBar = i; break; } }
 
-  var W = 520, H = 330, X0 = 6, X1 = 430, Y0 = 18, Y1 = 298;
-  var lo = Math.min(pmL, orL) - 0.5, hi = Math.max(target, PDH) + 0.7;
+  var W = 520, H = 330, X0 = 6, X1 = 420, Y0 = 18, Y1 = 298;
+  var lo = Math.min.apply(null, bars.map(function (b) { return b.l; }).concat(vb.lo.slice(3))) - 0.35;
+  var hi = Math.max.apply(null, bars.map(function (b) { return b.h; }).concat([orH])) + 0.6;
   var step = (X1 - X0) / N;
   function x(k) { return X0 + step * (k + 0.5); }
   function y(p) { return Y1 - (p - lo) / (hi - lo) * (Y1 - Y0); }
+  function path(arr, from) {
+    var d = "";
+    for (var k = from; k < arr.length; k++) d += (k === from ? "M" : "L") + x(k).toFixed(1) + " " + y(arr[k]).toFixed(1);
+    return d;
+  }
   var s = [];
-  s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, ui-monospace, monospace" font-size="11">');
+  s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12">');
   s.push('<rect x="' + (X0 + step * LUNCH).toFixed(1) + '" y="' + Y0 + '" width="' + (step * (N - LUNCH)).toFixed(1) + '" height="' + (Y1 - Y0) + '" fill="var(--shade)"/>');
+  s.push('<rect x="' + X0 + '" y="' + y(orH).toFixed(1) + '" width="' + (X1 - X0) + '" height="' + (y(orL) - y(orH)).toFixed(1) + '" fill="var(--or)" fill-opacity="0.08"/>');
   function hl(p, from, to, col, extra) {
     s.push('<line x1="' + (X0 + step * from).toFixed(1) + '" x2="' + (X0 + step * to).toFixed(1) + '" y1="' + y(p).toFixed(1) + '" y2="' + y(p).toFixed(1) + '" stroke="' + col + '" ' + (extra || 'stroke-width="1.2"') + '/>');
   }
-  s.push('<rect x="' + (X0 + step * OPEN).toFixed(1) + '" y="' + y(orH).toFixed(1) + '" width="' + (X1 - X0 - step * OPEN).toFixed(1) + '" height="' + (y(orL) - y(orH)).toFixed(1) + '" fill="var(--or)" fill-opacity="0.12"/>');
-  hl(orH, OPEN, N, "var(--or)", 'stroke-width="1.6"'); hl(orL, OPEN, N, "var(--or)", 'stroke-width="1.6"');
-  hl(PDH, 0, N, "var(--pd)"); hl(pmH, 0, N, "var(--muted)", 'stroke-width="1" stroke-opacity="0.8"'); hl(pmL, 0, N, "var(--muted)", 'stroke-width="1" stroke-opacity="0.8"');
-  // trade lines from entry to exit
-  hl(stop, ENTRY, exitBar + 1, "#ef5350", 'stroke-width="2.4"');
-  hl(target, ENTRY, exitBar + 1, "#26a69a", 'stroke-width="2.4"');
-  hl(entry, ENTRY, exitBar + 1, "var(--muted)", 'stroke-width="1.2" stroke-dasharray="2 3"');
-  // VWAP, colored by which side price is on
-  for (i = OPEN + 1; i < N; i++) {
-    var col = bars[i].c >= vw[i] ? "#26a69a" : "#ef5350";
-    s.push('<line x1="' + x(i - 1).toFixed(1) + '" y1="' + y(vw[i - 1]).toFixed(1) + '" x2="' + x(i).toFixed(1) + '" y2="' + y(vw[i]).toFixed(1) + '" stroke="' + col + '" stroke-width="2.2" stroke-linecap="round"/>');
+  hl(orH, 0, N, "var(--or)", 'stroke-width="1" stroke-opacity="0.7"'); hl(orL, 0, N, "var(--or)", 'stroke-width="1" stroke-opacity="0.7"');
+  s.push('<path d="' + path(vb.hi, 3) + '" fill="none" stroke="var(--accent)" stroke-opacity="0.45" stroke-width="1"/>');
+  s.push('<path d="' + path(vb.lo, 3) + '" fill="none" stroke="var(--accent)" stroke-width="2.2"/>');
+  for (i = 1; i < N; i++) {
+    var col = bars[i].c >= vb.vw[i] ? "#26a69a" : "#ef5350";
+    s.push('<line x1="' + x(i - 1).toFixed(1) + '" y1="' + y(vb.vw[i - 1]).toFixed(1) + '" x2="' + x(i).toFixed(1) + '" y2="' + y(vb.vw[i]).toFixed(1) + '" stroke="' + col + '" stroke-width="2.2" stroke-linecap="round"/>');
   }
+  hl(stop, SPRING, exitBar + 1, "#ef5350", 'stroke-width="2.4"');
+  hl(target, SPRING, exitBar + 1, "#26a69a", 'stroke-width="2.4"');
+  hl(entry, SPRING, exitBar + 1, "var(--muted)", 'stroke-width="1.2" stroke-dasharray="2 3"');
   var cw = Math.max(3, step * 0.56);
   bars.forEach(function (b, k) {
     var up = b.c >= b.o, c = up ? "var(--bull)" : "var(--bear)";
     var top = y(Math.max(b.o, b.c)), bot = y(Math.min(b.o, b.c));
     s.push('<line x1="' + x(k).toFixed(1) + '" x2="' + x(k).toFixed(1) + '" y1="' + y(b.h).toFixed(1) + '" y2="' + y(b.l).toFixed(1) + '" stroke="' + c + '" stroke-width="1"/>');
-    s.push('<rect x="' + (x(k) - cw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + Math.max(1, bot - top).toFixed(1) + '" fill="' + c + '" fill-opacity="' + (k < OPEN ? 0.5 : 1) + '"/>');
+    s.push('<rect x="' + (x(k) - cw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + Math.max(1, bot - top).toFixed(1) + '" fill="' + c + '"/>');
   });
   function tagBox(cx, yTop, text, fill, pointUp) {
-    var w = text.length * 6.9 + 12, hgt = 18, bx = Math.min(Math.max(cx - w / 2, X0), X1 - w);
+    var w = text.length * 7.6 + 12, hgt = 20, bx = Math.min(Math.max(cx - w / 2, X0), X1 - w);
     var by = pointUp ? yTop + 6 : yTop - 6 - hgt;
     s.push('<path d="M' + cx.toFixed(1) + ' ' + (pointUp ? yTop + 1 : yTop - 1).toFixed(1) + ' l-5 ' + (pointUp ? 5 : -5) + ' h10 Z" fill="' + fill + '"/>');
     s.push('<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + hgt + '" rx="3" fill="' + fill + '"/>');
-    s.push('<text x="' + (bx + w / 2).toFixed(1) + '" y="' + (by + 12.5).toFixed(1) + '" text-anchor="middle" fill="#fff" font-weight="600" font-family="Public Sans, -apple-system, sans-serif">' + text + '</text>');
+    s.push('<text x="' + (bx + w / 2).toFixed(1) + '" y="' + (by + 14).toFixed(1) + '" text-anchor="middle" fill="#fff" font-weight="600" font-size="13" font-family="Public Sans, -apple-system, sans-serif">' + text + '</text>');
   }
-  tagBox(x(ENTRY), y(bars[ENTRY].l) + 4, "BUY", "#26a69a", true);
-  tagBox(x(exitBar), y(bars[exitBar].h) - 4, "TARGET ✓ +2.0R", "#26a69a", false);
-  s.push('<text x="' + (x(OPEN) - 2).toFixed(1) + '" y="' + (y(orL) + 14).toFixed(1) + '" fill="var(--or)" font-weight="500">range</text>');
+  tagBox(x(SPRING), y(bars[SPRING].l) + 4, "BUY SPRING", "#26a69a", true);
+  tagBox(x(exitBar), y(bars[exitBar].h) - 4, "TARGET +2.0R", "#26a69a", false);
+  s.push('<text x="' + (x(SPRING) - 9).toFixed(1) + '" y="' + (y(bars[SPRING].l) + 4).toFixed(1) + '" text-anchor="end" fill="var(--accent)" font-weight="500">shakeout</text>');
   s.push('<text x="' + (X0 + step * LUNCH + 4).toFixed(1) + '" y="' + (Y0 + 12) + '" fill="var(--muted)">midday</text>');
-  s.push('<text x="' + (X0 + 2) + '" y="' + (Y0 + 12) + '" fill="var(--muted)">pre-market</text>');
-  [[OPEN, "9:30"], [14, "10:00"], [20, "10:30"], [26, "11:00"], [LUNCH, "11:30"], [38, "12:00"]].forEach(function (t) {
-    s.push('<text x="' + x(t[0]).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" fill="var(--muted)">' + t[1] + '</text>');
+  [[0, "9:30"], [6, "10:00"], [12, "10:30"], [18, "11:00"], [24, "11:30"], [30, "12:00"], [36, "12:30"]].forEach(function (t) {
+    s.push('<text x="' + (t[0] === 0 ? X0 : x(t[0])).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="' + (t[0] === 0 ? 'start' : 'middle') + '" fill="var(--muted)">' + t[1] + '</text>');
   });
   var tags = [
-    { p: target, t: "Target", c: "#26a69a" }, { p: stop, t: "Stop", c: "#ef5350" },
-    { p: vw[N - 1], t: "VWAP", c: "#26a69a" },
-    { p: orH, t: "Range high", c: "var(--or)" }, { p: orL, t: "Range low", c: "var(--or)" },
-    { p: PDH, t: "Prior high", c: "var(--pd)" },
-    { p: pmH, t: "PM high", c: "var(--muted)" }, { p: pmL, t: "PM low", c: "var(--muted)" }
+    { p: vb.vw[N - 1], t: "VWAP", c: "#26a69a" },
+    { p: vb.hi[N - 1], t: "Upper band", c: "var(--accent)" },
+    { p: vb.lo[N - 1], t: "Spring line", c: "var(--accent)" },
+    { p: orH, t: "Range high", c: "var(--or)" }, { p: orL, t: "Range low", c: "var(--or)" }
   ].map(function (g) { g.y = y(g.p); return g; }).sort(function (a, b) { return a.y - b.y; });
-  for (var j = 1; j < tags.length; j++) if (tags[j].y - tags[j - 1].y < 14) tags[j].y = tags[j - 1].y + 14;
+  for (var j = 1; j < tags.length; j++) if (tags[j].y - tags[j - 1].y < 15) tags[j].y = tags[j - 1].y + 15;
   tags.forEach(function (g) {
-    s.push('<text x="' + (X1 + 6) + '" y="' + (g.y + 4).toFixed(1) + '" fill="' + g.c + '" font-weight="500">' + g.t + '</text>');
+    s.push('<text x="' + (X1 + 5) + '" y="' + (g.y + 4).toFixed(1) + '" fill="' + g.c + '" font-weight="500" font-size="12.5">' + g.t + '</text>');
   });
   s.push('</svg>');
   document.getElementById("schematic").innerHTML = s.join("");

@@ -1,69 +1,59 @@
 //@version=6
-// DT Core 3 - opening range breakout with automatic BUY / SELL, stop, target and exit
+// DT Core 4 - VWAP spring day-trading strategy with a market-phase monitor
 //
-// What it does for you (Crabel 1990 opening range breakout, as taught by Aziz 2015):
-//   1. Waits for the opening range: the high and low of the first minutes after the open.
-//      Auto picks 5, 15 or 30 minutes from your chart timeframe.
-//   2. BUY when a candle closes above the range, above VWAP, on strong volume.
-//      SELL (short) when a candle closes below the range, below VWAP, on strong volume.
-//   3. Stop at the middle of the range. Target at 2x the risk.
-//   4. Exit at the stop, the target, or 5 minutes before the close.
-//   At most one BUY and one SELL per day, and none after the cutoff.
+// Main setup, tested on 20 liquid US stocks, 5-minute candles, Jun-Oct 2026:
+//   VWAP SPRING (Wyckoff spring / Raschke "Turtle Soup" / ICT manipulation):
+//   on a stock that is in play (today's volume >= 1.5x normal for this time of day),
+//   a candle trades below the lower VWAP band (2 standard deviations) and closes back
+//   above it, near its high. BUY at the close. Stop under the candle's low.
+//   Target 2x the risk. Average hold about an hour, then look for the next one.
+//   Up to 3 trades per day per stock; stop for the day after losing 2R.
 //
-// This is a strategy: TradingView simulates every trade (see Strategy Tester), and
-// alerts on order fills can send each order to a broker through a webhook.
+// Optional (off by default): opening range breakout on in-play stocks. It was
+// profitable in Jun-Aug but not in Sep-Oct, so it is not on by default.
+//
+// The phase monitor (accumulation, manipulation, expansion, distribution) reads
+// 1-minute volume delta. It is for reading the market; it does not trigger trades.
 // Educational tool. Not financial advice.
-strategy("DT Core", overlay = true, initial_capital = 25000, margin_long = 25, margin_short = 25, process_orders_on_close = true, pyramiding = 0, slippage = 1, max_labels_count = 500)
+strategy("DT Core", overlay = true, initial_capital = 25000, margin_long = 25, margin_short = 25, process_orders_on_close = true, pyramiding = 0, slippage = 2, max_labels_count = 500)
 
 // ----- Inputs -----
 string G1 = "Signals"
-string orChoice   = input.string("Auto", "Opening range length", options = ["Auto", "5 minutes", "15 minutes", "30 minutes", "60 minutes"], group = G1, tooltip = "How long to wait after the open before looking for a breakout. Auto: 5 min on a 1-minute chart, 15 min on 2 to 5 minute charts, 30 min on 10 to 15 minute charts.")
+string selectivity = input.string("Normal", "Selectivity", options = ["Normal", "Strict"], group = G1, tooltip = "Normal: trade when the stock's volume is at least 1.5x normal for this time of day. Strict: 2x. Strict gave fewer trades with a higher average in testing.")
+float  bandMult  = input.float(2.0, "Lower band (std devs below VWAP)", minval = 1.0, maxval = 3.0, step = 0.5, group = G1)
+float  targetR   = input.float(2.0, "Target (x risk)", minval = 1.0, step = 0.5, group = G1)
+int    maxTrades = input.int(3, "Max trades per day", minval = 1, maxval = 10, group = G1)
+float  dayStopR  = input.float(2.0, "Stop for the day after losing (R)", minval = 0.5, step = 0.5, group = G1)
+bool   useORB    = input.bool(false, "Also take opening range breakouts (experimental)", group = G1, tooltip = "Profitable Jun-Aug, not in Sep-Oct testing. Off by default.")
 string openChoice = input.string("Auto", "Market open", options = ["Auto", "Exchange open", "9:30 New York"], group = G1, tooltip = "Auto: the exchange opening bell for stocks, 9:30 New York for futures, crypto and forex.")
-string cutChoice  = input.string("2 hours after open", "Stop new signals", options = ["1 hour after open", "2 hours after open", "4 hours after open", "Never"], group = G1, tooltip = "Breakouts work best early. Open trades still run to their stop, target or the close.")
-string stopChoice = input.string("Middle of range", "Stop placement", options = ["Middle of range", "Other side of range"], group = G1)
-float  targetR    = input.float(2.0, "Target (x risk)", minval = 0.5, step = 0.5, group = G1, tooltip = "2 means the target is twice as far from entry as the stop.")
-bool   useVolF    = input.bool(true, "Only on strong volume (1.5x average)", group = G1)
-bool   useVwapF   = input.bool(true, "Only on the right side of VWAP", group = G1)
-bool   allowSell  = input.bool(true, "Take SELL (short) signals", group = G1)
 
 string G2 = "Show on chart"
-bool   showVwap  = input.bool(true, "VWAP (green = price above, red = below)", group = G2)
+bool   showVwap  = input.bool(true, "VWAP and bands", group = G2)
 bool   showOR    = input.bool(true, "Opening range box", group = G2)
 bool   showPD    = input.bool(true, "Prior day high and low", group = G2)
-bool   showPM    = input.bool(true, "Pre-market high and low (needs ETH on)", group = G2)
+bool   showMarks = input.bool(true, "Phase markers (springs and upthrusts that are not trades)", group = G2)
 bool   showLunch = input.bool(true, "Shade midday (2 to 4 hours after open)", group = G2)
-bool   showTags  = input.bool(true, "Price tags at the right edge", group = G2)
 bool   showPanel = input.bool(true, "Status panel", group = G2)
 string panelPos  = input.string("Top right", "Panel position", options = ["Top right", "Top left", "Bottom right", "Bottom left"], group = G2)
 string panelSize = input.string("Small", "Panel text size", options = ["Tiny", "Small", "Normal"], group = G2)
 
-string G3 = "Risk"
-float acct    = input.float(25000, "Account size ($)", minval = 0, group = G3)
-float riskPct = input.float(0.5, "Risk per trade (%)", minval = 0.05, maxval = 5, step = 0.05, group = G3, tooltip = "What you lose if the stop is hit. 0.5 to 1% is standard (Tharp, Elder).")
+string G3 = "Risk and alerts"
+float acct       = input.float(25000, "Account size ($)", minval = 0, group = G3)
+float riskPct    = input.float(0.5, "Risk per trade (%)", minval = 0.05, maxval = 5, step = 0.05, group = G3, tooltip = "What you lose if the stop is hit. 0.5 to 1% is standard (Tharp, Elder).")
+bool  phaseAlert = input.bool(false, "Phone alert when the phase changes", group = G3)
 
 color cBuy  = #26a69a
 color cSell = #ef5350
 color cVwap = #f5a623
 color cOR   = #29b6f6
 color cPD   = #ffca28
-color cPM   = #b0bec5
+color cMute = #9e9e9e
 
 // ----- Timing: everything is measured from the market open -----
-bool  intra = timeframe.isintraday
-float tfMin = timeframe.in_seconds() / 60.0
-int orPick = switch orChoice
-    "5 minutes"  => 5
-    "15 minutes" => 15
-    "30 minutes" => 30
-    "60 minutes" => 60
-    => tfMin <= 1 ? 5 : tfMin <= 5 ? 15 : tfMin <= 15 ? 30 : 60
-int orMin = math.max(orPick, math.ceil(tfMin))
-int cutMin = switch cutChoice
-    "1 hour after open"  => 60
-    "4 hours after open" => 240
-    "Never"              => 100000
-    => 120
-int MS_MIN = 60000
+bool  intra   = timeframe.isintraday
+float tfMin   = timeframe.in_seconds() / 60.0
+int   MS_MIN  = 60000
+float minRvol = selectivity == "Strict" ? 2.0 : 1.5
 
 bool   nyTypes = syminfo.type == "futures" or syminfo.type == "crypto" or syminfo.type == "forex" or syminfo.type == "cfd"
 bool   useNY   = openChoice == "9:30 New York" or (openChoice == "Auto" and nyTypes)
@@ -86,15 +76,15 @@ if na(openT)
         openT := time
 
 bool hasOpen   = not na(openT)
-int  orEndT    = hasOpen ? openT + orMin * MS_MIN : na
-int  cutT      = hasOpen ? openT + cutMin * MS_MIN : na
 bool isOpenBar = hasOpen and time == openT
-bool inOR      = hasOpen and time < orEndT
-bool beforeCut = hasOpen and time < cutT
+bool inOR      = hasOpen and time < openT + 15 * MS_MIN
+bool afterOR   = hasOpen and time >= openT + 15 * MS_MIN
+bool entryWin  = afterOR and time < openT + 330 * MS_MIN
+bool orbWin    = afterOR and time < openT + 120 * MS_MIN
 bool inLunch   = hasOpen and time >= openT + 120 * MS_MIN and time < openT + 240 * MS_MIN
 bool eodBar    = hasOpen and time_close >= openT + 385 * MS_MIN
 
-// ----- Opening range -----
+// ----- Opening range (first 15 minutes) -----
 var float orH = na
 var float orL = na
 if newDay
@@ -103,47 +93,41 @@ if newDay
 if inOR
     orH := na(orH) ? high : math.max(orH, high)
     orL := na(orL) ? low : math.min(orL, low)
-bool  orReady = hasOpen and time >= orEndT and not na(orH)
-float orMid   = (orH + orL) / 2
-
-// ----- Pre-market (stocks, ETH on) or overnight (futures, crypto) high and low -----
-var float preH = na
-var float preL = na
-if newDay
-    preH := na
-    preL := na
-if not hasOpen
-    preH := na(preH) ? high : math.max(preH, high)
-    preL := na(preL) ? low : math.min(preL, low)
-bool   stockLike = syminfo.type == "stock" or syminfo.type == "fund" or syminfo.type == "dr"
-string preTag    = stockLike ? "PM" : "ON"
+float orMid = (orH + orL) / 2
 
 // ----- Prior day high and low (no repaint) -----
 [pdh, pdl] = request.security(syminfo.tickerid, "D", [high[1], low[1]], lookahead = barmerge.lookahead_on)
 
-// ----- VWAP from the open (pre-open bars get their own) -----
+// ----- VWAP and volume-weighted bands from the open -----
 float vol = nz(volume)
-var float sPV = 0.0
-var float sV  = 0.0
+var float sPV  = 0.0
+var float sV   = 0.0
+var float sPV2 = 0.0
 bool vwapReset = newDay or isOpenBar
 if vwapReset
-    sPV := 0.0
-    sV  := 0.0
-sPV += hlc3 * vol
-sV  += vol
+    sPV  := 0.0
+    sV   := 0.0
+    sPV2 := 0.0
+sPV  += hlc3 * vol
+sV   += vol
+sPV2 += hlc3 * hlc3 * vol
 float vwapVal = sV > 0 ? sPV / sV : na
+float vsd     = sV > 0 ? math.sqrt(math.max(sPV2 / sV - vwapVal * vwapVal, 0.0)) : na
+float lowBand = vwapVal - bandMult * vsd
+float upBand  = vwapVal + bandMult * vsd
 
-float volAvg = ta.sma(vol, 20)
+float atr    = ta.atr(14)
+float ema9   = ta.ema(close, 9)
+float ema20  = ta.ema(close, 20)
 float totVol = ta.cum(vol)
-bool  volOK  = not useVolF or na(volAvg) or volAvg == 0 or vol >= 1.5 * volAvg
 
-// ----- Volume versus normal for this time of day (last 10 sessions) -----
+// ----- In play: volume since the open vs the same time on the last 10 sessions -----
 type VolHist
     array<float> vals
 
 var map<int, VolHist> volByTime = map.new<int, VolHist>()
 var float cumVol = 0.0
-if newDay
+if vwapReset
     cumVol := 0.0
 cumVol += vol
 bool  rvolOn = intra and timeframe.in_seconds() >= 60
@@ -151,7 +135,7 @@ int   todKey = hour * 60 + minute
 float avgCum = na
 if rvolOn and map.contains(volByTime, todKey)
     VolHist h = map.get(volByTime, todKey)
-    if array.size(h.vals) > 0
+    if array.size(h.vals) >= 5
         avgCum := array.avg(h.vals)
 float rvol = not na(avgCum) and avgCum > 0 ? cumVol / avgCum : na
 if rvolOn and barstate.isconfirmed
@@ -161,6 +145,64 @@ if rvolOn and barstate.isconfirmed
     array.push(hh.vals, cumVol)
     if array.size(hh.vals) > 10
         array.shift(hh.vals)
+bool inPlay = not na(rvol) and rvol >= minRvol
+
+// ----- Volume delta from 1-minute candles (buyers minus sellers) -----
+[ltfO, ltfC, ltfV] = request.security_lower_tf(syminfo.tickerid, "1", [open, close, volume], ignore_invalid_timeframe = true)
+float barDelta = 0.0
+for [i, vv] in ltfV
+    float oo = array.get(ltfO, i)
+    float cc = array.get(ltfC, i)
+    barDelta += cc > oo ? vv : cc < oo ? -vv : 0.0
+if array.size(ltfV) == 0
+    barDelta := close > open ? vol : close < open ? -vol : 0.0
+var float cvd = 0.0
+if vwapReset
+    cvd := 0.0
+cvd += barDelta
+bool cvdUp   = cvd > cvd[6]
+bool cvdDown = cvd < cvd[6]
+
+var float dayHigh = na
+if vwapReset
+    dayHigh := high
+dayHigh := math.max(nz(dayHigh, high), high)
+
+// ----- Spring and upthrust detection -----
+bool bullBar    = close > open and (close - low) >= 0.6 * (high - low)
+bool bearBar    = close < open and (high - close) >= 0.6 * (high - low)
+bool springBand = not na(lowBand) and low < lowBand - 0.05 * atr and close > lowBand
+bool springOR   = afterOR and not na(orL) and low < orL - 0.05 * atr and close > orL
+bool springPD   = not na(pdl) and low < pdl - 0.05 * atr and close > pdl
+bool upthrust   = not na(upBand) and high > upBand + 0.05 * atr and close < upBand and bearBar
+bool anySpring  = (springBand or springOR or springPD) and bullBar
+
+// ----- Market phase (accumulation, manipulation, expansion, distribution) -----
+int barsSinceSpring = ta.barssince(anySpring)
+int barsSinceUp     = ta.barssince(upthrust)
+string phase    = "-"
+color  phaseCol = cMute
+if not na(vwapVal) and hasOpen
+    if not na(barsSinceSpring) and barsSinceSpring <= 3
+        phase    := "MANIPULATION - spring below support (bullish)"
+        phaseCol := cBuy
+    else if not na(barsSinceUp) and barsSinceUp <= 3
+        phase    := "MANIPULATION - upthrust above resistance (bearish)"
+        phaseCol := cSell
+    else if close > vwapVal and high >= dayHigh - 0.5 * atr and cvdDown
+        phase    := "DISTRIBUTION - selling into highs"
+        phaseCol := cSell
+    else if close > vwapVal + vsd and ema9 > ema20
+        phase    := "EXPANSION UP - trending"
+        phaseCol := cBuy
+    else if close < vwapVal - vsd and ema9 < ema20
+        phase    := "EXPANSION DOWN - trending"
+        phaseCol := cSell
+    else if cvdUp
+        phase    := "ACCUMULATION - buyers absorbing"
+        phaseCol := cBuy
+    else
+        phase    := "BALANCE - no edge"
 
 // ----- Helpers -----
 float  riskUsd = acct * riskPct / 100
@@ -188,33 +230,35 @@ clock(int t) =>
     str.tostring(h12) + ":" + (mm < 10 ? "0" : "") + str.tostring(mm) + (hh24 < 12 ? " AM" : " PM")
 
 // Webhook order messages (read by the moomoo bridge; TradersPost-compatible)
-jsonEntry(string act, float q, float tgt, float stp) =>
-    '{"ticker":"' + syminfo.ticker + '","action":"' + act + '","quantity":' + qtyStr(q) + ',"price":' + px(close) + ',"takeProfit":{"limitPrice":' + px(tgt) + '},"stopLoss":{"type":"stop","stopPrice":' + px(stp) + '}}'
+jsonEntry(float q, float tgt, float stp) =>
+    '{"ticker":"' + syminfo.ticker + '","action":"buy","quantity":' + qtyStr(q) + ',"price":' + px(close) + ',"takeProfit":{"limitPrice":' + px(tgt) + '},"stopLoss":{"type":"stop","stopPrice":' + px(stp) + '}}'
 
 jsonExit() =>
     '{"ticker":"' + syminfo.ticker + '","action":"exit","price":' + px(close) + '}'
 
 // ----- Trade engine -----
-bool xUp = ta.crossover(close, orH)
-bool xDn = ta.crossunder(close, orL)
+bool xUpOR = ta.crossover(close, orH)
 
-var bool   buyUsed    = false
-var bool   sellUsed   = false
-var int    dirNow     = 0
-var float  entryPx    = na
-var float  stopPx     = na
-var float  tgtPx      = na
-var float  riskPx     = na
-var float  qtyNow     = na
-var int    seenClosed = 0
-var int    nDays      = 0
-var float  sumR       = 0.0
-var string lastResult = ""
+var int    tradesToday = 0
+var float  dayR        = 0.0
+var bool   orbUsed     = false
+var bool   inTrade     = false
+var float  entryPx     = na
+var float  stopPx      = na
+var float  tgtPx       = na
+var float  riskPx      = na
+var float  qtyNow      = na
+var string setupNow    = ""
+var int    seenClosed  = 0
+var int    nDays       = 0
+var float  sumR        = 0.0
+var string lastResult  = ""
 
 if newDay
-    buyUsed  := false
-    sellUsed := false
-    nDays    += 1
+    tradesToday := 0
+    dayR        := 0.0
+    orbUsed     := false
+    nDays       += 1
 
 string msg       = ""
 bool   exitedNow = false
@@ -224,101 +268,84 @@ if strategy.closedtrades > seenClosed
     int   k  = strategy.closedtrades - 1
     float ep = strategy.closedtrades.entry_price(k)
     float xp = strategy.closedtrades.exit_price(k)
-    int   d  = strategy.closedtrades.size(k) > 0 ? 1 : -1
-    float r  = riskPx > 0 ? (xp - ep) * d / riskPx : 0.0
-    bool  hitT = d == 1 ? xp >= tgtPx - 3 * syminfo.mintick : xp <= tgtPx + 3 * syminfo.mintick
-    bool  hitS = d == 1 ? xp <= stopPx + 3 * syminfo.mintick : xp >= stopPx - 3 * syminfo.mintick
+    float r  = riskPx > 0 ? (xp - ep) / riskPx : 0.0
+    bool  hitT = xp >= tgtPx - 3 * syminfo.mintick
+    bool  hitS = xp <= stopPx + 3 * syminfo.mintick
     string head = hitT ? "TARGET" : hitS ? "STOP" : "EXIT"
     string rTxt = (r >= 0 ? "+" : "") + str.tostring(r, "0.0") + "R"
     sumR += r
-    label.new(strategy.closedtrades.exit_bar_index(k), 0.0, head + " " + rTxt, yloc = d == 1 ? yloc.abovebar : yloc.belowbar, style = d == 1 ? label.style_label_down : label.style_label_up, color = r > 0 ? cBuy : r < 0 ? cSell : color.gray, textcolor = color.white, size = size.small)
-    lastResult := (d == 1 ? "BUY " : "SELL ") + head + " " + rTxt
-    msg := "EXIT " + syminfo.ticker + " @ " + px(xp) + " - " + head + " " + rTxt
+    dayR += r
+    label.new(strategy.closedtrades.exit_bar_index(k), 0.0, head + " " + rTxt, yloc = yloc.abovebar, style = label.style_label_down, color = r > 0 ? cBuy : r < 0 ? cSell : color.gray, textcolor = color.white, size = size.small)
+    lastResult := setupNow + " " + head + " " + rTxt
+    msg := "EXIT " + syminfo.ticker + " @ " + px(xp) + " - " + head + " " + rTxt + " - today " + str.tostring(dayR, "0.0") + "R"
     seenClosed := strategy.closedtrades
-    dirNow := 0
+    inTrade := false
     exitedNow := true
 
 // New entries, filled at the close of the signal candle
-bool flat     = strategy.position_size == 0 and dirNow == 0
-bool canTrade = intra and orReady and beforeCut and not eodBar and flat and not exitedNow
-bool vwapUpOK = not useVwapF or na(vwapVal) or close > vwapVal
-bool vwapDnOK = not useVwapF or na(vwapVal) or close < vwapVal
-bool buySig   = canTrade and not buyUsed and xUp and volOK and vwapUpOK
-bool sellSig  = canTrade and allowSell and not sellUsed and xDn and volOK and vwapDnOK
+bool  dayOpen   = tradesToday < maxTrades and dayR > -dayStopR
+bool  flat      = strategy.position_size == 0 and not inTrade
+bool  canTrade  = intra and dayOpen and flat and not exitedNow and not eodBar
+float springStp = low - 0.1 * atr
+float springRsk = close - springStp
+bool  springSig = canTrade and entryWin and springBand and bullBar and inPlay and springRsk >= 0.3 * atr and springRsk <= 2.5 * atr
+float orbStp    = orMid
+float orbRsk    = close - orbStp
+bool  orbSig    = canTrade and useORB and not orbUsed and orbWin and xUpOR and not na(vwapVal) and close > vwapVal and inPlay and orbRsk >= 0.3 * atr and orbRsk <= 2.5 * atr
+bool  buySig    = springSig or orbSig
 
-if buySig or sellSig
-    int   d   = buySig ? 1 : -1
-    float stp = stopChoice == "Middle of range" ? orMid : d == 1 ? orL : orH
-    float rsk = math.abs(close - stp)
-    float tgt = close + d * targetR * rsk
+if buySig
+    float stp = springSig ? springStp : orbStp
+    float rsk = close - stp
+    float tgt = close + targetR * rsk
     float q   = qtyFor(rsk)
-    dirNow  := d
-    entryPx := close
-    stopPx  := stp
-    tgtPx   := tgt
-    riskPx  := rsk
-    qtyNow  := q
-    if buySig
-        buyUsed := true
-        strategy.entry("BUY", strategy.long, qty = q, alert_message = jsonEntry("buy", q, tgt, stp))
-        strategy.exit("BUY exit", from_entry = "BUY", stop = stp, limit = tgt, alert_message = jsonExit())
-    else
-        sellUsed := true
-        strategy.entry("SELL", strategy.short, qty = q, alert_message = jsonEntry("sell", q, tgt, stp))
-        strategy.exit("SELL exit", from_entry = "SELL", stop = stp, limit = tgt, alert_message = jsonExit())
-    label.new(bar_index, 0.0, d == 1 ? "BUY" : "SELL", yloc = d == 1 ? yloc.belowbar : yloc.abovebar, style = d == 1 ? label.style_label_up : label.style_label_down, color = d == 1 ? cBuy : cSell, textcolor = color.white, size = size.normal)
-    msg := (d == 1 ? "BUY " : "SELL ") + syminfo.ticker + " @ " + px(close) + " - stop " + px(stp) + " - target " + px(tgt) + " - " + qtyStr(q) + unit + " (risk $" + str.tostring(riskUsd, "#,##0") + ")"
+    inTrade  := true
+    entryPx  := close
+    stopPx   := stp
+    tgtPx    := tgt
+    riskPx   := rsk
+    qtyNow   := q
+    setupNow := springSig ? "SPRING" : "ORB"
+    tradesToday += 1
+    if orbSig and not springSig
+        orbUsed := true
+    strategy.entry("BUY", strategy.long, qty = q, comment = setupNow, alert_message = jsonEntry(q, tgt, stp))
+    strategy.exit("BUY exit", from_entry = "BUY", stop = stp, limit = tgt, alert_message = jsonExit())
+    label.new(bar_index, 0.0, "BUY\n" + setupNow, yloc = yloc.belowbar, style = label.style_label_up, color = cBuy, textcolor = color.white, size = size.normal)
+    msg := "BUY " + syminfo.ticker + " (" + setupNow + ") @ " + px(close) + " - stop " + px(stp) + " - target " + px(tgt) + " - " + qtyStr(q) + unit + " (risk $" + str.tostring(riskUsd, "#,##0") + ")"
 
 // Flat before the close
 if eodBar and strategy.position_size != 0
     strategy.close_all(comment = "CLOSE", alert_message = jsonExit())
 
 // Phone notifications in plain words
+string phaseShort   = str.substring(phase, 0, str.pos(phase + " ", " "))
+bool   phaseChanged = phaseAlert and barstate.isconfirmed and phaseShort != phaseShort[1] and phaseShort != "-"
+if msg == "" and phaseChanged
+    msg := syminfo.ticker + " phase: " + phase
 if msg != ""
     alert(msg, alert.freq_once_per_bar_close)
 
-// ----- Lines and shading -----
-bool tradeOn = dirNow != 0 or exitedNow
+// ----- Lines, markers and shading -----
+bool tradeOn = inTrade or exitedNow
 plot(tradeOn ? stopPx : na, "Stop", cSell, 2, plot.style_linebr)
 plot(tradeOn ? tgtPx : na, "Target", cBuy, 2, plot.style_linebr)
 plot(tradeOn ? entryPx : na, "Entry", color.gray, 1, plot.style_linebr)
 
 bool vwOn = intra and showVwap and not vwapReset
 plot(vwOn ? vwapVal : na, "VWAP", close >= vwapVal ? cBuy : cSell, 2, plot.style_linebr)
+plot(vwOn ? upBand : na, "Upper band", color.new(cVwap, 50), 1, plot.style_linebr)
+plot(vwOn ? lowBand : na, "Lower band (spring line)", cVwap, 2, plot.style_linebr)
 
-pOH = plot(intra and showOR ? orH : na, "Opening range high", cOR, 2, plot.style_linebr)
-pOL = plot(intra and showOR ? orL : na, "Opening range low", cOR, 2, plot.style_linebr)
-fill(pOH, pOL, color.new(cOR, 88), "Opening range")
-
+pOH = plot(intra and showOR and afterOR ? orH : na, "Opening range high", cOR, 1, plot.style_linebr)
+pOL = plot(intra and showOR and afterOR ? orL : na, "Opening range low", cOR, 1, plot.style_linebr)
+fill(pOH, pOL, color.new(cOR, 90), "Opening range")
 plot(intra and showPD and not newDay ? pdh : na, "Prior day high", cPD, 1, plot.style_linebr)
 plot(intra and showPD and not newDay ? pdl : na, "Prior day low", cPD, 1, plot.style_linebr)
-plot(intra and showPM ? preH : na, "Pre-market high", cPM, 1, plot.style_linebr)
-plot(intra and showPM ? preL : na, "Pre-market low", cPM, 1, plot.style_linebr)
 
-bgcolor(intra and showLunch and inLunch ? color.new(color.gray, 90) : na, title = "Midday")
-
-// ----- Price tags at the right edge -----
-addTag(array<label> arr, float y, string name, color col) =>
-    if not na(y)
-        array.push(arr, label.new(bar_index + 2, y, name + " " + str.tostring(y, format.mintick), style = label.style_label_left, color = color.new(col, 100), textcolor = col, size = size.small))
-
-var array<label> tags = array.new<label>()
-if barstate.islast
-    for l in tags
-        label.delete(l)
-    array.clear(tags)
-    if intra and showTags
-        if showVwap
-            addTag(tags, vwapVal, "VWAP", cVwap)
-        if showOR and orReady
-            addTag(tags, orH, "Range high", cOR)
-            addTag(tags, orL, "Range low", cOR)
-        if showPD
-            addTag(tags, pdh, "Prior high", cPD)
-            addTag(tags, pdl, "Prior low", cPD)
-        if showPM
-            addTag(tags, preH, preTag + " high", cPM)
-            addTag(tags, preL, preTag + " low", cPM)
+plotshape(intra and showMarks and anySpring and not buySig, "Spring (not a trade)", shape.diamond, location.belowbar, color.new(cMute, 20), size = size.tiny)
+plotshape(intra and showMarks and upthrust, "Upthrust (warning)", shape.diamond, location.abovebar, color.new(cSell, 20), size = size.tiny)
+bgcolor(intra and showLunch and inLunch ? color.new(color.gray, 92) : na, title = "Midday")
 
 // ----- Status panel -----
 posOf(string p) =>
@@ -333,7 +360,7 @@ string tSize = switch panelSize
     "Normal" => size.normal
     => size.small
 
-var table panel = table.new(posOf(panelPos), 2, 7, bgcolor = color.new(chart.bg_color, 6), border_color = color.new(chart.fg_color, 85), border_width = 1)
+var table panel = table.new(posOf(panelPos), 2, 9, bgcolor = color.new(chart.bg_color, 6), border_color = color.new(chart.fg_color, 85), border_width = 1)
 
 row(int r, string k, string v, color vc) =>
     table.cell(panel, 0, r, k, text_color = color.new(chart.fg_color, 35), text_size = tSize, text_halign = text.align_left)
@@ -341,52 +368,50 @@ row(int r, string k, string v, color vc) =>
 
 if barstate.islast and showPanel
     color fg = chart.fg_color
-    row(0, "DT Core", syminfo.ticker + " - " + timeframe.period + (tfMin >= 1 ? " min" : ""), fg)
+    row(0, "DT Core 4", syminfo.ticker + " - " + timeframe.period + (tfMin >= 1 ? " min" : ""), fg)
     if not intra
-        row(1, "Status", "Switch to a 1 to 15 minute chart", cSell)
+        row(1, "Status", "Switch to a 5-minute chart", cSell)
     else
         bool up = not na(vwapVal) and close > vwapVal
-        bool dn = not na(vwapVal) and close < vwapVal
-        row(1, "Trend", up ? "UP - price above VWAP" : dn ? "DOWN - price below VWAP" : "-", up ? cBuy : dn ? cSell : fg)
+        row(1, "Trend", na(vwapVal) ? "-" : up ? "above VWAP" : "below VWAP", up ? cBuy : cSell)
+        row(2, "Phase", phase, phaseCol)
+        string rvTxt = na(rvol) ? (totVol == 0 ? "no volume data" : "building history (5 days)") : str.tostring(rvol, "0.0") + "x normal - " + (inPlay ? "IN PLAY" : "not in play, no trades")
+        row(3, "In play", rvTxt, inPlay ? cBuy : fg)
 
         string st   = ""
         string plan = ""
         color  stc  = fg
-        bool doneToday = buyUsed and (sellUsed or not allowSell)
-        if dirNow == 1
-            st   := "IN A BUY TRADE"
+        if inTrade
+            st   := "IN A BUY TRADE (" + setupNow + ")"
             stc  := cBuy
-            plan := "entry " + px(entryPx) + " - stop " + px(stopPx) + " - target " + px(tgtPx)
-        else if dirNow == -1
-            st   := "IN A SELL TRADE"
-            stc  := cSell
             plan := "entry " + px(entryPx) + " - stop " + px(stopPx) + " - target " + px(tgtPx)
         else if not hasOpen
             st   := "Waiting for the open"
-            plan := useNY ? "Opens 9:30 AM New York" : "Range starts at the opening bell"
-        else if not orReady
+            plan := "Pick in-play stocks before 9:30"
+        else if not afterOR
             st   := "Opening range forming"
             stc  := cVwap
-            plan := "Done at " + clock(orEndT) + " - so far " + px(orH) + " to " + px(orL)
-        else if beforeCut and not doneToday
-            st   := "Watching until " + clock(cutT)
-            stc  := cVwap
-            string buyPart  = buyUsed ? "" : "BUY above " + px(orH)
-            string sellPart = allowSell and not sellUsed ? "SELL below " + px(orL) : ""
-            plan := buyPart + (buyPart != "" and sellPart != "" ? " - " : "") + sellPart
+            plan := "Signals start at " + clock(openT + 15 * MS_MIN)
+        else if not dayOpen
+            st   := "Done for today"
+            plan := tradesToday >= maxTrades ? "Max trades reached" : "Daily loss limit reached"
+        else if not entryWin
+            st   := "No new entries after " + clock(openT + 330 * MS_MIN)
+            plan := lastResult == "" ? "-" : "Last: " + lastResult
+        else if not inPlay
+            st   := "Watching - stock not in play"
+            plan := "Needs " + str.tostring(minRvol, "0.0") + "x normal volume"
         else
-            st   := "No new signals today"
-            plan := lastResult == "" ? "Next chance: next session's open" : "Last: " + lastResult
-        row(2, "Status", st, stc)
-        row(3, "Plan", plan, fg)
+            st   := "Watching for a spring"
+            stc  := cVwap
+            plan := "BUY if a candle dips below " + px(lowBand) + " and closes back above it"
+        row(4, "Status", st, stc)
+        row(5, "Plan", plan, fg)
 
-        float halfRange = stopChoice == "Middle of range" ? (orH - orL) / 2 : orH - orL
-        float qtyIdea   = dirNow != 0 ? qtyNow : not na(halfRange) and halfRange > 0 ? qtyFor(halfRange) : na
-        row(4, "Size", na(qtyIdea) ? "-" : (dirNow == 0 ? "about " : "") + qtyStr(qtyIdea) + unit + " - risk $" + str.tostring(riskUsd, "#,##0"), fg)
-
-        string volTxt = na(rvol) ? (totVol == 0 ? "no volume data" : "building history") : str.tostring(rvol, "0.0") + "x normal" + (rvol >= 2 ? " - in play" : rvol < 1 ? " - quiet" : "")
-        row(5, "Volume", volTxt, not na(rvol) and rvol >= 2 ? cBuy : fg)
+        float qtyIdea = inTrade ? qtyNow : qtyFor(math.max(0.3 * atr, 0.000001))
+        row(6, "Size", na(qtyIdea) ? "-" : (inTrade ? "" : "up to ") + qtyStr(qtyIdea) + unit + " - risk $" + str.tostring(riskUsd, "#,##0"), fg)
+        row(7, "Today", str.tostring(tradesToday) + " of " + str.tostring(maxTrades) + " trades - " + (dayR >= 0 ? "+" : "") + str.tostring(dayR, "0.0") + "R", dayR > 0 ? cBuy : dayR < 0 ? cSell : fg)
 
         int    nT    = strategy.closedtrades
         string score = nT == 0 ? "no trades yet on this chart" : str.tostring(nDays) + " days - " + str.tostring(nT) + " trades - " + str.tostring(strategy.wintrades * 100.0 / nT, "0") + "% wins - " + (sumR >= 0 ? "+" : "") + str.tostring(sumR, "0.0") + "R"
-        row(6, "Results", score, sumR > 0 ? cBuy : sumR < 0 ? cSell : fg)
+        row(8, "Results", score, sumR > 0 ? cBuy : sumR < 0 ? cSell : fg)

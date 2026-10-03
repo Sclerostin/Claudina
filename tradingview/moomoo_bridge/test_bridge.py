@@ -91,6 +91,12 @@ class BridgeLogic(unittest.TestCase):
                 with self.assertRaisesRegex(bridge.OrderError, why):
                     self.run_msg(msg, cfg)
 
+    def test_several_trades_in_one_day(self):
+        b = bridge.Bridge(CFG, bridge.DryRunBroker())
+        for _ in range(3):                      # DT Core 4 re-enters after each exit
+            self.assertIn("entered BUY", b.handle(entry()))
+            self.assertIn("closed 100", b.handle({"ticker": "NVDA", "action": "exit", "price": 104.5}))
+
     def test_dry_run_broker_tracks_a_round_trip(self):
         b = bridge.Bridge(CFG, bridge.DryRunBroker())
         self.assertIn("entered BUY", b.handle(entry()))

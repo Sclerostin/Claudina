@@ -202,330 +202,282 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
   .stack .set { white-space: normal; }
 }
 </style>
+<style>
+/* Additions for the simplified guide */
+.qa { display: grid; gap: 14px; }
+.q { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 16px; display: grid; gap: 10px; }
+.q > h3 { font-size: 1.3rem; }
+.q > h3::before { content: "Q  "; color: var(--accent); }
+.q p { max-width: none; }
+.q ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 0.94rem; }
+.path { font-family: var(--font-mono); font-size: 0.84rem; background: var(--accent-soft); padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+.key { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
+.key li { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.key li > span:last-child { min-width: 0; font-size: 0.94rem; }
+.sw { display: inline-flex; align-items: center; justify-content: center; font: 600 0.72rem var(--font-body); letter-spacing: 0.03em; border-radius: 4px; padding: 4px 8px; color: #fff; white-space: nowrap; }
+.sw.buy { background: #26a69a; } .sw.sell { background: #ef5350; } .sw.grey { background: #787b86; }
+.ln { display: inline-block; width: 64px; height: 0; border-top: 3px solid; margin-top: 10px; }
+.ln.stop { border-color: #ef5350; } .ln.tgt { border-color: #26a69a; } .ln.entry { border-top: 2px dotted var(--muted); }
+.ln.or { border-color: var(--or); } .ln.pd { border-color: var(--pd); } .ln.pm { border-color: var(--muted); border-top-width: 2px; }
+.ln.vw { border-image: linear-gradient(90deg, #ef5350 50%, #26a69a 50%) 1; }
+.box { display: inline-block; width: 64px; height: 18px; border-radius: 3px; }
+.box.or { background: color-mix(in srgb, var(--or) 20%, transparent); border-top: 2px solid var(--or); border-bottom: 2px solid var(--or); }
+.box.mid { background: var(--shade); border: 1px solid var(--rule); }
+.mock { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; font-family: var(--font-mono); font-size: 0.8rem; }
+.mock .mock-row { display: grid; grid-template-columns: 84px 1fr; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--rule); }
+.mock .mock-row:last-child { border-bottom: 0; }
+.mock .k { color: var(--muted); }
+.mock .v { min-width: 0; overflow-wrap: anywhere; }
+.mock .up { color: var(--bull); font-weight: 500; }
+.example { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.84rem; }
+.flow span { border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 3px 10px; }
+.flow i { color: var(--muted); font-style: normal; }
+.levels { display: grid; gap: 12px; }
+.level { display: grid; grid-template-columns: 36px 1fr; gap: 12px; }
+.level b.n { font-family: var(--font-display); font-size: 1.6rem; color: var(--accent); line-height: 1; }
+.level div { min-width: 0; display: grid; gap: 4px; }
+.msg { font-family: var(--font-mono); font-size: 0.8rem; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre; }
+details.extra { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+details.extra > summary { cursor: pointer; padding: 14px 16px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details.extra > summary::-webkit-details-marker { display: none; }
+details.extra > summary::after { content: "Show"; font: 500 0.78rem var(--font-mono); color: var(--accent); }
+details.extra[open] > summary::after { content: "Hide"; }
+details.extra .script { border: 0; border-top: 1px solid var(--rule); border-radius: 0; }
+</style>
 
 <div class="wrap">
   <header class="hero">
     <div class="eyebrow">Pine Script v6 · TradingView for iPhone and iPad</div>
     <h1>DT Core Day-Trading Kit</h1>
-    <p class="lede">Three indicators you paste into the Pine Editor, the chart settings to pair with them, alert recipes, and a six-setup playbook. Every default comes from the day-trading literature: Crabel's opening range, Shannon's VWAP, Carter's squeeze, Tharp's position sizing.</p>
+    <p class="lede">DT Core prints BUY and SELL on your chart, draws the stop and target for each trade, closes it for you, and keeps score. Version 2 needs almost no chart settings.</p>
     <figure>
-      <div class="chart-box" id="schematic" role="img" aria-label="Schematic five-minute chart: pre-market range, a fifteen-minute opening range box, an opening range breakout marker, price trending above VWAP and its bands, a break of the prior day high, and shaded midday chop."></div>
-      <div class="legend">
-        <span><i style="background:var(--accent)"></i>VWAP ±1σ / ±2σ</span>
-        <span><i style="background:var(--or)"></i>Opening range</span>
-        <span><i style="background:var(--pd)"></i>Prior day high</span>
-        <span><i style="background:var(--muted)"></i>Pre-open high / low</span>
-        <span><i style="background:var(--ema)"></i>9 EMA</span>
-        <span><i style="background:var(--shade);border:1px solid var(--rule);height:10px"></i>Midday chop</span>
-      </div>
-      <figcaption>What DT Core draws on a 5-minute chart with its defaults. Illustrative data.</figcaption>
+      <div class="chart-box" id="schematic" role="img" aria-label="Schematic five-minute chart: an opening range box forms after 9:30, a candle closes above it and a green BUY label appears, red stop and green target lines extend to the right, and a TARGET label marks a two-R win later in the morning."></div>
+      <figcaption>A typical BUY on a 5-minute chart: range forms, breakout closes above it, the target is hit two hours later. Illustrative data.</figcaption>
     </figure>
   </header>
 
   <nav class="nav" aria-label="Sections">
     <ul>
-      <li><a href="#start">Start</a></li>
-      <li><a href="#scripts">Scripts</a></li>
-      <li><a href="#settings">Chart settings</a></li>
-      <li><a href="#timeframes">Timeframes</a></li>
-      <li><a href="#alerts">Alerts</a></li>
-      <li><a href="#playbook">Playbook</a></li>
-      <li><a href="#risk">Risk</a></li>
-      <li><a href="#routine">Routine</a></li>
-      <li><a href="#sources">Sources</a></li>
+      <li><a href="#questions">Your questions</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#signals">Read the signals</a></li>
+      <li><a href="#panel">Status panel</a></li>
+      <li><a href="#settings">Settings</a></li>
+      <li><a href="#alerts">Alerts &amp; automation</a></li>
+      <li><a href="#rules">Rules</a></li>
+      <li><a href="#extras">Extras</a></li>
     </ul>
   </nav>
 
-  <section id="start">
-    <div class="eyebrow">Setup order</div>
-    <h2>Start here</h2>
-    <ol class="steps">
-      <li><div><b>Set the chart up first.</b> Extended hours on, exchange timezone, right margin of about 10 bars. <a href="#settings">Chart settings</a></div></li>
-      <li><div><b>Paste the scripts into the Pine Editor.</b> Copy each one below, save it under its name, add it to the chart. <a href="#scripts">Scripts</a></div></li>
-      <li><div><b>Match the inputs to your timeframe.</b> The opening range window changes with the chart you trade. <a href="#timeframes">Timeframes</a></div></li>
-      <li><div><b>Create alerts from the chart you trade.</b> One alert on DT Core covers every signal it draws. <a href="#alerts">Alerts</a></div></li>
-      <li><div><b>Paper trade the playbook for 20+ trades.</b> TradingView's Paper Trading broker works in the iOS app. Keep a journal. <a href="#playbook">Playbook</a></div></li>
-    </ol>
-    <div class="table-scroll">
-      <table class="stack">
-        <thead><tr><th>Your plan</th><th>Load</th><th>Why</th></tr></thead>
-        <tbody>
-          <tr><td>Free (Basic)</td><td>DT Core + DT Volume</td><td class="why">Basic allows very few indicators per chart. DT Core packs nine tools into one slot, and price plus volume matter more than oscillators in Aziz's and Bellafiore's methods. Remove the built-in Volume.</td></tr>
-          <tr><td>Any paid plan</td><td>All three</td><td class="why">Add DT Momentum underneath for squeeze and 3/10 timing.</td></tr>
-        </tbody>
-      </table>
+  <section id="questions">
+    <div class="eyebrow">Answers first</div>
+    <h2>Your three questions</h2>
+    <div class="qa">
+      <article class="q">
+        <h3>I saved the script. Why is nothing on the chart?</h3>
+        <p><b>Saving and adding are two separate steps, and you need both.</b> Saving stores the code in your TradingView account. If it saved without a red error message, the code compiled fine. Adding puts it on a chart:</p>
+        <p>On the chart, tap <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> (some versions say <span class="path">My scripts</span>) → tap <b>DT Core</b>. Its name appears in the top-left corner of the chart.</p>
+        <p><b>Added but still blank?</b></p>
+        <ul>
+          <li><b>Daily chart.</b> DT Core only draws on intraday charts. Switch to 5 minutes; the panel says so if you forget.</li>
+          <li><b>Indicator limit.</b> The free plan fits very few indicators per chart. Remove Volume or anything else you're not using (tap its name → remove).</li>
+          <li><b>Hidden.</b> Tap DT Core's name at the top left and make sure the eye icon is on.</li>
+          <li><b>Before the open or on a weekend.</b> You'll see earlier days' lines and signals; today's start at 9:30.</li>
+        </ul>
+      </article>
+      <article class="q">
+        <h3>What do "0930-1000" and "0930-0935" mean?</h3>
+        <p>They were time windows on a 24-hour clock in New York time, written start-end without colons. Version 2 no longer asks for them: you pick <b>Opening range length: Auto, 5, 15 or 30 minutes</b>, and it measures from the opening bell on its own.</p>
+        <div class="table-scroll">
+          <table class="stack">
+            <thead><tr><th>Code</th><th>Clock time</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="set">0930-0935</td><td>9:30 – 9:35 AM</td><td class="why">First 5 minutes after the open</td></tr>
+              <tr><td class="set">0930-0945</td><td>9:30 – 9:45 AM</td><td class="why">First 15 minutes</td></tr>
+              <tr><td class="set">0930-1000</td><td>9:30 – 10:00 AM</td><td class="why">First 30 minutes</td></tr>
+              <tr><td class="set">1130-1330</td><td>11:30 AM – 1:30 PM</td><td class="why">The midday lull, now shaded automatically</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="q">
+        <h3>The chart settings didn't match my app.</h3>
+        <p>Menus differ between app versions, and most of those settings didn't affect the signals. Version 2 handles timezone and pre-market data inside the script. <b>The only chart settings you need: Candles, and the 5-minute timeframe.</b></p>
+        <p>To reach chart settings for anything else, long-press the price numbers on the right edge of the chart, then tap Settings.</p>
+      </article>
     </div>
   </section>
 
-  <section id="scripts">
-    <div class="eyebrow">Pine Editor</div>
-    <h2>The three scripts</h2>
+  <section id="install">
+    <div class="eyebrow">Install or update</div>
+    <h2>Four steps</h2>
     <ol class="steps">
-      <li><div><b>Tap Copy</b> on a script below. If copying is blocked, the code gets selected instead; use the iOS Copy bubble.</div></li>
-      <li><div><b>Open the Pine Editor</b> from a chart in the TradingView app. Depending on app version it sits in the chart's bottom toolbar or under the <span class="mono">⋯</span> menu.</div></li>
-      <li><div><b>Create a new indicator,</b> select all of the template code, delete it, and paste.</div></li>
-      <li><div><b>Save</b> with the script's name (DT Core, DT Momentum, DT Volume), then <b>Add to chart</b>.</div></li>
+      <li><div><b>Copy DT Core.</b> Use the Copy button below.</div></li>
+      <li><div><b>Paste over the old version.</b> Pine Editor → open your saved DT Core → select all → paste → Save. Keeping the name replaces the old code. No saved copy yet? Create a new indicator, paste, and save it as DT Core.</div></li>
+      <li><div><b>Add it to the chart:</b> <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> → DT Core. If it's already on the chart, saving updates it in place.</div></li>
+      <li><div><b>Set the chart to 5-minute candles, then enter your numbers.</b> Tap DT Core's name on the chart → Settings → Risk and alerts: account size and risk per trade.</div></li>
     </ol>
-    <div class="callout">
-      <p><b>No Pine Editor in your app?</b> Open tradingview.com in Safari, tap <span class="mono">aA</span> → Request Desktop Website, open a chart, and use the Pine Editor tab at the bottom. Saved scripts sync to your account and show up in the iOS app under Indicators → My scripts.</p>
-    </div>
-
     <article class="script" id="core">
       <div class="script-head">
-        <div class="row"><h3>DT Core</h3><span class="pill">overlay · %%DT_CORE_LINES%% lines</span></div>
-        <p>The whole intraday map in one indicator slot.</p>
-        <ul>
-          <li>Session VWAP with volume-weighted ±1σ and ±2σ bands; anchor at the session or at the 9:30 open</li>
-          <li>9 and 20 EMA, 200 SMA</li>
-          <li>Opening range box with optional 1× and 2× measured-move targets</li>
-          <li>Prior-day high, low and close; pre-market high and low (overnight high/low on futures); central pivot range</li>
-          <li>Dashboard: bias, time-of-day relative volume, gap, share of daily ATR used, and position size for your stop</li>
-          <li>Signals: ORB (volume and VWAP filtered, once per day each side), PDH/PDL breaks, VWAP reclaim/loss, EMA cross, ±2σ stretch</li>
-        </ul>
+        <div class="row"><h3>DT Core 2</h3><span class="pill">overlay · %%DT_CORE_LINES%% lines</span></div>
+        <p>BUY/SELL signals with automatic stop, target and exit, a plain-English status panel, a running scorecard, and alerts ready for automation.</p>
       </div>
       <div class="codebar"><span class="mono">DT_Core.pine</span><div class="btns"><button class="ghost" data-expand="code-core" type="button">Expand</button><button class="copy" data-copy="code-core" type="button">Copy</button></div></div>
       <p class="copy-note" hidden></p>
       <pre class="code" id="code-core">%%DT_CORE%%</pre>
     </article>
+  </section>
 
-    <article class="script" id="momentum">
-      <div class="script-head">
-        <div class="row"><h3>DT Momentum</h3><span class="pill">pane · %%DT_MOMENTUM_LINES%% lines</span></div>
-        <p>One pane, three oscillators. Pick one under Settings → Oscillator.</p>
-        <ul>
-          <li><b>Squeeze</b> (Carter): red dots mean Bollinger Bands sit inside the Keltner Channel and volatility is coiled. The first green dot is the "fire"; trade in the direction of the histogram.</li>
-          <li><b>3/10</b> (Raschke): SMA(3) − SMA(10) with a 16-period signal line. In a trend, the first cross back in the trend's direction after a pullback is the entry.</li>
-          <li><b>RSI</b> (Wilder): 14-period with 70/30. Alerts fire when RSI leaves an extreme, not when it enters one.</li>
-        </ul>
-      </div>
-      <div class="codebar"><span class="mono">DT_Momentum.pine</span><div class="btns"><button class="ghost" data-expand="code-mom" type="button">Expand</button><button class="copy" data-copy="code-mom" type="button">Copy</button></div></div>
-      <p class="copy-note" hidden></p>
-      <pre class="code" id="code-mom">%%DT_MOMENTUM%%</pre>
-    </article>
+  <section id="signals">
+    <div class="eyebrow">Legend</div>
+    <h2>Reading the signals</h2>
+    <p>Labels appear when a candle closes and never move or disappear afterward.</p>
+    <ul class="key">
+      <li><span><span class="sw buy">BUY</span></span><span>A candle closed above the opening range, above VWAP, on strong volume. Entry is that candle's closing price.</span></li>
+      <li><span><span class="sw sell">SELL</span></span><span>The mirror image below the range. SELL means sell short. If you only buy stocks, read it as "no longs today" or turn it off in settings.</span></li>
+      <li><span><span class="ln stop"></span></span><span><b>Stop.</b> Where the trade is wrong. Put this stop order in at your broker the moment you enter.</span></li>
+      <li><span><span class="ln tgt"></span></span><span><b>Target.</b> Twice as far from entry as the stop, so a win pays 2× what a loss costs.</span></li>
+      <li><span><span class="ln entry"></span></span><span>Entry price.</span></li>
+      <li><span><span class="sw buy">TARGET ✓</span></span><span>Target hit: <b>+2.0R</b>. R means "times your risk". +2R on $125 risk is +$250.</span></li>
+      <li><span><span class="sw sell">STOP ✗</span></span><span>Stop hit: <b>−1.0R</b>, a planned, limited loss.</span></li>
+      <li><span><span class="sw grey">EXIT</span></span><span>Neither was hit, so the trade closed 5 minutes before the market close.</span></li>
+      <li><span><span class="ln vw"></span></span><span><b>VWAP</b>, the day's average price weighted by volume. Green when price is above it (buyers in control), red when below.</span></li>
+      <li><span><span class="box or"></span></span><span><b>Opening range.</b> High and low of the first minutes after the open. Breakouts from this box are the signals.</span></li>
+      <li><span><span class="ln pd"></span></span><span>Yesterday's high and low. Price often pauses here.</span></li>
+      <li><span><span class="ln pm"></span></span><span>Pre-market high and low (overnight on futures). Shown even if your chart hides extended hours.</span></li>
+      <li><span><span class="box mid"></span></span><span><b>Midday</b>, 2 to 4 hours after the open. Volume dries up and breakouts fail more often.</span></li>
+    </ul>
+  </section>
 
-    <article class="script" id="volume">
-      <div class="script-head">
-        <div class="row"><h3>DT Volume</h3><span class="pill">pane · %%DT_VOLUME_LINES%% lines</span></div>
-        <p>Replaces the built-in Volume. Ordinary bars are faded; bars at 2× or more of the 20-bar average print in full color, so breakout participation stands out at a glance.</p>
-      </div>
-      <div class="codebar"><span class="mono">DT_Volume.pine</span><div class="btns"><button class="ghost" data-expand="code-vol" type="button">Expand</button><button class="copy" data-copy="code-vol" type="button">Copy</button></div></div>
-      <p class="copy-note" hidden></p>
-      <pre class="code" id="code-vol">%%DT_VOLUME%%</pre>
-    </article>
-    <p class="fine">After adding DT Core, open its settings (tap the indicator name on the chart → Settings) and set Account size and Risk per trade under Dashboard and risk. The Long and Short rows then show stop price and share count for the current bar.</p>
+  <section id="panel">
+    <div class="eyebrow">Top-right corner</div>
+    <h2>The status panel</h2>
+    <p>It tells you what DT Core is doing right now, in words.</p>
+    <div class="example">Example, matching the chart above</div>
+    <div class="mock" aria-label="Example status panel">
+      <div class="mock-row"><span class="k">DT Core</span><span class="v">NVDA · 5 min</span></div>
+      <div class="mock-row"><span class="k">Trend</span><span class="v up">UP · price above VWAP</span></div>
+      <div class="mock-row"><span class="k">Status</span><span class="v up">IN A BUY TRADE</span></div>
+      <div class="mock-row"><span class="k">Plan</span><span class="v">entry 102.00 · stop 100.75 · target 104.50</span></div>
+      <div class="mock-row"><span class="k">Size</span><span class="v">100 shares · risk $125</span></div>
+      <div class="mock-row"><span class="k">Volume</span><span class="v up">2.4× normal · in play</span></div>
+      <div class="mock-row"><span class="k">Results</span><span class="v up">22 days · 15 trades · 53% wins · +4.5R</span></div>
+    </div>
+    <p><b>Status</b> moves through the day like this:</p>
+    <div class="flow"><span>Waiting for the open</span><i>→</i><span>Opening range forming</span><i>→</i><span>Watching until 11:30 AM</span><i>→</i><span>IN A BUY / SELL TRADE</span><i>→</i><span>No new signals today</span></div>
+    <ul class="rules">
+      <li><b>Plan</b><span>While watching, it shows the exact trigger prices ("BUY above 101.60 · SELL below 99.90"). In a trade, it shows entry, stop and target.</span></li>
+      <li><b>Size</b><span>Shares to buy so that hitting the stop loses exactly your risk per trade (Tharp's position sizing). "≈" means an estimate before the trade exists.</span></li>
+      <li><b>Volume</b><span>Today's volume against the same time on the last 10 days. 2× or more means the stock is "in play" (Bellafiore, Aziz); breakouts work best then.</span></li>
+      <li><b>Results</b><span>How DT Core's rules did on the days loaded on this chart. A rough test: it ignores commissions and slippage, and if one candle touches both stop and target, it counts the stop.</span></li>
+    </ul>
   </section>
 
   <section id="settings">
-    <div class="eyebrow">Chart → Settings</div>
-    <h2>Chart settings</h2>
-    <p>Open a chart, tap the gear (or long-press the chart → Settings). Section names below follow the app; a few move between versions.</p>
+    <div class="eyebrow">Tap DT Core → Settings</div>
+    <h2>Settings that matter</h2>
+    <p>The defaults are sensible. These are the ones worth knowing.</p>
     <div class="table-scroll">
       <table class="stack">
-        <thead><tr><th>Setting</th><th>Set to</th><th>Why</th></tr></thead>
+        <thead><tr><th>Setting</th><th>Default</th><th>What it does</th></tr></thead>
         <tbody>
-          <tr class="t-group"><td colspan="3">Symbol</td></tr>
-          <tr><td>Chart type</td><td class="set">Candles</td><td class="why">Heikin Ashi averages prices, so its bars don't show real opens, closes or fills.</td></tr>
-          <tr><td>Extended trading hours</td><td class="set on">On (stocks)</td><td class="why">Needed for pre-market high/low, the pre-open gap and a session VWAP that includes pre-market. Prefer a 9:30 VWAP? Keep it on and set DT Core → VWAP → Anchor to RTH open.</td></tr>
-          <tr><td>Timezone</td><td class="set">Exchange (New York)</td><td class="why">DT Core's session windows (0930-0945, 1130-1330) are entered in exchange time.</td></tr>
-          <tr><td>Adjust for dividends</td><td class="set off">Off</td><td class="why">Keeps prior-day levels equal to the prices that actually traded.</td></tr>
-          <tr class="t-group"><td colspan="3">Status line</td></tr>
-          <tr><td>Indicator arguments</td><td class="set off">Off</td><td class="why">Saves a full line of screen on a phone.</td></tr>
-          <tr><td>Indicator values</td><td class="set on">On</td><td class="why">Shows VWAP and EMA values under the symbol name.</td></tr>
-          <tr><td>OHLC and bar change</td><td class="set on">On</td><td class="why">Read the current bar without tapping it.</td></tr>
-          <tr><td>Volume</td><td class="set off">Off</td><td class="why">DT Volume shows it in its own pane.</td></tr>
-          <tr class="t-group"><td colspan="3">Scales and lines</td></tr>
-          <tr><td>Last price line and label</td><td class="set on">On</td><td class="why">Where price is versus your levels.</td></tr>
-          <tr><td>Countdown to bar close</td><td class="set on">On</td><td class="why">Every signal confirms at the bar close. Know when that is.</td></tr>
-          <tr><td>Previous day close line</td><td class="set off">Off</td><td class="why">DT Core already draws it (dotted).</td></tr>
-          <tr><td>Indicator name and value labels</td><td class="set off">Off</td><td class="why">DT Core prints its own right-edge tags. With both on, the price scale gets crowded.</td></tr>
-          <tr><td>Scale price chart only</td><td class="set on">On</td><td class="why">A far-away 200 SMA won't squash the candles.</td></tr>
-          <tr><td>Log scale</td><td class="set off">Off</td><td class="why">Intraday ranges are small; linear keeps distances honest.</td></tr>
-          <tr class="t-group"><td colspan="3">Canvas / appearance</td></tr>
-          <tr><td>Session breaks</td><td class="set on">On</td><td class="why">A vertical line where each trading day starts.</td></tr>
-          <tr><td>Grid lines</td><td class="set off">Off or faint</td><td class="why">Less noise around the levels you care about.</td></tr>
-          <tr><td>Right margin</td><td class="set">≈10 bars</td><td class="why">Room for DT Core's price tags at the right edge.</td></tr>
-          <tr><td>Watermark</td><td class="set off">Off</td><td class="why">Screen space.</td></tr>
-          <tr class="t-group"><td colspan="3">Events and trading</td></tr>
-          <tr><td>Earnings, dividends, splits</td><td class="set on">On</td><td class="why">Earnings days rewrite the playbook; size down or sit out.</td></tr>
-          <tr><td>Economic events</td><td class="set on">On (futures, forex)</td><td class="why">8:30 and 10:00 ET releases and 2:00 PM Fed days move everything.</td></tr>
-          <tr><td>Positions and executions</td><td class="set on">On</td><td class="why">Shows paper or broker fills against your levels for review.</td></tr>
+          <tr><td>Opening range length</td><td class="set">Auto</td><td class="why">How long to wait after the open. Auto picks 5 minutes on a 1-minute chart, 15 on a 5-minute chart, 30 on a 15-minute chart.</td></tr>
+          <tr><td>Market open</td><td class="set">Auto</td><td class="why">The exchange's opening bell for stocks; 9:30 New York for futures, crypto and forex.</td></tr>
+          <tr><td>Stop new signals</td><td class="set">2 hours after open</td><td class="why">No new entries after 11:30 AM for US stocks. Open trades keep running.</td></tr>
+          <tr><td>Stop placement</td><td class="set">Middle of range</td><td class="why">Smaller risk, so more shares. "Other side of range" gives the trade more room.</td></tr>
+          <tr><td>Target (× risk)</td><td class="set">2</td><td class="why">Aziz's 2-to-1 minimum. With 2R wins, winning 40% of trades still comes out ahead before costs.</td></tr>
+          <tr><td>Only on strong volume</td><td class="set">On</td><td class="why">The breakout candle needs 1.5× the average volume of the last 20 candles.</td></tr>
+          <tr><td>Only on the right side of VWAP</td><td class="set">On</td><td class="why">BUY only above VWAP, SELL only below it.</td></tr>
+          <tr><td>Show SELL (short) signals</td><td class="set">On</td><td class="why">Turn off if you only buy.</td></tr>
+          <tr><td>Account size, risk per trade</td><td class="set">$25,000 · 0.5%</td><td class="why">Drive the Size row and the share count in alerts.</td></tr>
+          <tr><td>Alert message</td><td class="set">Plain text</td><td class="why">Switch to JSON only if you connect an automation service.</td></tr>
+          <tr><td>Show on chart</td><td class="set">—</td><td class="why">Turn lines on or off. VWAP bands and the 9/20 EMA start hidden.</td></tr>
         </tbody>
       </table>
     </div>
-    <p class="fine">Favorite intervals for the toolbar: 1m, 5m, 15m, 1h, 1D. Long-press an interval to star it.</p>
-  </section>
-
-  <section id="timeframes">
-    <div class="eyebrow">Inputs per chart</div>
-    <h2>Timeframes and presets</h2>
-    <p>Shannon's multiple-timeframe approach and Elder's Triple Screen both put roughly a factor of five between charts: the higher one sets direction, the lower one times the entry. DT Core's opening range should be at least one bar long on the chart you use.</p>
-    <div class="table-scroll">
-      <table class="stack">
-        <thead><tr><th>Chart</th><th>Job</th><th>Opening range</th><th>Other inputs</th></tr></thead>
-        <tbody>
-          <tr><td>1D</td><td>Bias and big levels</td><td class="set">—</td><td class="why">DT Core reports "use an intraday chart". Read trend from the 20/50/200 and mark swing highs and lows.</td></tr>
-          <tr><td>15m</td><td>Structure, squeeze</td><td class="set">0930-1000</td><td class="why">30-minute range. DT Momentum on Squeeze.</td></tr>
-          <tr><td>5m</td><td>Main setup chart</td><td class="set">0930-0945</td><td class="why">The defaults. Brooks reads the 20 EMA on this chart.</td></tr>
-          <tr><td>1m</td><td>Entry timing</td><td class="set">0930-0935</td><td class="why">Signal window 0930-1030, ATR multiple 2.0, ORB volume filter 2.0. One-minute noise needs wider stops.</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="fine">Futures: the same windows work in New York time (overnight high/low replaces pre-market). Crypto and forex have no opening bell, so pick your own window, for example the London or New York open, and adjust Timezone.</p>
   </section>
 
   <section id="alerts">
-    <div class="eyebrow">Alerts</div>
-    <h2>Alerts that reach your phone</h2>
+    <div class="eyebrow">Hands-off</div>
+    <h2>Alerts and automation</h2>
+    <p><b>One alert per stock</b> sends every BUY, SELL and exit to your phone with prices and share count.</p>
     <ol class="steps">
-      <li><div><b>Open the chart on the timeframe you trade.</b> An alert stores the symbol, timeframe and indicator inputs at the moment you create it.</div></li>
-      <li><div><b>Tap the alarm-clock Alert button</b> in the chart toolbar, or long-press the chart → Add alert.</div></li>
-      <li><div><b>Condition:</b> DT Core → <span class="mono">Any alert() function call</span>. One alert now covers every signal you enabled, and its message includes price and RVOL. The script already fires once per bar close.</div></li>
-      <li><div><b>Expiration:</b> the longest your plan allows. <b>Notifications:</b> app push and sound on; email optional; webhook URL if you automate.</div></li>
-      <li><div><b>Name it</b> like <span class="mono">NVDA 5m DT Core</span> and create.</div></li>
+      <li><div><b>Open the stock's 5-minute chart.</b> DT Core must be on it.</div></li>
+      <li><div><b>Add an alert.</b> Tap the alarm-clock button, or long-press the chart → Add alert.</div></li>
+      <li><div><b>Condition:</b> DT Core → <span class="path">Any alert() function call</span>.</div></li>
+      <li><div><b>Notify:</b> app push on, sound on. Create.</div></li>
     </ol>
-    <div class="table-scroll">
-      <table class="stack">
-        <thead><tr><th>Alert</th><th>Condition</th><th>Trigger</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>All DT Core signals</td><td class="set">DT Core → Any alert() function call</td><td class="set">set by script</td><td class="why">5m chart of each stock in play.</td></tr>
-          <tr><td>ORB only</td><td class="set">DT Core → ORB long / ORB short</td><td class="set">Once per bar close</td><td class="why">Fewer pings on the open.</td></tr>
-          <tr><td>Pre-market high</td><td class="set">Price → Crossing → PMH value</td><td class="set">Only once</td><td class="why">Type the PMH tag's price. Plain price alerts are available on every plan.</td></tr>
-          <tr><td>Prior day high / low</td><td class="set">Price → Crossing → PDH or PDL</td><td class="set">Only once</td><td class="why">The level gappers have to clear.</td></tr>
-          <tr><td>Trade management</td><td class="set">DT Core → VWAP lost</td><td class="set">Once per bar close</td><td class="why">Open long? Hear about it when price closes back under VWAP.</td></tr>
-          <tr><td>Squeeze fired</td><td class="set">DT Momentum → Squeeze fired up / down</td><td class="set">Once per bar close</td><td class="why">15m chart. Context, not an entry by itself.</td></tr>
-          <tr><td>Volume spike</td><td class="set">DT Volume → Volume spike on up bar</td><td class="set">Once per bar close</td><td class="why">Something is happening; go look.</td></tr>
-        </tbody>
-      </table>
+    <p>What arrives on your phone:</p>
+    <div class="msg">BUY NVDA @ 102.00 · stop 100.75 · target 104.50 · 100 shares (risk $125)
+EXIT NVDA @ 104.50 · TARGET ✓ +2.0R</div>
+    <p class="fine">Change a setting and old alerts keep the old settings: delete and recreate them. iPhone: Settings → Notifications → TradingView → allow notifications and sounds, and keep it out of Scheduled Summary.</p>
+
+    <h3>Three levels of automation</h3>
+    <div class="levels">
+      <div class="level"><b class="n">1</b><div><b>Alert → you place the order.</b><p>Works on any plan that includes indicator alerts. Copy the stop and target from the message into your order.</p></div></div>
+      <div class="level"><b class="n">2</b><div><b>One bracket order at your broker.</b><p>Enter with a bracket (OCO) order: entry, stop and target in one ticket. The exit then happens without you, even if you look away. This is the biggest step toward hands-off trading and needs nothing extra.</p></div></div>
+      <div class="level"><b class="n">3</b><div><b>Webhook → automation service → broker.</b><p>Needs a paid TradingView plan for webhooks. Set Alert message to JSON, paste the service's webhook URL into the alert, and it places orders for you. Run it on a paper account for weeks before real money.</p></div></div>
     </div>
+    <div class="msg">{"action":"buy","ticker":"NVDA","price":102.00,"stop":100.75,"target":104.50,"qty":100}
+{"action":"exit","ticker":"NVDA","price":104.50,"reason":"target","r":2.00}</div>
+  </section>
+
+  <section id="rules">
+    <div class="eyebrow">What it does, in order</div>
+    <h2>The rules behind the signals</h2>
+    <ol class="steps">
+      <li><div><b>Mark the opening range.</b> The high and low of the first minutes after the open. Toby Crabel showed in 1990 that breakouts from it carry follow-through; Andrew Aziz teaches the same trade for stocks.</div></li>
+      <li><div><b>Wait for a candle to close outside it.</b> With strong volume, and on the side of VWAP that agrees (Shannon: VWAP is the day's fair price).</div></li>
+      <li><div><b>Size from the stop.</b> Stop at the middle of the range; shares = dollars at risk ÷ distance to the stop (Tharp).</div></li>
+      <li><div><b>Let the trade end itself.</b> Target at 2× risk, stop, or 5 minutes before the close. At most one BUY and one SELL a day, none after the cutoff.</div></li>
+    </ol>
     <ul class="rules">
-      <li><b>Inputs are frozen</b><span>Change an indicator setting or timeframe and existing alerts keep the old ones. Delete and recreate them.</span></li>
-      <li><b>Bar close</b><span>"Once per bar" can fire on a cross that disappears before the bar closes. Use "Once per bar close" for every signal alert.</span></li>
-      <li><b>Server-side</b><span>Alerts run on TradingView's servers. The app can be closed and the phone locked.</span></li>
-      <li><b>Plan limits</b><span>Basic has very few alerts and may not allow indicator alerts at all. Check your plan page; price alerts on PMH and PDH work everywhere.</span></li>
-      <li><b>iOS settings</b><span>Settings → Notifications → TradingView: allow notifications and sounds, set banners to Persistent, keep it out of Scheduled Summary, and allow it in the Focus mode you trade in.</span></li>
+      <li><b>0.5–1% per trade</b><span>Elder's ceiling is 2%. Start small while you learn.</span></li>
+      <li><b>Daily stop at −3R</b><span>Three full losses and you're done for the day.</span></li>
+      <li><b>Paper trade first</b><span>Run 20 or more signals on TradingView's Paper Trading account before using real money. Many days produce no signal; that's by design.</span></li>
+      <li><b>Check your broker's rules</b><span>US margin accounts face pattern-day-trader requirements.</span></li>
     </ul>
   </section>
 
-  <section id="playbook">
-    <div class="eyebrow">Playbook</div>
-    <h2>Six setups DT Core is built to show</h2>
-    <p>Only trade stocks in play: a catalyst, a gap, and time-of-day RVOL of 2× or more on the dashboard (Bellafiore, Aziz). Everything below assumes that filter.</p>
-    <div class="setups">
-      <article class="setup">
-        <div class="row"><h3>Opening range breakout</h3><span class="tag both">long / short</span></div>
-        <dl>
-          <dt>Trigger</dt><dd>ORB marker: a candle closes beyond the range on 1.5× volume, on the matching side of VWAP.</dd>
-          <dt>Stop</dt><dd>Other side of the range, or its midpoint for half the risk.</dd>
-          <dt>Target</dt><dd>1× range (measured move), then 2× or the next level (PDH, PMH).</dd>
-          <dt>Skip</dt><dd>The dashboard shows most of the daily ATR already used, or the clock is past 11:30.</dd>
-        </dl>
-        <p class="src">Crabel, 1990; Aziz, 2015</p>
+  <section id="extras">
+    <div class="eyebrow">Not needed for the signals</div>
+    <h2>Optional extras</h2>
+    <p>Add these only if your plan has room for more indicators.</p>
+    <details class="extra">
+      <summary>DT Momentum · squeeze, 3/10 or RSI in one pane</summary>
+      <article class="script">
+        <div class="script-head"><p>Pick one oscillator under Settings → Oscillator. Squeeze (Carter): red dots mean energy is building; the first green dot is the release. 3/10 (Raschke) and RSI (Wilder) are the other choices.</p></div>
+        <div class="codebar"><span class="mono">DT_Momentum.pine · %%DT_MOMENTUM_LINES%% lines</span><div class="btns"><button class="ghost" data-expand="code-mom" type="button">Expand</button><button class="copy" data-copy="code-mom" type="button">Copy</button></div></div>
+        <p class="copy-note" hidden></p>
+        <pre class="code" id="code-mom">%%DT_MOMENTUM%%</pre>
       </article>
-      <article class="setup">
-        <div class="row"><h3>VWAP reclaim</h3><span class="tag both">long / short</span></div>
-        <dl>
-          <dt>Trigger</dt><dd>After a morning flush, price closes back above VWAP (VW marker) and the next bar holds.</dd>
-          <dt>Stop</dt><dd>Below the reclaim bar's low or the lower inner band.</dd>
-          <dt>Target</dt><dd>Upper inner band, then PDH or the outer band.</dd>
-          <dt>Short</dt><dd>Mirror image: VWAP lost and the retest fails.</dd>
-        </dl>
-        <p class="src">Shannon, 2008 and 2023; Aziz, 2015</p>
+    </details>
+    <details class="extra">
+      <summary>DT Volume · volume bars that light up on spikes</summary>
+      <article class="script">
+        <div class="script-head"><p>Replaces the built-in Volume. Bars at 2× the recent average print in full color.</p></div>
+        <div class="codebar"><span class="mono">DT_Volume.pine · %%DT_VOLUME_LINES%% lines</span><div class="btns"><button class="ghost" data-expand="code-vol" type="button">Expand</button><button class="copy" data-copy="code-vol" type="button">Copy</button></div></div>
+        <p class="copy-note" hidden></p>
+        <pre class="code" id="code-vol">%%DT_VOLUME%%</pre>
       </article>
-      <article class="setup">
-        <div class="row"><h3>First pullback</h3><span class="tag long">trend</span></div>
-        <dl>
-          <dt>Context</dt><dd>Above VWAP, 9 EMA over 20, making higher highs. The dashboard Bias row is green.</dd>
-          <dt>Trigger</dt><dd>The first pullback to the 9 or 20 EMA on lighter volume; buy the break of the pullback's high.</dd>
-          <dt>Stop</dt><dd>Below the pullback low.</dd>
-          <dt>Target</dt><dd>Retest of the high, then a measured move equal to the first leg.</dd>
-        </dl>
-        <p class="src">Aziz's bull flag; Brooks, 2011</p>
-      </article>
-      <article class="setup">
-        <div class="row"><h3>Key-level break</h3><span class="tag long">gappers</span></div>
-        <dl>
-          <dt>Trigger</dt><dd>A close through PMH or PDH (PDH marker) with a full-color DT Volume bar.</dd>
-          <dt>Stop</dt><dd>Back inside the level, or the breakout bar's low.</dd>
-          <dt>Target</dt><dd>2R, then trail under the 9 EMA.</dd>
-          <dt>Skip</dt><dd>The break comes on faded volume: those fail more often.</dd>
-        </dl>
-        <p class="src">Bellafiore, 2010; Aziz, 2015</p>
-      </article>
-      <article class="setup">
-        <div class="row"><h3>Squeeze release</h3><span class="tag both">long / short</span></div>
-        <dl>
-          <dt>Context</dt><dd>DT Momentum on Squeeze, 5m or 15m, with a run of red dots.</dd>
-          <dt>Trigger</dt><dd>First green dot. Trade only in the histogram's direction, and only on the matching side of VWAP.</dd>
-          <dt>Stop</dt><dd>Other side of the coil, or 1.5 ATR.</dd>
-          <dt>Exit</dt><dd>When the histogram weakens for two bars in a row.</dd>
-        </dl>
-        <p class="src">Carter, Mastering the Trade</p>
-      </article>
-      <article class="setup">
-        <div class="row"><h3>Outer-band fade</h3><span class="tag short">advanced</span></div>
-        <dl>
-          <dt>Context</dt><dd>Range days only: RVOL fading below 1.5×, price chopping around a wide pivot range.</dd>
-          <dt>Trigger</dt><dd>2σ marker, then a reversal bar back inside the band.</dd>
-          <dt>Stop</dt><dd>Just beyond the extreme.</dd>
-          <dt>Target</dt><dd>Inner band, then VWAP. On a trend day, don't fade: the 2σ marker means don't chase.</dd>
-        </dl>
-        <p class="src">Bollinger, 2001; Shannon, 2023</p>
-      </article>
-    </div>
-  </section>
-
-  <section id="risk">
-    <div class="eyebrow">Risk</div>
-    <h2>Risk rules</h2>
-    <ul class="rules">
-      <li><b>Define R first</b><span>R is entry minus stop. Size = dollars at risk ÷ R. DT Core's Long and Short rows do this division for the stop basis you pick (Tharp).</span></li>
-      <li><b>0.5–1% per trade</b><span>Elder's ceiling is 2% of the account per trade. Start at the low end while you learn the setups.</span></li>
-      <li><b>Daily stop at −3R</b><span>Hit it and you're done for the day. Elder's 6% rule does the same monthly: down 6% for the month, stop trading until next month.</span></li>
-      <li><b>Aim for 2R</b><span>Aziz looks for at least 2:1 reward to risk. With 2R winners, a 40% win rate is still profitable before costs.</span></li>
-      <li><b>Respect the clock</b><span>New ORB entries end at 11:30. Midday (shaded) volume is thin; size down or stand aside. Be flat before the close.</span></li>
-      <li><b>Journal every trade</b><span>A screenshot, the setup name, R result, and one sentence on execution. Steenbarger's point: review the process, not just the P&amp;L.</span></li>
-      <li><b>Check your broker's rules</b><span>US margin accounts face pattern-day-trader requirements. Confirm what applies to your account before trading live.</span></li>
-    </ul>
-  </section>
-
-  <section id="routine">
-    <div class="eyebrow">Each morning (ET)</div>
-    <h2>Pre-market routine</h2>
-    <p>Check items off as you go. This list resets each day and is stored on this device only.</p>
-    <div class="check" id="checklist">
-      <label><input type="checkbox" id="ck-1"><span><span class="time">8:00</span><b>Check the economic calendar.</b> 8:30 and 10:00 data, Fed speakers, and earnings for anything you hold.</span></label>
-      <label><input type="checkbox" id="ck-2"><span><span class="time">8:15</span><b>Scan for gappers.</b> In the screener: pre-market change ±3% or more, price above $5, 10-day average volume above 1M, a news catalyst.</span></label>
-      <label><input type="checkbox" id="ck-3"><span><span class="time">8:45</span><b>Pick two to four stocks in play.</b> Pre-market volume should already be heavy. Fewer names, better execution.</span></label>
-      <label><input type="checkbox" id="ck-4"><span><span class="time">9:00</span><b>Mark the daily picture.</b> On 1D: trend, swing highs and lows, distance to the 200 SMA.</span></label>
-      <label><input type="checkbox" id="ck-5"><span><span class="time">9:10</span><b>Set price alerts at PMH and PDH</b> (PML and PDL for shorts) on each name.</span></label>
-      <label><input type="checkbox" id="ck-6"><span><span class="time">9:20</span><b>Write the plan.</b> Setup, trigger, stop, size from the dashboard, first target.</span></label>
-      <label><input type="checkbox" id="ck-7"><span><span class="time">9:25</span><b>Set today's loss limit</b> in dollars (3R) and write it down.</span></label>
-      <label><input type="checkbox" id="ck-8"><span><span class="time">9:30</span><b>Let the opening range form.</b> No entries until the ORB window closes unless the plan says otherwise.</span></label>
-    </div>
-    <div class="check-foot"><span id="ck-status">0 of 8 done</span><button class="reset" id="ck-reset" type="button">Clear checklist</button></div>
+    </details>
   </section>
 
   <section id="sources">
     <div class="eyebrow">Literature</div>
-    <h2>Sources behind the defaults</h2>
+    <h2>Sources</h2>
     <ul class="sources">
-      <li><cite>Toby Crabel, <i>Day Trading with Short Term Price Patterns and Opening Range Breakout</i> (1990)</cite><span>Opening range breakout, early-session timing.</span></li>
-      <li><cite>Mark B. Fisher, <i>The Logical Trader</i> (2002)</cite><span>Opening range and pivot range framework (ACD).</span></li>
-      <li><cite>Frank O. Ochoa, <i>Secrets of a Pivot Boss</i> (2010)</cite><span>Central pivot range width as a trend-day tell.</span></li>
-      <li><cite>Andrew Aziz, <i>How to Day Trade for a Living</i> (2015)</cite><span>VWAP, 9/20 EMA, ORB, bull flag, stocks in play, relative volume, 2:1 targets.</span></li>
-      <li><cite>Brian Shannon, <i>Technical Analysis Using Multiple Timeframes</i> (2008) and <i>Maximum Trading Gains with Anchored VWAP</i> (2023)</cite><span>VWAP as the day's fair price; timeframe alignment.</span></li>
-      <li><cite>Mike Bellafiore, <i>One Good Trade</i> (2010)</cite><span>Trade stocks in play; process over outcome.</span></li>
-      <li><cite>Al Brooks, <i>Trading Price Action Trends</i> (2011)</cite><span>The 20-bar EMA on the 5-minute chart; pullbacks in trends.</span></li>
-      <li><cite>John F. Carter, <i>Mastering the Trade</i> (2005; 3rd ed. 2019)</cite><span>The squeeze: Bollinger Bands inside Keltner Channels.</span></li>
-      <li><cite>Linda Bradford Raschke and Laurence Connors, <i>Street Smarts</i> (1995)</cite><span>Short-term momentum patterns; Raschke's 3/10 oscillator.</span></li>
-      <li><cite>J. Welles Wilder Jr., <i>New Concepts in Technical Trading Systems</i> (1978)</cite><span>RSI and ATR.</span></li>
-      <li><cite>John Bollinger, <i>Bollinger on Bollinger Bands</i> (2001)</cite><span>Standard-deviation bands and volatility contraction.</span></li>
+      <li><cite>Toby Crabel, <i>Day Trading with Short Term Price Patterns and Opening Range Breakout</i> (1990)</cite><span>The opening range breakout.</span></li>
+      <li><cite>Andrew Aziz, <i>How to Day Trade for a Living</i> (2015)</cite><span>ORB for stocks, VWAP, relative volume, 2:1 targets.</span></li>
+      <li><cite>Brian Shannon, <i>Maximum Trading Gains with Anchored VWAP</i> (2023)</cite><span>VWAP as the day's fair price.</span></li>
+      <li><cite>Mike Bellafiore, <i>One Good Trade</i> (2010)</cite><span>Trade stocks in play.</span></li>
       <li><cite>Van K. Tharp, <i>Trade Your Way to Financial Freedom</i> (1998)</cite><span>R-multiples and position sizing.</span></li>
-      <li><cite>Alexander Elder, <i>The New Trading for a Living</i> (2014)</cite><span>2% and 6% rules; Triple Screen.</span></li>
-      <li><cite>Brett N. Steenbarger, <i>The Daily Trading Coach</i> (2009)</cite><span>Journaling and structured self-review.</span></li>
+      <li><cite>Alexander Elder, <i>The New Trading for a Living</i> (2014)</cite><span>The 2% per-trade ceiling.</span></li>
+      <li><cite>John F. Carter, <i>Mastering the Trade</i>; Linda Raschke and Laurence Connors, <i>Street Smarts</i>; J. Welles Wilder, <i>New Concepts in Technical Trading Systems</i></cite><span>The optional DT Momentum oscillators.</span></li>
     </ul>
     <hr>
-    <p class="fine">Educational material, not financial advice. Indicators describe what price has done; none of them predicts what it will do. Most day traders lose money, so paper trade first and risk only what you can afford to lose. Plan limits and app menus change; check TradingView's current plan page and help center.</p>
+    <p class="fine">Educational material, not financial advice. The signals follow fixed rules; they don't predict the future, and the Results row ignores trading costs. Most day traders lose money. Paper trade first and risk only what you can afford to lose.</p>
   </section>
 </div>
 
@@ -545,7 +497,6 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
     btn.addEventListener("click", function () {
       var pre = document.getElementById(btn.getAttribute("data-copy"));
       var note = btn.closest(".script").querySelector(".copy-note");
-      var text = pre.textContent;
       function ok() {
         btn.textContent = "Copied";
         btn.classList.add("done");
@@ -559,7 +510,7 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
         note.hidden = false;
       }
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(ok, fallback);
+        navigator.clipboard.writeText(pre.textContent).then(ok, fallback);
       } else {
         fallback();
       }
@@ -568,11 +519,10 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
   document.querySelectorAll("[data-expand]").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var pre = document.getElementById(btn.getAttribute("data-expand"));
-      var open = pre.classList.toggle("expanded");
-      btn.textContent = open ? "Collapse" : "Expand";
+      btn.textContent = pre.classList.toggle("expanded") ? "Collapse" : "Expand";
     });
   });
-
+  // Label table cells with their column header for the stacked phone layout
   document.querySelectorAll("table.stack").forEach(function (t) {
     var heads = Array.prototype.map.call(t.querySelectorAll("thead th"), function (th) { return th.textContent; });
     t.querySelectorAll("tbody tr").forEach(function (tr) {
@@ -582,36 +532,7 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
     });
   });
 
-  // ── Daily checklist (this device only) ──
-  var KEY = "dt-kit-checklist";
-  var today = new Date().toLocaleDateString("en-CA");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("#checklist input"));
-  var status = document.getElementById("ck-status");
-  function load() {
-    try {
-      var saved = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (saved && saved.day === today) {
-        boxes.forEach(function (b) { b.checked = saved.done.indexOf(b.id) !== -1; });
-      }
-    } catch (e) {}
-  }
-  function save() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ day: today, done: boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.id; }) }));
-    } catch (e) {}
-  }
-  function count() {
-    var n = boxes.filter(function (b) { return b.checked; }).length;
-    status.textContent = n + " of " + boxes.length + " done";
-  }
-  boxes.forEach(function (b) { b.addEventListener("change", function () { save(); count(); }); });
-  document.getElementById("ck-reset").addEventListener("click", function () {
-    boxes.forEach(function (b) { b.checked = false; });
-    save(); count();
-  });
-  load(); count();
-
-  // ── Schematic chart (illustrative data, 5-minute bars) ──
+  // ── Schematic: one BUY from range to target (illustrative 5-minute data) ──
   var closes = [99.8, 100.1, 99.9, 100.4, 100.2, 100.0, 100.3, 100.2,
     101.2, 100.5, 101.0,
     101.1, 101.3, 102.0,
@@ -635,84 +556,73 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
     if (i === 12) { h = 101.45; }
     return { o: o, h: h, l: l, c: c, v: vols[i] };
   });
-  var OR0 = 8, OR1 = 10, ORB = 13, PDHBAR = 19, LUNCH = 32, N = bars.length;
-  var PDH = 103.1;
+  var OPEN = 8, ENTRY = 13, LUNCH = 32, N = bars.length, PDH = 103.1;
   var orH = Math.max(bars[8].h, bars[9].h, bars[10].h), orL = Math.min(bars[8].l, bars[9].l, bars[10].l);
-  var pmH = -1e9, pmL = 1e9;
-  for (var i = 0; i < OR0; i++) { pmH = Math.max(pmH, bars[i].h); pmL = Math.min(pmL, bars[i].l); }
-  var sPV = 0, sV = 0, sPV2 = 0, vw = [], u1 = [], d1 = [], u2 = [], d2 = [], ema = [], k = 2 / 10;
-  bars.forEach(function (b, i) {
-    var src = (b.h + b.l + b.c) / 3;
-    sPV += src * b.v; sV += b.v; sPV2 += src * src * b.v;
-    var m = sPV / sV, sd = Math.sqrt(Math.max(sPV2 / sV - m * m, 0));
-    vw.push(m); u1.push(m + sd); d1.push(m - sd); u2.push(m + 2 * sd); d2.push(m - 2 * sd);
-    ema.push(i === 0 ? b.c : b.c * k + ema[i - 1] * (1 - k));
+  var pmH = -1e9, pmL = 1e9, i;
+  for (i = 0; i < OPEN; i++) { pmH = Math.max(pmH, bars[i].h); pmL = Math.min(pmL, bars[i].l); }
+  var entry = bars[ENTRY].c, stop = (orH + orL) / 2, target = entry + 2 * (entry - stop), exitBar = N - 1;
+  for (i = ENTRY + 1; i < N; i++) { if (bars[i].h >= target) { exitBar = i; break; } }
+  var vw = [], sPV = 0, sV = 0;
+  bars.forEach(function (b, k) {
+    if (k === OPEN) { sPV = 0; sV = 0; }
+    var src = (b.h + b.l + b.c) / 3; sPV += src * b.v; sV += b.v; vw.push(sPV / sV);
   });
 
-  var W = 520, H = 330, X0 = 6, X1 = 424, Y0 = 14, Y1 = 298;
-  var lo = Math.min.apply(null, bars.map(function (b) { return b.l; }).concat([pmL])) - 0.3;
-  var hi = Math.max.apply(null, bars.map(function (b) { return b.h; }).concat([PDH])) + 0.6;
+  var W = 520, H = 330, X0 = 6, X1 = 430, Y0 = 18, Y1 = 298;
+  var lo = Math.min(pmL, orL) - 0.5, hi = Math.max(target, PDH) + 0.7;
   var step = (X1 - X0) / N;
-  function x(i) { return X0 + step * (i + 0.5); }
+  function x(k) { return X0 + step * (k + 0.5); }
   function y(p) { return Y1 - (p - lo) / (hi - lo) * (Y1 - Y0); }
-  function clampY(p) { return Math.max(Y0, Math.min(Y1, y(p))); }
-  function path(arr, from) {
-    var d = "";
-    for (var i = from; i < arr.length; i++) d += (i === from ? "M" : "L") + x(i).toFixed(1) + " " + clampY(arr[i]).toFixed(1);
-    return d;
-  }
   var s = [];
   s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12">');
-  // background zones
-  s.push('<rect x="' + X0 + '" y="' + Y0 + '" width="' + (step * OR0) + '" height="' + (Y1 - Y0) + '" fill="var(--shade)"/>');
-  s.push('<rect x="' + (X0 + step * LUNCH) + '" y="' + Y0 + '" width="' + (step * (N - LUNCH)) + '" height="' + (Y1 - Y0) + '" fill="var(--shade)"/>');
-  // VWAP bands
-  var band = path(u1, 0) + " " + d1.map(function (v, i) { return "L" + x(d1.length - 1 - i).toFixed(1) + " " + clampY(d1[d1.length - 1 - i]).toFixed(1); }).join(" ") + "Z";
-  s.push('<path d="' + band + '" fill="var(--accent)" fill-opacity="0.09" stroke="none"/>');
-  s.push('<path d="' + path(u2, 0) + '" fill="none" stroke="var(--bear)" stroke-opacity="0.55" stroke-width="1"/>');
-  s.push('<path d="' + path(d2, 0) + '" fill="none" stroke="var(--bull)" stroke-opacity="0.55" stroke-width="1"/>');
-  // levels
-  function hline(p, from, col, dash, op) {
-    s.push('<line x1="' + (X0 + step * from).toFixed(1) + '" x2="' + X1 + '" y1="' + y(p).toFixed(1) + '" y2="' + y(p).toFixed(1) + '" stroke="' + col + '" stroke-width="1.2" ' + (dash ? 'stroke-dasharray="' + dash + '" ' : '') + 'stroke-opacity="' + (op || 1) + '"/>');
+  s.push('<rect x="' + (X0 + step * LUNCH).toFixed(1) + '" y="' + Y0 + '" width="' + (step * (N - LUNCH)).toFixed(1) + '" height="' + (Y1 - Y0) + '" fill="var(--shade)"/>');
+  function hl(p, from, to, col, extra) {
+    s.push('<line x1="' + (X0 + step * from).toFixed(1) + '" x2="' + (X0 + step * to).toFixed(1) + '" y1="' + y(p).toFixed(1) + '" y2="' + y(p).toFixed(1) + '" stroke="' + col + '" ' + (extra || 'stroke-width="1.2"') + '/>');
   }
-  s.push('<rect x="' + (X0 + step * OR0).toFixed(1) + '" y="' + y(orH).toFixed(1) + '" width="' + (X1 - X0 - step * OR0).toFixed(1) + '" height="' + (y(orL) - y(orH)).toFixed(1) + '" fill="var(--or)" fill-opacity="0.1"/>');
-  hline(orH, OR0, "var(--or)"); hline(orL, OR0, "var(--or)");
-  hline(PDH, 0, "var(--pd)"); hline(pmH, 0, "var(--muted)", "4 3", 0.8); hline(pmL, 0, "var(--muted)", "4 3", 0.8);
-  // VWAP and EMA
-  s.push('<path d="' + path(vw, 0) + '" fill="none" stroke="var(--accent)" stroke-width="2"/>');
-  s.push('<path d="' + path(ema, 0) + '" fill="none" stroke="var(--ema)" stroke-width="1.2"/>');
-  // candles
+  s.push('<rect x="' + (X0 + step * OPEN).toFixed(1) + '" y="' + y(orH).toFixed(1) + '" width="' + (X1 - X0 - step * OPEN).toFixed(1) + '" height="' + (y(orL) - y(orH)).toFixed(1) + '" fill="var(--or)" fill-opacity="0.12"/>');
+  hl(orH, OPEN, N, "var(--or)", 'stroke-width="1.6"'); hl(orL, OPEN, N, "var(--or)", 'stroke-width="1.6"');
+  hl(PDH, 0, N, "var(--pd)"); hl(pmH, 0, N, "var(--muted)", 'stroke-width="1" stroke-opacity="0.8"'); hl(pmL, 0, N, "var(--muted)", 'stroke-width="1" stroke-opacity="0.8"');
+  // trade lines from entry to exit
+  hl(stop, ENTRY, exitBar + 1, "#ef5350", 'stroke-width="2.4"');
+  hl(target, ENTRY, exitBar + 1, "#26a69a", 'stroke-width="2.4"');
+  hl(entry, ENTRY, exitBar + 1, "var(--muted)", 'stroke-width="1.2" stroke-dasharray="2 3"');
+  // VWAP, colored by which side price is on
+  for (i = OPEN + 1; i < N; i++) {
+    var col = bars[i].c >= vw[i] ? "#26a69a" : "#ef5350";
+    s.push('<line x1="' + x(i - 1).toFixed(1) + '" y1="' + y(vw[i - 1]).toFixed(1) + '" x2="' + x(i).toFixed(1) + '" y2="' + y(vw[i]).toFixed(1) + '" stroke="' + col + '" stroke-width="2.2" stroke-linecap="round"/>');
+  }
   var cw = Math.max(3, step * 0.56);
-  bars.forEach(function (b, i) {
-    var up = b.c >= b.o, col = up ? "var(--bull)" : "var(--bear)";
+  bars.forEach(function (b, k) {
+    var up = b.c >= b.o, c = up ? "var(--bull)" : "var(--bear)";
     var top = y(Math.max(b.o, b.c)), bot = y(Math.min(b.o, b.c));
-    s.push('<line x1="' + x(i).toFixed(1) + '" x2="' + x(i).toFixed(1) + '" y1="' + y(b.h).toFixed(1) + '" y2="' + y(b.l).toFixed(1) + '" stroke="' + col + '" stroke-width="1"/>');
-    s.push('<rect x="' + (x(i) - cw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + Math.max(1, bot - top).toFixed(1) + '" fill="' + col + '" fill-opacity="' + (i < OR0 ? 0.55 : 1) + '"/>');
+    s.push('<line x1="' + x(k).toFixed(1) + '" x2="' + x(k).toFixed(1) + '" y1="' + y(b.h).toFixed(1) + '" y2="' + y(b.l).toFixed(1) + '" stroke="' + c + '" stroke-width="1"/>');
+    s.push('<rect x="' + (x(k) - cw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + Math.max(1, bot - top).toFixed(1) + '" fill="' + c + '" fill-opacity="' + (k < OPEN ? 0.5 : 1) + '"/>');
   });
-  // markers
-  var mb = bars[ORB], my = y(mb.l) + 10;
-  s.push('<path d="M' + x(ORB).toFixed(1) + ' ' + my.toFixed(1) + ' l5 8 h-10 Z" fill="var(--bull)"/>');
-  s.push('<text x="' + x(ORB).toFixed(1) + '" y="' + (my + 19).toFixed(1) + '" text-anchor="middle" fill="var(--bull)" font-weight="500">ORB</text>');
-  var pb = bars[PDHBAR], py = y(pb.l) + 10;
-  s.push('<path d="M' + x(PDHBAR).toFixed(1) + ' ' + py.toFixed(1) + ' l4 4 l-4 4 l-4 -4 Z" fill="var(--pd)"/>');
-  s.push('<text x="' + x(PDHBAR).toFixed(1) + '" y="' + (py + 19).toFixed(1) + '" text-anchor="middle" fill="var(--pd)" font-weight="500">PDH</text>');
-  // zone captions
-  s.push('<text x="' + (X0 + 4) + '" y="' + (Y1 - 6) + '" fill="var(--muted)">pre-market</text>');
-  s.push('<text x="' + (X0 + step * LUNCH + 4).toFixed(1) + '" y="' + (Y1 - 6) + '" fill="var(--muted)">midday chop</text>');
-  // time axis
-  [[OR0, "9:30"], [14, "10:00"], [20, "10:30"], [26, "11:00"], [LUNCH, "11:30"], [38, "12:00"]].forEach(function (t) {
-    s.push('<text x="' + x(t[0]).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" fill="var(--muted)">' + t[1] + '</text>');
+  function tagBox(cx, yTop, text, fill, pointUp) {
+    var w = text.length * 7.6 + 12, hgt = 20, bx = Math.min(Math.max(cx - w / 2, X0), X1 - w);
+    var by = pointUp ? yTop + 6 : yTop - 6 - hgt;
+    s.push('<path d="M' + cx.toFixed(1) + ' ' + (pointUp ? yTop + 1 : yTop - 1).toFixed(1) + ' l-5 ' + (pointUp ? 5 : -5) + ' h10 Z" fill="' + fill + '"/>');
+    s.push('<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + hgt + '" rx="3" fill="' + fill + '"/>');
+    s.push('<text x="' + (bx + w / 2).toFixed(1) + '" y="' + (by + 14).toFixed(1) + '" text-anchor="middle" fill="#fff" font-weight="600" font-size="13" font-family="Public Sans, -apple-system, sans-serif">' + text + '</text>');
+  }
+  tagBox(x(ENTRY), y(bars[ENTRY].l) + 4, "BUY", "#26a69a", true);
+  tagBox(x(exitBar), y(bars[exitBar].h) - 4, "TARGET ✓ +2.0R", "#26a69a", false);
+  s.push('<text x="' + (x(OPEN) - 2).toFixed(1) + '" y="' + (y(orL) + 14).toFixed(1) + '" fill="var(--or)" font-weight="500">range</text>');
+  s.push('<text x="' + (X0 + step * LUNCH + 4).toFixed(1) + '" y="' + (Y0 + 12) + '" fill="var(--muted)">midday</text>');
+  s.push('<text x="' + (X0 + 2) + '" y="' + (Y0 + 12) + '" fill="var(--muted)">pre-market</text>');
+  [[OPEN, "9:30"], [14, "10:00"], [20, "10:30"], [26, "11:00"], [LUNCH, "11:30"], [38, "12:00"]].forEach(function (t) {
+    s.push('<text x="' + x(t[0]).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" fill="var(--muted)">' + t[1] + '</text>');
   });
-  // right-edge tags, spread apart so none overlap
   var tags = [
-    { p: vw[N - 1], t: "VWAP", c: "var(--accent)" },
-    { p: orH, t: "ORH", c: "var(--or)" }, { p: orL, t: "ORL", c: "var(--or)" },
-    { p: PDH, t: "PDH", c: "var(--pd)" },
-    { p: pmH, t: "PMH", c: "var(--muted)" }, { p: pmL, t: "PML", c: "var(--muted)" }
+    { p: target, t: "Target", c: "#26a69a" }, { p: stop, t: "Stop", c: "#ef5350" },
+    { p: vw[N - 1], t: "VWAP", c: "#26a69a" },
+    { p: orH, t: "Range high", c: "var(--or)" }, { p: orL, t: "Range low", c: "var(--or)" },
+    { p: PDH, t: "Prior high", c: "var(--pd)" },
+    { p: pmH, t: "PM high", c: "var(--muted)" }, { p: pmL, t: "PM low", c: "var(--muted)" }
   ].map(function (g) { g.y = y(g.p); return g; }).sort(function (a, b) { return a.y - b.y; });
   for (var j = 1; j < tags.length; j++) if (tags[j].y - tags[j - 1].y < 15) tags[j].y = tags[j - 1].y + 15;
   tags.forEach(function (g) {
-    s.push('<text x="' + (X1 + 6) + '" y="' + (g.y + 3.5).toFixed(1) + '" fill="' + g.c + '" font-weight="500">' + g.t + ' ' + g.p.toFixed(2) + '</text>');
+    s.push('<text x="' + (X1 + 5) + '" y="' + (g.y + 4).toFixed(1) + '" fill="' + g.c + '" font-weight="500" font-size="12.5">' + g.t + '</text>');
   });
   s.push('</svg>');
   document.getElementById("schematic").innerHTML = s.join("");

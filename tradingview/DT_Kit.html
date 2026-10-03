@@ -202,222 +202,278 @@ hr { border: 0; border-top: 1px solid var(--rule); margin: 0; }
   .stack .set { white-space: normal; }
 }
 </style>
+<style>
+/* Additions for the simplified guide */
+.qa { display: grid; gap: 14px; }
+.q { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; padding: 16px; display: grid; gap: 10px; }
+.q > h3 { font-size: 1.3rem; }
+.q > h3::before { content: "Q  "; color: var(--accent); }
+.q p { max-width: none; }
+.q ul { margin: 0; padding-left: 1.1em; display: grid; gap: 6px; font-size: 0.94rem; }
+.path { font-family: var(--font-mono); font-size: 0.84rem; background: var(--accent-soft); padding: 2px 6px; border-radius: 4px; white-space: nowrap; }
+.key { list-style: none; margin: 0; padding: 0; display: grid; border-top: 1px solid var(--rule); }
+.key li { display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: start; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.key li > span:last-child { min-width: 0; font-size: 0.94rem; }
+.sw { display: inline-flex; align-items: center; justify-content: center; font: 600 0.72rem var(--font-body); letter-spacing: 0.03em; border-radius: 4px; padding: 4px 8px; color: #fff; white-space: nowrap; }
+.sw.buy { background: #26a69a; } .sw.sell { background: #ef5350; } .sw.grey { background: #787b86; }
+.ln { display: inline-block; width: 64px; height: 0; border-top: 3px solid; margin-top: 10px; }
+.ln.stop { border-color: #ef5350; } .ln.tgt { border-color: #26a69a; } .ln.entry { border-top: 2px dotted var(--muted); }
+.ln.or { border-color: var(--or); } .ln.pd { border-color: var(--pd); } .ln.pm { border-color: var(--muted); border-top-width: 2px; }
+.ln.vw { border-image: linear-gradient(90deg, #ef5350 50%, #26a69a 50%) 1; }
+.box { display: inline-block; width: 64px; height: 18px; border-radius: 3px; }
+.box.or { background: color-mix(in srgb, var(--or) 20%, transparent); border-top: 2px solid var(--or); border-bottom: 2px solid var(--or); }
+.box.mid { background: var(--shade); border: 1px solid var(--rule); }
+.mock { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; overflow: hidden; font-family: var(--font-mono); font-size: 0.8rem; }
+.mock .mock-row { display: grid; grid-template-columns: 84px 1fr; gap: 10px; padding: 7px 12px; border-bottom: 1px solid var(--rule); }
+.mock .mock-row:last-child { border-bottom: 0; }
+.mock .k { color: var(--muted); }
+.mock .v { min-width: 0; overflow-wrap: anywhere; }
+.mock .up { color: var(--bull); font-weight: 500; }
+.example { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.flow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 0.84rem; }
+.flow span { border: 1px solid var(--rule); background: var(--surface); border-radius: 999px; padding: 3px 10px; }
+.flow i { color: var(--muted); font-style: normal; }
+.levels { display: grid; gap: 12px; }
+.level { display: grid; grid-template-columns: 36px 1fr; gap: 12px; }
+.level b.n { font-family: var(--font-display); font-size: 1.6rem; color: var(--accent); line-height: 1; }
+.level div { min-width: 0; display: grid; gap: 4px; }
+.msg { font-family: var(--font-mono); font-size: 0.8rem; background: var(--code-bg); color: var(--code-ink); border-radius: 8px; padding: 10px 12px; overflow-x: auto; white-space: pre; }
+details.extra { background: var(--surface); border: 1px solid var(--rule); border-radius: 12px; overflow: hidden; }
+details.extra > summary { cursor: pointer; padding: 14px 16px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 12px; }
+details.extra > summary::-webkit-details-marker { display: none; }
+details.extra > summary::after { content: "Show"; font: 500 0.78rem var(--font-mono); color: var(--accent); }
+details.extra[open] > summary::after { content: "Hide"; }
+details.extra .script { border: 0; border-top: 1px solid var(--rule); border-radius: 0; }
+</style>
 
 <div class="wrap">
   <header class="hero">
     <div class="eyebrow">Pine Script v6 · TradingView for iPhone and iPad</div>
     <h1>DT Core Day-Trading Kit</h1>
-    <p class="lede">Three indicators you paste into the Pine Editor, the chart settings to pair with them, alert recipes, and a six-setup playbook. Every default comes from the day-trading literature: Crabel's opening range, Shannon's VWAP, Carter's squeeze, Tharp's position sizing.</p>
+    <p class="lede">DT Core prints BUY and SELL on your chart, draws the stop and target for each trade, closes it for you, and keeps score. Version 2 needs almost no chart settings.</p>
     <figure>
-      <div class="chart-box" id="schematic" role="img" aria-label="Schematic five-minute chart: pre-market range, a fifteen-minute opening range box, an opening range breakout marker, price trending above VWAP and its bands, a break of the prior day high, and shaded midday chop."></div>
-      <div class="legend">
-        <span><i style="background:var(--accent)"></i>VWAP ±1σ / ±2σ</span>
-        <span><i style="background:var(--or)"></i>Opening range</span>
-        <span><i style="background:var(--pd)"></i>Prior day high</span>
-        <span><i style="background:var(--muted)"></i>Pre-open high / low</span>
-        <span><i style="background:var(--ema)"></i>9 EMA</span>
-        <span><i style="background:var(--shade);border:1px solid var(--rule);height:10px"></i>Midday chop</span>
-      </div>
-      <figcaption>What DT Core draws on a 5-minute chart with its defaults. Illustrative data.</figcaption>
+      <div class="chart-box" id="schematic" role="img" aria-label="Schematic five-minute chart: an opening range box forms after 9:30, a candle closes above it and a green BUY label appears, red stop and green target lines extend to the right, and a TARGET label marks a two-R win later in the morning."></div>
+      <figcaption>A typical BUY on a 5-minute chart: range forms, breakout closes above it, the target is hit two hours later. Illustrative data.</figcaption>
     </figure>
   </header>
 
   <nav class="nav" aria-label="Sections">
     <ul>
-      <li><a href="#start">Start</a></li>
-      <li><a href="#scripts">Scripts</a></li>
-      <li><a href="#settings">Chart settings</a></li>
-      <li><a href="#timeframes">Timeframes</a></li>
-      <li><a href="#alerts">Alerts</a></li>
-      <li><a href="#playbook">Playbook</a></li>
-      <li><a href="#risk">Risk</a></li>
-      <li><a href="#routine">Routine</a></li>
-      <li><a href="#sources">Sources</a></li>
+      <li><a href="#questions">Your questions</a></li>
+      <li><a href="#install">Install</a></li>
+      <li><a href="#signals">Read the signals</a></li>
+      <li><a href="#panel">Status panel</a></li>
+      <li><a href="#settings">Settings</a></li>
+      <li><a href="#alerts">Alerts &amp; automation</a></li>
+      <li><a href="#rules">Rules</a></li>
+      <li><a href="#extras">Extras</a></li>
     </ul>
   </nav>
 
-  <section id="start">
-    <div class="eyebrow">Setup order</div>
-    <h2>Start here</h2>
-    <ol class="steps">
-      <li><div><b>Set the chart up first.</b> Extended hours on, exchange timezone, right margin of about 10 bars. <a href="#settings">Chart settings</a></div></li>
-      <li><div><b>Paste the scripts into the Pine Editor.</b> Copy each one below, save it under its name, add it to the chart. <a href="#scripts">Scripts</a></div></li>
-      <li><div><b>Match the inputs to your timeframe.</b> The opening range window changes with the chart you trade. <a href="#timeframes">Timeframes</a></div></li>
-      <li><div><b>Create alerts from the chart you trade.</b> One alert on DT Core covers every signal it draws. <a href="#alerts">Alerts</a></div></li>
-      <li><div><b>Paper trade the playbook for 20+ trades.</b> TradingView's Paper Trading broker works in the iOS app. Keep a journal. <a href="#playbook">Playbook</a></div></li>
-    </ol>
-    <div class="table-scroll">
-      <table class="stack">
-        <thead><tr><th>Your plan</th><th>Load</th><th>Why</th></tr></thead>
-        <tbody>
-          <tr><td>Free (Basic)</td><td>DT Core + DT Volume</td><td class="why">Basic allows very few indicators per chart. DT Core packs nine tools into one slot, and price plus volume matter more than oscillators in Aziz's and Bellafiore's methods. Remove the built-in Volume.</td></tr>
-          <tr><td>Any paid plan</td><td>All three</td><td class="why">Add DT Momentum underneath for squeeze and 3/10 timing.</td></tr>
-        </tbody>
-      </table>
+  <section id="questions">
+    <div class="eyebrow">Answers first</div>
+    <h2>Your three questions</h2>
+    <div class="qa">
+      <article class="q">
+        <h3>I saved the script. Why is nothing on the chart?</h3>
+        <p><b>Saving and adding are two separate steps, and you need both.</b> Saving stores the code in your TradingView account. If it saved without a red error message, the code compiled fine. Adding puts it on a chart:</p>
+        <p>On the chart, tap <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> (some versions say <span class="path">My scripts</span>) → tap <b>DT Core</b>. Its name appears in the top-left corner of the chart.</p>
+        <p><b>Added but still blank?</b></p>
+        <ul>
+          <li><b>Daily chart.</b> DT Core only draws on intraday charts. Switch to 5 minutes; the panel says so if you forget.</li>
+          <li><b>Indicator limit.</b> The free plan fits very few indicators per chart. Remove Volume or anything else you're not using (tap its name → remove).</li>
+          <li><b>Hidden.</b> Tap DT Core's name at the top left and make sure the eye icon is on.</li>
+          <li><b>Before the open or on a weekend.</b> You'll see earlier days' lines and signals; today's start at 9:30.</li>
+        </ul>
+      </article>
+      <article class="q">
+        <h3>What do "0930-1000" and "0930-0935" mean?</h3>
+        <p>They were time windows on a 24-hour clock in New York time, written start-end without colons. Version 2 no longer asks for them: you pick <b>Opening range length: Auto, 5, 15 or 30 minutes</b>, and it measures from the opening bell on its own.</p>
+        <div class="table-scroll">
+          <table class="stack">
+            <thead><tr><th>Code</th><th>Clock time</th><th>Meaning</th></tr></thead>
+            <tbody>
+              <tr><td class="set">0930-0935</td><td>9:30 – 9:35 AM</td><td class="why">First 5 minutes after the open</td></tr>
+              <tr><td class="set">0930-0945</td><td>9:30 – 9:45 AM</td><td class="why">First 15 minutes</td></tr>
+              <tr><td class="set">0930-1000</td><td>9:30 – 10:00 AM</td><td class="why">First 30 minutes</td></tr>
+              <tr><td class="set">1130-1330</td><td>11:30 AM – 1:30 PM</td><td class="why">The midday lull, now shaded automatically</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+      <article class="q">
+        <h3>The chart settings didn't match my app.</h3>
+        <p>Menus differ between app versions, and most of those settings didn't affect the signals. Version 2 handles timezone and pre-market data inside the script. <b>The only chart settings you need: Candles, and the 5-minute timeframe.</b></p>
+        <p>To reach chart settings for anything else, long-press the price numbers on the right edge of the chart, then tap Settings.</p>
+      </article>
     </div>
   </section>
 
-  <section id="scripts">
-    <div class="eyebrow">Pine Editor</div>
-    <h2>The three scripts</h2>
+  <section id="install">
+    <div class="eyebrow">Install or update</div>
+    <h2>Four steps</h2>
     <ol class="steps">
-      <li><div><b>Tap Copy</b> on a script below. If copying is blocked, the code gets selected instead; use the iOS Copy bubble.</div></li>
-      <li><div><b>Open the Pine Editor</b> from a chart in the TradingView app. Depending on app version it sits in the chart's bottom toolbar or under the <span class="mono">⋯</span> menu.</div></li>
-      <li><div><b>Create a new indicator,</b> select all of the template code, delete it, and paste.</div></li>
-      <li><div><b>Save</b> with the script's name (DT Core, DT Momentum, DT Volume), then <b>Add to chart</b>.</div></li>
+      <li><div><b>Copy DT Core.</b> Use the Copy button below.</div></li>
+      <li><div><b>Paste over the old version.</b> Pine Editor → open your saved DT Core → select all → paste → Save. Keeping the name replaces the old code. No saved copy yet? Create a new indicator, paste, and save it as DT Core.</div></li>
+      <li><div><b>Add it to the chart:</b> <span class="path">ƒx Indicators</span> → <span class="path">Personal</span> → DT Core. If it's already on the chart, saving updates it in place.</div></li>
+      <li><div><b>Set the chart to 5-minute candles, then enter your numbers.</b> Tap DT Core's name on the chart → Settings → Risk and alerts: account size and risk per trade.</div></li>
     </ol>
-    <div class="callout">
-      <p><b>No Pine Editor in your app?</b> Open tradingview.com in Safari, tap <span class="mono">aA</span> → Request Desktop Website, open a chart, and use the Pine Editor tab at the bottom. Saved scripts sync to your account and show up in the iOS app under Indicators → My scripts.</p>
-    </div>
-
     <article class="script" id="core">
       <div class="script-head">
-        <div class="row"><h3>DT Core</h3><span class="pill">overlay · 399 lines</span></div>
-        <p>The whole intraday map in one indicator slot.</p>
-        <ul>
-          <li>Session VWAP with volume-weighted ±1σ and ±2σ bands; anchor at the session or at the 9:30 open</li>
-          <li>9 and 20 EMA, 200 SMA</li>
-          <li>Opening range box with optional 1× and 2× measured-move targets</li>
-          <li>Prior-day high, low and close; pre-market high and low (overnight high/low on futures); central pivot range</li>
-          <li>Dashboard: bias, time-of-day relative volume, gap, share of daily ATR used, and position size for your stop</li>
-          <li>Signals: ORB (volume and VWAP filtered, once per day each side), PDH/PDL breaks, VWAP reclaim/loss, EMA cross, ±2σ stretch</li>
-        </ul>
+        <div class="row"><h3>DT Core 2</h3><span class="pill">overlay · 413 lines</span></div>
+        <p>BUY/SELL signals with automatic stop, target and exit, a plain-English status panel, a running scorecard, and alerts ready for automation.</p>
       </div>
       <div class="codebar"><span class="mono">DT_Core.pine</span><div class="btns"><button class="ghost" data-expand="code-core" type="button">Expand</button><button class="copy" data-copy="code-core" type="button">Copy</button></div></div>
       <p class="copy-note" hidden></p>
       <pre class="code" id="code-core"><span class="tk-c">//@version=6</span>
 <span class="tk-c">// ═══════════════════════════════════════════════════════════════════════════</span>
-<span class="tk-c">//  DT Core · all-in-one intraday overlay (uses ONE indicator slot)</span>
-<span class="tk-c">//  VWAP ±σ · 9/20 EMA · 200 SMA · Opening range · Prior-day H/L/C</span>
-<span class="tk-c">//  Pre-open H/L · Central pivot range · Time-of-day RVOL · R-based sizing</span>
+<span class="tk-c">//  DT Core 2 · simple BUY / SELL day-trading signals (uses ONE indicator slot)</span>
 <span class="tk-c">//</span>
-<span class="tk-c">//  Methods: Crabel (opening range breakout), Shannon &amp; Aziz (VWAP, 9/20 EMA),</span>
-<span class="tk-c">//  Fisher &amp; Ochoa (pivot range), Bellafiore (stocks in play / RVOL),</span>
-<span class="tk-c">//  Tharp &amp; Elder (fixed-fractional risk, R-multiples).</span>
+<span class="tk-c">//  The plan it follows for you (opening range breakout: Crabel 1990, Aziz 2015)</span>
+<span class="tk-c">//   1. Wait for the opening range: the high and low of the first minutes after</span>
+<span class="tk-c">//      the market opens. Auto picks 5, 15 or 30 minutes from your chart.</span>
+<span class="tk-c">//   2. BUY when a candle CLOSES above the range, above VWAP, on strong volume.</span>
+<span class="tk-c">//      SELL (short) is the mirror image below the range.</span>
+<span class="tk-c">//   3. Stop at the middle of the range. Target = 2× what you risk.</span>
+<span class="tk-c">//   4. Exit at the stop, the target, or 5 minutes before the close.</span>
+<span class="tk-c">//      At most one BUY and one SELL per day; none after the cutoff.</span>
+<span class="tk-c">//</span>
+<span class="tk-c">//  Times are measured from the market open, so chart timezone and</span>
+<span class="tk-c">//  extended-hours settings don't change the signals.</span>
 <span class="tk-c">//  Educational tool. Not financial advice.</span>
 <span class="tk-c">// ═══════════════════════════════════════════════════════════════════════════</span>
-indicator(<span class="tk-s">"DT Core"</span>, overlay = <span class="tk-k">true</span>, max_labels_count = <span class="tk-n">50</span>)
+indicator(<span class="tk-s">"DT Core"</span>, overlay = <span class="tk-k">true</span>, max_labels_count = <span class="tk-n">500</span>, max_lines_count = <span class="tk-n">500</span>)
 
 <span class="tk-c">// ───── Inputs ─────────────────────────────────────────────────────────────</span>
-<span class="tk-k">string</span> G_SES = <span class="tk-s">"Session (exchange time)"</span>
-<span class="tk-k">string</span> tz        = input.<span class="tk-k">string</span>(<span class="tk-s">"America/New_York"</span>, <span class="tk-s">"Timezone"</span>, options = [<span class="tk-s">"America/New_York"</span>, <span class="tk-s">"America/Chicago"</span>, <span class="tk-s">"Europe/London"</span>, <span class="tk-s">"Europe/Berlin"</span>, <span class="tk-s">"Asia/Tokyo"</span>, <span class="tk-s">"Asia/Kolkata"</span>, <span class="tk-s">"Australia/Sydney"</span>, <span class="tk-s">"UTC"</span>], group = G_SES)
-<span class="tk-k">string</span> orSess    = input.session(<span class="tk-s">"0930-0945"</span>, <span class="tk-s">"Opening range"</span>, group = G_SES, tooltip = <span class="tk-s">"Crabel / Aziz ORB. 0930-0935 = 5-min, 0930-0945 = 15-min, 0930-1000 = 30-min. Use a chart timeframe no larger than the range."</span>)
-<span class="tk-k">string</span> sigSess   = input.session(<span class="tk-s">"0930-1130"</span>, <span class="tk-s">"Breakout signal window"</span>, group = G_SES, tooltip = <span class="tk-s">"ORB signals only fire inside this window. Opening-range breakouts lose their edge after the morning session."</span>)
-<span class="tk-k">bool</span>   shadeLunch = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Shade midday chop"</span>, inline = <span class="tk-s">"lunch"</span>, group = G_SES)
-<span class="tk-k">string</span> lunchSess = input.session(<span class="tk-s">"1130-1330"</span>, <span class="tk-s">""</span>, inline = <span class="tk-s">"lunch"</span>, group = G_SES)
+<span class="tk-k">string</span> G1 = <span class="tk-s">"Signals"</span>
+<span class="tk-k">string</span> orChoice   = input.<span class="tk-k">string</span>(<span class="tk-s">"Auto"</span>, <span class="tk-s">"Opening range length"</span>, options = [<span class="tk-s">"Auto"</span>, <span class="tk-s">"5 minutes"</span>, <span class="tk-s">"15 minutes"</span>, <span class="tk-s">"30 minutes"</span>, <span class="tk-s">"60 minutes"</span>], group = G1, tooltip = <span class="tk-s">"How long to wait after the open before looking for a breakout. Auto: 5 min on a 1-minute chart, 15 min on 2–5 minute charts, 30 min on 10–15 minute charts."</span>)
+<span class="tk-k">string</span> openChoice = input.<span class="tk-k">string</span>(<span class="tk-s">"Auto"</span>, <span class="tk-s">"Market open"</span>, options = [<span class="tk-s">"Auto"</span>, <span class="tk-s">"Exchange open"</span>, <span class="tk-s">"9:30 New York"</span>], group = G1, tooltip = <span class="tk-s">"Auto: the exchange's opening bell for stocks, 9:30 New York for futures, crypto and forex."</span>)
+<span class="tk-k">string</span> cutChoice  = input.<span class="tk-k">string</span>(<span class="tk-s">"2 hours after open"</span>, <span class="tk-s">"Stop new signals"</span>, options = [<span class="tk-s">"1 hour after open"</span>, <span class="tk-s">"2 hours after open"</span>, <span class="tk-s">"4 hours after open"</span>, <span class="tk-s">"Never"</span>], group = G1, tooltip = <span class="tk-s">"Breakouts work best early. Open trades still run to their stop, target or the close."</span>)
+<span class="tk-k">string</span> stopChoice = input.<span class="tk-k">string</span>(<span class="tk-s">"Middle of range"</span>, <span class="tk-s">"Stop placement"</span>, options = [<span class="tk-s">"Middle of range"</span>, <span class="tk-s">"Other side of range"</span>], group = G1)
+<span class="tk-k">float</span>  targetR    = input.<span class="tk-k">float</span>(<span class="tk-n">2.0</span>, <span class="tk-s">"Target (× risk)"</span>, minval = <span class="tk-n">0.5</span>, step = <span class="tk-n">0.5</span>, group = G1, tooltip = <span class="tk-s">"2 means the target is twice as far from entry as the stop."</span>)
+<span class="tk-k">bool</span>   useVolF    = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Only on strong volume (1.5× average)"</span>, group = G1)
+<span class="tk-k">bool</span>   useVwapF   = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Only on the right side of VWAP"</span>, group = G1)
+<span class="tk-k">bool</span>   allowSell  = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Show SELL (short) signals"</span>, group = G1)
 
-<span class="tk-k">string</span> G_VW = <span class="tk-s">"VWAP"</span>
-<span class="tk-k">bool</span>   showVwap   = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Show VWAP"</span>, group = G_VW)
-<span class="tk-k">string</span> vwapAnchor = input.<span class="tk-k">string</span>(<span class="tk-s">"Session"</span>, <span class="tk-s">"Anchor"</span>, options = [<span class="tk-s">"Session"</span>, <span class="tk-s">"RTH open"</span>], group = G_VW, tooltip = <span class="tk-s">"Session: resets at the start of the trading day (includes pre-market when Extended hours is on). RTH open: resets at the start of the opening range."</span>)
-<span class="tk-k">bool</span>   showBand1  = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Inner band"</span>, inline = <span class="tk-s">"b1"</span>, group = G_VW)
-<span class="tk-k">float</span>  band1Mult  = input.<span class="tk-k">float</span>(<span class="tk-n">1.0</span>, <span class="tk-s">"inner σ"</span>, minval = <span class="tk-n">0.1</span>, step = <span class="tk-n">0.1</span>, inline = <span class="tk-s">"b1"</span>, group = G_VW)
-<span class="tk-k">bool</span>   showBand2  = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Outer band"</span>, inline = <span class="tk-s">"b2"</span>, group = G_VW)
-<span class="tk-k">float</span>  band2Mult  = input.<span class="tk-k">float</span>(<span class="tk-n">2.0</span>, <span class="tk-s">"outer σ"</span>, minval = <span class="tk-n">0.1</span>, step = <span class="tk-n">0.1</span>, inline = <span class="tk-s">"b2"</span>, group = G_VW)
+<span class="tk-k">string</span> G2 = <span class="tk-s">"Show on chart"</span>
+<span class="tk-k">bool</span>   showVwap  = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"VWAP (green = price above, red = below)"</span>, group = G2)
+<span class="tk-k">bool</span>   showBands = input.<span class="tk-k">bool</span>(<span class="tk-k">false</span>, <span class="tk-s">"VWAP bands (±1σ and ±2σ)"</span>, group = G2)
+<span class="tk-k">bool</span>   showEma   = input.<span class="tk-k">bool</span>(<span class="tk-k">false</span>, <span class="tk-s">"9 and 20 EMA"</span>, group = G2)
+<span class="tk-k">bool</span>   showOR    = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Opening range box"</span>, group = G2)
+<span class="tk-k">bool</span>   showPD    = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Prior day high and low"</span>, group = G2)
+<span class="tk-k">bool</span>   showPM    = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Pre-market high and low"</span>, group = G2)
+<span class="tk-k">bool</span>   showLunch = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Shade midday (2–4 hours after open)"</span>, group = G2)
+<span class="tk-k">bool</span>   showTags  = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Price tags at the right edge"</span>, group = G2)
+<span class="tk-k">bool</span>   showPanel = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Status panel"</span>, group = G2)
+<span class="tk-k">string</span> panelPos  = input.<span class="tk-k">string</span>(<span class="tk-s">"Top right"</span>, <span class="tk-s">"Panel position"</span>, options = [<span class="tk-s">"Top right"</span>, <span class="tk-s">"Top left"</span>, <span class="tk-s">"Bottom right"</span>, <span class="tk-s">"Bottom left"</span>], group = G2)
+<span class="tk-k">string</span> panelSize = input.<span class="tk-k">string</span>(<span class="tk-s">"Small"</span>, <span class="tk-s">"Panel text size"</span>, options = [<span class="tk-s">"Tiny"</span>, <span class="tk-s">"Small"</span>, <span class="tk-s">"Normal"</span>], group = G2)
 
-<span class="tk-k">string</span> G_MA = <span class="tk-s">"Moving averages"</span>
-<span class="tk-k">bool</span> showFast  = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Fast EMA"</span>, inline = <span class="tk-s">"f"</span>, group = G_MA)
-<span class="tk-k">int</span>  fastLen   = input.<span class="tk-k">int</span>(<span class="tk-n">9</span>, <span class="tk-s">""</span>, minval = <span class="tk-n">1</span>, inline = <span class="tk-s">"f"</span>, group = G_MA)
-<span class="tk-k">bool</span> showSlow  = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Slow EMA"</span>, inline = <span class="tk-s">"s"</span>, group = G_MA)
-<span class="tk-k">int</span>  slowLen   = input.<span class="tk-k">int</span>(<span class="tk-n">20</span>, <span class="tk-s">""</span>, minval = <span class="tk-n">1</span>, inline = <span class="tk-s">"s"</span>, group = G_MA)
-<span class="tk-k">bool</span> showTrend = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Trend SMA"</span>, inline = <span class="tk-s">"t"</span>, group = G_MA)
-<span class="tk-k">int</span>  trendLen  = input.<span class="tk-k">int</span>(<span class="tk-n">200</span>, <span class="tk-s">""</span>, minval = <span class="tk-n">1</span>, inline = <span class="tk-s">"t"</span>, group = G_MA)
+<span class="tk-k">string</span> G3 = <span class="tk-s">"Risk and alerts"</span>
+<span class="tk-k">float</span>  acct    = input.<span class="tk-k">float</span>(<span class="tk-n">25000</span>, <span class="tk-s">"Account size ($)"</span>, minval = <span class="tk-n">0</span>, group = G3)
+<span class="tk-k">float</span>  riskPct = input.<span class="tk-k">float</span>(<span class="tk-n">0.5</span>, <span class="tk-s">"Risk per trade (%)"</span>, minval = <span class="tk-n">0.05</span>, maxval = <span class="tk-n">5</span>, step = <span class="tk-n">0.05</span>, group = G3, tooltip = <span class="tk-s">"What you lose if the stop is hit. 0.5–1% is standard (Tharp, Elder)."</span>)
+<span class="tk-k">string</span> msgFmt  = input.<span class="tk-k">string</span>(<span class="tk-s">"Plain text"</span>, <span class="tk-s">"Alert message"</span>, options = [<span class="tk-s">"Plain text"</span>, <span class="tk-s">"JSON (webhook)"</span>], group = G3, tooltip = <span class="tk-s">"JSON is for automation services that read TradingView webhooks."</span>)
 
-<span class="tk-k">string</span> G_LV = <span class="tk-s">"Key levels"</span>
-<span class="tk-k">bool</span> showOR   = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Opening range"</span>, group = G_LV)
-<span class="tk-k">bool</span> showORX  = input.<span class="tk-k">bool</span>(<span class="tk-k">false</span>, <span class="tk-s">"OR measured-move targets (1× and 2×)"</span>, group = G_LV)
-<span class="tk-k">bool</span> showPD   = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Prior day high / low / close"</span>, group = G_LV)
-<span class="tk-k">bool</span> showPM   = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Pre-open high / low (pre-market or overnight)"</span>, group = G_LV, tooltip = <span class="tk-s">"High and low of the bars between the start of the trading day and the opening range. Stocks need Extended hours on."</span>)
-<span class="tk-k">bool</span> showCPR  = input.<span class="tk-k">bool</span>(<span class="tk-k">false</span>, <span class="tk-s">"Central pivot range"</span>, group = G_LV, tooltip = <span class="tk-s">"Fisher (The Logical Trader) / Ochoa (Secrets of a Pivot Boss). A narrow range often precedes a trend day."</span>)
-<span class="tk-k">bool</span> showTags = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Price tags on the right edge"</span>, group = G_LV)
+<span class="tk-k">color</span> cBuy  = <span class="tk-n">#26a69a</span>
+<span class="tk-k">color</span> cSell = <span class="tk-n">#ef5350</span>
+<span class="tk-k">color</span> cVwap = <span class="tk-n">#f5a623</span>
+<span class="tk-k">color</span> cOR   = <span class="tk-n">#29b6f6</span>
+<span class="tk-k">color</span> cPD   = <span class="tk-n">#ffca28</span>
+<span class="tk-k">color</span> cPM   = <span class="tk-n">#b0bec5</span>
+<span class="tk-k">color</span> cEma1 = <span class="tk-n">#42a5f5</span>
+<span class="tk-k">color</span> cEma2 = <span class="tk-n">#ab47bc</span>
 
-<span class="tk-k">string</span> G_SG = <span class="tk-s">"Signals and alerts"</span>
-<span class="tk-k">bool</span>  sigORB  = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Opening range breakout"</span>, group = G_SG)
-<span class="tk-k">bool</span>  fVwap   = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"ORB must agree with VWAP side"</span>, group = G_SG)
-<span class="tk-k">float</span> volMult = input.<span class="tk-k">float</span>(<span class="tk-n">1.5</span>, <span class="tk-s">"ORB minimum volume (× 20-bar average)"</span>, minval = <span class="tk-n">0</span>, step = <span class="tk-n">0.1</span>, group = G_SG, tooltip = <span class="tk-s">"0 turns the volume filter off."</span>)
-<span class="tk-k">bool</span>  sigPD   = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Prior-day high / low break"</span>, group = G_SG)
-<span class="tk-k">bool</span>  sigVWAP = input.<span class="tk-k">bool</span>(<span class="tk-k">false</span>, <span class="tk-s">"VWAP reclaim / loss"</span>, group = G_SG)
-<span class="tk-k">bool</span>  sigEMA  = input.<span class="tk-k">bool</span>(<span class="tk-k">false</span>, <span class="tk-s">"Fast / slow EMA cross"</span>, group = G_SG)
-<span class="tk-k">bool</span>  sigExt  = input.<span class="tk-k">bool</span>(<span class="tk-k">false</span>, <span class="tk-s">"Outer-band stretch (don't chase)"</span>, group = G_SG)
+<span class="tk-c">// ───── Timing: everything is measured from the market open ────────────────</span>
+<span class="tk-k">bool</span>  intra = timeframe.isintraday
+<span class="tk-k">float</span> tfMin = timeframe.in_seconds() / <span class="tk-n">60.0</span>
+<span class="tk-k">int</span> orPick = <span class="tk-k">switch</span> orChoice
+    <span class="tk-s">"5 minutes"</span>  =&gt; <span class="tk-n">5</span>
+    <span class="tk-s">"15 minutes"</span> =&gt; <span class="tk-n">15</span>
+    <span class="tk-s">"30 minutes"</span> =&gt; <span class="tk-n">30</span>
+    <span class="tk-s">"60 minutes"</span> =&gt; <span class="tk-n">60</span>
+    =&gt; tfMin &lt;= <span class="tk-n">1</span> ? <span class="tk-n">5</span> : tfMin &lt;= <span class="tk-n">5</span> ? <span class="tk-n">15</span> : tfMin &lt;= <span class="tk-n">15</span> ? <span class="tk-n">30</span> : <span class="tk-n">60</span>
+<span class="tk-k">int</span> orMin = math.max(orPick, math.ceil(tfMin))
+<span class="tk-k">int</span> cutMin = <span class="tk-k">switch</span> cutChoice
+    <span class="tk-s">"1 hour after open"</span>  =&gt; <span class="tk-n">60</span>
+    <span class="tk-s">"4 hours after open"</span> =&gt; <span class="tk-n">240</span>
+    <span class="tk-s">"Never"</span>              =&gt; <span class="tk-n">100000</span>
+    =&gt; <span class="tk-n">120</span>
+<span class="tk-k">int</span> MIN = <span class="tk-n">60000</span>
 
-<span class="tk-k">string</span> G_RK = <span class="tk-s">"Dashboard and risk"</span>
-<span class="tk-k">bool</span>   showDash = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Show dashboard"</span>, group = G_RK)
-<span class="tk-k">string</span> dashPos  = input.<span class="tk-k">string</span>(<span class="tk-s">"Top right"</span>, <span class="tk-s">"Position"</span>, options = [<span class="tk-s">"Top right"</span>, <span class="tk-s">"Bottom right"</span>, <span class="tk-s">"Bottom left"</span>, <span class="tk-s">"Top left"</span>], group = G_RK)
-<span class="tk-k">float</span>  acct     = input.<span class="tk-k">float</span>(<span class="tk-n">25000</span>, <span class="tk-s">"Account size"</span>, minval = <span class="tk-n">0</span>, group = G_RK)
-<span class="tk-k">float</span>  riskPct  = input.<span class="tk-k">float</span>(<span class="tk-n">0.5</span>, <span class="tk-s">"Risk per trade (%)"</span>, minval = <span class="tk-n">0.01</span>, step = <span class="tk-n">0.05</span>, group = G_RK, tooltip = <span class="tk-s">"Tharp / Elder: risk a small fixed fraction per trade. 0.5–1% is common; 2% is Elder's ceiling."</span>)
-<span class="tk-k">string</span> stopMode = input.<span class="tk-k">string</span>(<span class="tk-s">"ATR"</span>, <span class="tk-s">"Stop basis"</span>, options = [<span class="tk-s">"ATR"</span>, <span class="tk-s">"Opening range"</span>, <span class="tk-s">"VWAP"</span>], group = G_RK)
-<span class="tk-k">float</span>  atrMult  = input.<span class="tk-k">float</span>(<span class="tk-n">1.5</span>, <span class="tk-s">"ATR multiple (chart timeframe)"</span>, minval = <span class="tk-n">0.1</span>, step = <span class="tk-n">0.1</span>, group = G_RK)
-<span class="tk-k">int</span>    rvolDays = input.<span class="tk-k">int</span>(<span class="tk-n">10</span>, <span class="tk-s">"RVOL lookback (days)"</span>, minval = <span class="tk-n">2</span>, maxval = <span class="tk-n">50</span>, group = G_RK)
+<span class="tk-k">bool</span>   nyTypes = syminfo.<span class="tk-k">type</span> == <span class="tk-s">"futures"</span> <span class="tk-k">or</span> syminfo.<span class="tk-k">type</span> == <span class="tk-s">"crypto"</span> <span class="tk-k">or</span> syminfo.<span class="tk-k">type</span> == <span class="tk-s">"forex"</span> <span class="tk-k">or</span> syminfo.<span class="tk-k">type</span> == <span class="tk-s">"cfd"</span>
+<span class="tk-k">bool</span>   useNY   = openChoice == <span class="tk-s">"9:30 New York"</span> <span class="tk-k">or</span> (openChoice == <span class="tk-s">"Auto"</span> <span class="tk-k">and</span> nyTypes)
+<span class="tk-k">string</span> showTz  = useNY ? <span class="tk-s">"America/New_York"</span> : syminfo.timezone
 
-<span class="tk-k">string</span> G_CL = <span class="tk-s">"Colors"</span>
-<span class="tk-k">color</span> cBull  = input.<span class="tk-k">color</span>(<span class="tk-n">#26a69a</span>, <span class="tk-s">"Bull"</span>, inline = <span class="tk-s">"c1"</span>, group = G_CL)
-<span class="tk-k">color</span> cBear  = input.<span class="tk-k">color</span>(<span class="tk-n">#ef5350</span>, <span class="tk-s">"Bear"</span>, inline = <span class="tk-s">"c1"</span>, group = G_CL)
-<span class="tk-k">color</span> cVwap  = input.<span class="tk-k">color</span>(<span class="tk-n">#f5a623</span>, <span class="tk-s">"VWAP"</span>, inline = <span class="tk-s">"c1"</span>, group = G_CL)
-<span class="tk-k">color</span> cFast  = input.<span class="tk-k">color</span>(<span class="tk-n">#42a5f5</span>, <span class="tk-s">"Fast"</span>, inline = <span class="tk-s">"c2"</span>, group = G_CL)
-<span class="tk-k">color</span> cSlow  = input.<span class="tk-k">color</span>(<span class="tk-n">#ab47bc</span>, <span class="tk-s">"Slow"</span>, inline = <span class="tk-s">"c2"</span>, group = G_CL)
-<span class="tk-k">color</span> cTrend = input.<span class="tk-k">color</span>(<span class="tk-n">#9e9e9e</span>, <span class="tk-s">"Trend"</span>, inline = <span class="tk-s">"c2"</span>, group = G_CL)
-<span class="tk-k">color</span> cOR    = input.<span class="tk-k">color</span>(<span class="tk-n">#29b6f6</span>, <span class="tk-s">"OR"</span>, inline = <span class="tk-s">"c3"</span>, group = G_CL)
-<span class="tk-k">color</span> cPD    = input.<span class="tk-k">color</span>(<span class="tk-n">#ffca28</span>, <span class="tk-s">"Prior day"</span>, inline = <span class="tk-s">"c3"</span>, group = G_CL)
-<span class="tk-k">color</span> cPM    = input.<span class="tk-k">color</span>(<span class="tk-n">#b0bec5</span>, <span class="tk-s">"Pre-open"</span>, inline = <span class="tk-s">"c3"</span>, group = G_CL)
-<span class="tk-k">color</span> cCPR   = input.<span class="tk-k">color</span>(<span class="tk-n">#7e57c2</span>, <span class="tk-s">"CPR"</span>, inline = <span class="tk-s">"c4"</span>, group = G_CL)
+<span class="tk-k">bool</span> newDay = timeframe.change(<span class="tk-s">"D"</span>)
+<span class="tk-k">int</span>  t930   = timestamp(<span class="tk-s">"America/New_York"</span>, year(time, <span class="tk-s">"America/New_York"</span>), month(time, <span class="tk-s">"America/New_York"</span>), dayofmonth(time, <span class="tk-s">"America/New_York"</span>), <span class="tk-n">9</span>, <span class="tk-n">30</span>, <span class="tk-n">0</span>)
 
-<span class="tk-c">// ───── Session state ──────────────────────────────────────────────────────</span>
-<span class="tk-k">bool</span> intra   = timeframe.isintraday
-<span class="tk-k">bool</span> newDay  = timeframe.change(<span class="tk-s">"D"</span>)
-<span class="tk-k">bool</span> inOR    = <span class="tk-k">not</span> <span class="tk-k">na</span>(time(timeframe.period, orSess, tz))
-<span class="tk-k">bool</span> inSig   = <span class="tk-k">not</span> <span class="tk-k">na</span>(time(timeframe.period, sigSess, tz))
-<span class="tk-k">bool</span> inLunch = <span class="tk-k">not</span> <span class="tk-k">na</span>(time(timeframe.period, lunchSess, tz))
-<span class="tk-k">bool</span> inMkt   = session.ismarket
-<span class="tk-k">float</span> vol    = nz(volume)
-
-<span class="tk-c">// Opening range, pre-open range and regular-session day stats</span>
-<span class="tk-k">var</span> <span class="tk-k">float</span> orH    = <span class="tk-k">na</span>
-<span class="tk-k">var</span> <span class="tk-k">float</span> orL    = <span class="tk-k">na</span>
-<span class="tk-k">var</span> <span class="tk-k">bool</span>  orSeen = <span class="tk-k">false</span>
-<span class="tk-k">var</span> <span class="tk-k">bool</span>  orDone = <span class="tk-k">false</span>
-<span class="tk-k">var</span> <span class="tk-k">float</span> pmH    = <span class="tk-k">na</span>
-<span class="tk-k">var</span> <span class="tk-k">float</span> pmL    = <span class="tk-k">na</span>
-<span class="tk-k">var</span> <span class="tk-k">float</span> dayO   = <span class="tk-k">na</span>
-<span class="tk-k">var</span> <span class="tk-k">float</span> dayH   = <span class="tk-k">na</span>
-<span class="tk-k">var</span> <span class="tk-k">float</span> dayL   = <span class="tk-k">na</span>
-
+<span class="tk-k">var</span> <span class="tk-k">int</span> openT = <span class="tk-k">na</span>
 <span class="tk-k">if</span> newDay
-    orH    := <span class="tk-k">na</span>
-    orL    := <span class="tk-k">na</span>
-    orSeen := <span class="tk-k">false</span>
-    orDone := <span class="tk-k">false</span>
-    pmH    := <span class="tk-k">na</span>
-    pmL    := <span class="tk-k">na</span>
-    dayO   := <span class="tk-k">na</span>
-    dayH   := <span class="tk-k">na</span>
-    dayL   := <span class="tk-k">na</span>
+    openT := <span class="tk-k">na</span>
+<span class="tk-k">if</span> <span class="tk-k">na</span>(openT)
+    <span class="tk-k">if</span> useNY
+        <span class="tk-k">if</span> time &gt;= t930 <span class="tk-k">and</span> time &lt; t930 + <span class="tk-n">390</span> * MIN
+            openT := time
+    <span class="tk-k">else</span> <span class="tk-k">if</span> session.isfirstbar_regular
+        openT := time
 
-<span class="tk-k">bool</span> orStart = inOR <span class="tk-k">and</span> <span class="tk-k">not</span> orSeen
+<span class="tk-k">bool</span> hasOpen = <span class="tk-k">not</span> <span class="tk-k">na</span>(openT)
+<span class="tk-k">int</span>  orEndT  = hasOpen ? openT + orMin * MIN : <span class="tk-k">na</span>
+<span class="tk-k">int</span>  cutT    = hasOpen ? openT + cutMin * MIN : <span class="tk-k">na</span>
+<span class="tk-k">bool</span> isOpenBar = hasOpen <span class="tk-k">and</span> time == openT
+<span class="tk-k">bool</span> inOR      = hasOpen <span class="tk-k">and</span> time &lt; orEndT
+<span class="tk-k">bool</span> beforeCut = hasOpen <span class="tk-k">and</span> time &lt; cutT
+<span class="tk-k">bool</span> inLunch   = hasOpen <span class="tk-k">and</span> time &gt;= openT + <span class="tk-n">120</span> * MIN <span class="tk-k">and</span> time &lt; openT + <span class="tk-n">240</span> * MIN
+<span class="tk-k">bool</span> eodBar    = hasOpen <span class="tk-k">and</span> (time_close &gt;= openT + <span class="tk-n">385</span> * MIN <span class="tk-k">or</span> (<span class="tk-k">not</span> useNY <span class="tk-k">and</span> session.islastbar_regular))
+
+<span class="tk-c">// ───── Opening range ──────────────────────────────────────────────────────</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> orH = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> orL = <span class="tk-k">na</span>
+<span class="tk-k">if</span> newDay
+    orH := <span class="tk-k">na</span>
+    orL := <span class="tk-k">na</span>
 <span class="tk-k">if</span> inOR
-    orH    := <span class="tk-k">na</span>(orH) ? high : math.max(orH, high)
-    orL    := <span class="tk-k">na</span>(orL) ? low : math.min(orL, low)
-    orSeen := <span class="tk-k">true</span>
-<span class="tk-k">else</span> <span class="tk-k">if</span> orSeen
-    orDone := <span class="tk-k">true</span>
+    orH := <span class="tk-k">na</span>(orH) ? high : math.max(orH, high)
+    orL := <span class="tk-k">na</span>(orL) ? low : math.min(orL, low)
+<span class="tk-k">bool</span>  orReady = hasOpen <span class="tk-k">and</span> time &gt;= orEndT <span class="tk-k">and</span> <span class="tk-k">not</span> <span class="tk-k">na</span>(orH)
+<span class="tk-k">float</span> orMid   = (orH + orL) / <span class="tk-n">2</span>
 
-<span class="tk-k">if</span> <span class="tk-k">not</span> orSeen
-    pmH := <span class="tk-k">na</span>(pmH) ? high : math.max(pmH, high)
-    pmL := <span class="tk-k">na</span>(pmL) ? low : math.min(pmL, low)
+<span class="tk-c">// ───── Pre-market (stocks) or overnight (futures, crypto) high and low ────</span>
+<span class="tk-c">// Stocks: pulled from extended-hours data even when the chart hides it.</span>
+pmLevels() =&gt;
+    <span class="tk-k">var</span> <span class="tk-k">float</span> h = <span class="tk-k">na</span>
+    <span class="tk-k">var</span> <span class="tk-k">float</span> l = <span class="tk-k">na</span>
+    <span class="tk-k">if</span> timeframe.change(<span class="tk-s">"D"</span>)
+        h := <span class="tk-k">na</span>
+        l := <span class="tk-k">na</span>
+    <span class="tk-k">if</span> session.ispremarket
+        h := <span class="tk-k">na</span>(h) ? high : math.max(h, high)
+        l := <span class="tk-k">na</span>(l) ? low : math.min(l, low)
+    [h, l]
+[pmHx, pmLx] = request.security(ticker.modify(syminfo.tickerid, session.extended), timeframe.period, pmLevels())
 
-<span class="tk-k">if</span> orStart
-    dayO := open
-    dayH := high
-    dayL := low
-<span class="tk-k">else</span> <span class="tk-k">if</span> orSeen <span class="tk-k">and</span> inMkt
-    dayH := math.max(dayH, high)
-    dayL := math.min(dayL, low)
+<span class="tk-k">var</span> <span class="tk-k">float</span> onH = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> onL = <span class="tk-k">na</span>
+<span class="tk-k">if</span> newDay
+    onH := <span class="tk-k">na</span>
+    onL := <span class="tk-k">na</span>
+<span class="tk-k">if</span> <span class="tk-k">not</span> hasOpen
+    onH := <span class="tk-k">na</span>(onH) ? high : math.max(onH, high)
+    onL := <span class="tk-k">na</span>(onL) ? low : math.min(onL, low)
 
-<span class="tk-k">float</span> orRange = orH - orL
+<span class="tk-k">bool</span>   stockLike = syminfo.<span class="tk-k">type</span> == <span class="tk-s">"stock"</span> <span class="tk-k">or</span> syminfo.<span class="tk-k">type</span> == <span class="tk-s">"fund"</span> <span class="tk-k">or</span> syminfo.<span class="tk-k">type</span> == <span class="tk-s">"dr"</span>
+<span class="tk-k">float</span>  preH   = stockLike ? pmHx : onH
+<span class="tk-k">float</span>  preL   = stockLike ? pmLx : onL
+<span class="tk-k">string</span> preTag = stockLike ? <span class="tk-s">"PM"</span> : <span class="tk-s">"ON"</span>
 
-<span class="tk-c">// ───── VWAP with volume-weighted σ bands ──────────────────────────────────</span>
+<span class="tk-c">// ───── Prior day high and low (no repaint) ────────────────────────────────</span>
+[pdh, pdl] = request.security(ticker.modify(syminfo.tickerid, session.regular), <span class="tk-s">"D"</span>, [high[<span class="tk-n">1</span>], low[<span class="tk-n">1</span>]], lookahead = barmerge.lookahead_on)
+
+<span class="tk-c">// ───── VWAP from the open (pre-open bars get their own) ───────────────────</span>
+<span class="tk-k">float</span> vol = nz(volume)
 <span class="tk-k">var</span> <span class="tk-k">float</span> sPV  = <span class="tk-n">0.0</span>
 <span class="tk-k">var</span> <span class="tk-k">float</span> sV   = <span class="tk-n">0.0</span>
 <span class="tk-k">var</span> <span class="tk-k">float</span> sPV2 = <span class="tk-n">0.0</span>
-<span class="tk-k">bool</span> vwapReset = newDay <span class="tk-k">or</span> (vwapAnchor == <span class="tk-s">"RTH open"</span> <span class="tk-k">and</span> orStart)
+<span class="tk-k">bool</span> vwapReset = newDay <span class="tk-k">or</span> isOpenBar
 <span class="tk-k">if</span> vwapReset
     sPV  := <span class="tk-n">0.0</span>
     sV   := <span class="tk-n">0.0</span>
@@ -427,32 +483,14 @@ sV   += vol
 sPV2 += hlc3 * hlc3 * vol
 <span class="tk-k">float</span> vwapVal = sV &gt; <span class="tk-n">0</span> ? sPV / sV : <span class="tk-k">na</span>
 <span class="tk-k">float</span> sd      = sV &gt; <span class="tk-n">0</span> ? math.sqrt(math.max(sPV2 / sV - vwapVal * vwapVal, <span class="tk-n">0.0</span>)) : <span class="tk-k">na</span>
-<span class="tk-k">float</span> up1 = vwapVal + band1Mult * sd
-<span class="tk-k">float</span> dn1 = vwapVal - band1Mult * sd
-<span class="tk-k">float</span> up2 = vwapVal + band2Mult * sd
-<span class="tk-k">float</span> dn2 = vwapVal - band2Mult * sd
 
-<span class="tk-c">// ───── Moving averages, ATR, volume ───────────────────────────────────────</span>
-<span class="tk-k">float</span> emaFast  = ta.ema(close, fastLen)
-<span class="tk-k">float</span> emaSlow  = ta.ema(close, slowLen)
-<span class="tk-k">float</span> smaTrend = ta.sma(close, trendLen)
-<span class="tk-k">float</span> atrTF    = ta.atr(<span class="tk-n">14</span>)
-<span class="tk-k">float</span> volAvg   = ta.sma(vol, <span class="tk-n">20</span>)
-<span class="tk-k">bool</span>  volOK    = volMult &lt;= <span class="tk-n">0</span> <span class="tk-k">or</span> <span class="tk-k">na</span>(volAvg) <span class="tk-k">or</span> volAvg == <span class="tk-n">0</span> <span class="tk-k">or</span> vol &gt;= volMult * volAvg
+<span class="tk-k">float</span> ema9   = ta.ema(close, <span class="tk-n">9</span>)
+<span class="tk-k">float</span> ema20  = ta.ema(close, <span class="tk-n">20</span>)
+<span class="tk-k">float</span> volAvg = ta.sma(vol, <span class="tk-n">20</span>)
+<span class="tk-k">float</span> totVol = ta.cum(vol)
+<span class="tk-k">bool</span>  volOK  = <span class="tk-k">not</span> useVolF <span class="tk-k">or</span> <span class="tk-k">na</span>(volAvg) <span class="tk-k">or</span> volAvg == <span class="tk-n">0</span> <span class="tk-k">or</span> vol &gt;= <span class="tk-n">1.5</span> * volAvg
 
-<span class="tk-c">// ───── Prior-day levels and daily ATR (regular session, no repaint) ───────</span>
-<span class="tk-k">string</span> dailyId = ticker.modify(syminfo.tickerid, session.regular)
-[pdh, pdl, pdc, dAtr] = request.security(dailyId, <span class="tk-s">"D"</span>, [high[<span class="tk-n">1</span>], low[<span class="tk-n">1</span>], close[<span class="tk-n">1</span>], ta.atr(<span class="tk-n">14</span>)[<span class="tk-n">1</span>]], lookahead = barmerge.lookahead_on)
-
-<span class="tk-k">float</span> cprP   = (pdh + pdl + pdc) / <span class="tk-n">3</span>
-<span class="tk-k">float</span> cprBC  = (pdh + pdl) / <span class="tk-n">2</span>
-<span class="tk-k">float</span> cprTC  = <span class="tk-n">2</span> * cprP - cprBC
-<span class="tk-k">float</span> cprTop = math.max(cprTC, cprBC)
-<span class="tk-k">float</span> cprBot = math.min(cprTC, cprBC)
-
-<span class="tk-c">// ───── Time-of-day relative volume ────────────────────────────────────────</span>
-<span class="tk-c">// Today's cumulative volume divided by the average cumulative volume at the</span>
-<span class="tk-c">// same clock time over the last N sessions.</span>
+<span class="tk-c">// ───── Volume versus normal for this time of day ──────────────────────────</span>
 <span class="tk-k">type</span> VolHist
     <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; vals
 
@@ -461,7 +499,6 @@ sPV2 += hlc3 * hlc3 * vol
 <span class="tk-k">if</span> newDay
     cumVol := <span class="tk-n">0.0</span>
 cumVol += vol
-
 <span class="tk-k">bool</span>  rvolOn = intra <span class="tk-k">and</span> timeframe.in_seconds() &gt;= <span class="tk-n">60</span>
 <span class="tk-k">int</span>   todKey = hour * <span class="tk-n">60</span> + minute
 <span class="tk-k">float</span> avgCum = <span class="tk-k">na</span>
@@ -470,100 +507,149 @@ cumVol += vol
     <span class="tk-k">if</span> <span class="tk-k">array</span>.size(h.vals) &gt; <span class="tk-n">0</span>
         avgCum := <span class="tk-k">array</span>.avg(h.vals)
 <span class="tk-k">float</span> rvol = <span class="tk-k">not</span> <span class="tk-k">na</span>(avgCum) <span class="tk-k">and</span> avgCum &gt; <span class="tk-n">0</span> ? cumVol / avgCum : <span class="tk-k">na</span>
-
 <span class="tk-k">if</span> rvolOn <span class="tk-k">and</span> barstate.isconfirmed
     <span class="tk-k">if</span> <span class="tk-k">not</span> <span class="tk-k">map</span>.contains(volByTime, todKey)
         <span class="tk-k">map</span>.put(volByTime, todKey, VolHist.new(<span class="tk-k">array</span>.new&lt;<span class="tk-k">float</span>&gt;()))
     VolHist hh = <span class="tk-k">map</span>.get(volByTime, todKey)
     <span class="tk-k">array</span>.push(hh.vals, cumVol)
-    <span class="tk-k">if</span> <span class="tk-k">array</span>.size(hh.vals) &gt; rvolDays
+    <span class="tk-k">if</span> <span class="tk-k">array</span>.size(hh.vals) &gt; <span class="tk-n">10</span>
         <span class="tk-k">array</span>.shift(hh.vals)
 
-<span class="tk-c">// ───── Signals (computed every bar, confirmed at bar close by the alert) ──</span>
-<span class="tk-k">bool</span> xUpOR  = ta.crossover(close, orH)
-<span class="tk-k">bool</span> xDnOR  = ta.crossunder(close, orL)
-<span class="tk-k">bool</span> xUpVW  = ta.crossover(close, vwapVal)
-<span class="tk-k">bool</span> xDnVW  = ta.crossunder(close, vwapVal)
-<span class="tk-k">bool</span> xUpPDH = ta.crossover(close, pdh)
-<span class="tk-k">bool</span> xDnPDL = ta.crossunder(close, pdl)
-<span class="tk-k">bool</span> xUpEMA = ta.crossover(emaFast, emaSlow)
-<span class="tk-k">bool</span> xDnEMA = ta.crossunder(emaFast, emaSlow)
-<span class="tk-k">bool</span> xUpExt = ta.crossover(close, up2)
-<span class="tk-k">bool</span> xDnExt = ta.crossunder(close, dn2)
+<span class="tk-c">// ───── Trade engine: signals, stop, target, exits, scorecard ──────────────</span>
+<span class="tk-k">float</span>  riskUsd = acct * riskPct / <span class="tk-n">100</span>
+<span class="tk-k">float</span>  pv      = syminfo.pointvalue
+<span class="tk-k">bool</span>   fracQty = syminfo.<span class="tk-k">type</span> == <span class="tk-s">"crypto"</span> <span class="tk-k">or</span> syminfo.<span class="tk-k">type</span> == <span class="tk-s">"forex"</span>
+<span class="tk-k">string</span> unit    = syminfo.<span class="tk-k">type</span> == <span class="tk-s">"futures"</span> ? <span class="tk-s">" contracts"</span> : fracQty ? <span class="tk-s">" units"</span> : <span class="tk-s">" shares"</span>
 
-<span class="tk-k">var</span> <span class="tk-k">bool</span> orbLongDone  = <span class="tk-k">false</span>
-<span class="tk-k">var</span> <span class="tk-k">bool</span> orbShortDone = <span class="tk-k">false</span>
+qtyStr(<span class="tk-k">float</span> q) =&gt;
+    <span class="tk-k">na</span>(q) ? <span class="tk-s">"—"</span> : fracQty ? str.tostring(q, <span class="tk-s">"0.####"</span>) : str.tostring(math.floor(q))
+px(<span class="tk-k">float</span> p) =&gt;
+    str.tostring(p, format.mintick)
+
+<span class="tk-k">bool</span> xUp = ta.crossover(close, orH)
+<span class="tk-k">bool</span> xDn = ta.crossunder(close, orL)
+
+<span class="tk-k">var</span> <span class="tk-k">int</span>   pos      = <span class="tk-n">0</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> entry    = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> stopPx   = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> tgtPx    = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> qty      = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">int</span>   entryIx  = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">bool</span>  buyUsed  = <span class="tk-k">false</span>
+<span class="tk-k">var</span> <span class="tk-k">bool</span>  sellUsed = <span class="tk-k">false</span>
+<span class="tk-k">var</span> line  lnStop   = <span class="tk-k">na</span>
+<span class="tk-k">var</span> line  lnTgt    = <span class="tk-k">na</span>
+<span class="tk-k">var</span> line  lnEntry  = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">int</span>   nTrades  = <span class="tk-n">0</span>
+<span class="tk-k">var</span> <span class="tk-k">int</span>   nWins    = <span class="tk-n">0</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> sumR     = <span class="tk-n">0.0</span>
+<span class="tk-k">var</span> <span class="tk-k">int</span>   nDays    = <span class="tk-n">0</span>
+<span class="tk-k">var</span> <span class="tk-k">string</span> lastResult = <span class="tk-s">""</span>
+
 <span class="tk-k">if</span> newDay
-    orbLongDone  := <span class="tk-k">false</span>
-    orbShortDone := <span class="tk-k">false</span>
+    buyUsed  := <span class="tk-k">false</span>
+    sellUsed := <span class="tk-k">false</span>
+    nDays    += <span class="tk-n">1</span>
 
-<span class="tk-k">bool</span> vwapLongOK  = <span class="tk-k">not</span> fVwap <span class="tk-k">or</span> <span class="tk-k">na</span>(vwapVal) <span class="tk-k">or</span> close &gt; vwapVal
-<span class="tk-k">bool</span> vwapShortOK = <span class="tk-k">not</span> fVwap <span class="tk-k">or</span> <span class="tk-k">na</span>(vwapVal) <span class="tk-k">or</span> close &lt; vwapVal
-<span class="tk-k">bool</span> orbLong  = intra <span class="tk-k">and</span> sigORB <span class="tk-k">and</span> orDone <span class="tk-k">and</span> inSig <span class="tk-k">and</span> xUpOR <span class="tk-k">and</span> volOK <span class="tk-k">and</span> vwapLongOK <span class="tk-k">and</span> <span class="tk-k">not</span> orbLongDone
-<span class="tk-k">bool</span> orbShort = intra <span class="tk-k">and</span> sigORB <span class="tk-k">and</span> orDone <span class="tk-k">and</span> inSig <span class="tk-k">and</span> xDnOR <span class="tk-k">and</span> volOK <span class="tk-k">and</span> vwapShortOK <span class="tk-k">and</span> <span class="tk-k">not</span> orbShortDone
-<span class="tk-k">if</span> orbLong
-    orbLongDone := <span class="tk-k">true</span>
-<span class="tk-k">if</span> orbShort
-    orbShortDone := <span class="tk-k">true</span>
+<span class="tk-k">string</span> alertMsg  = <span class="tk-s">""</span>
+<span class="tk-k">bool</span>   exitedNow = <span class="tk-k">false</span>
 
-<span class="tk-k">bool</span> pdhBreak = intra <span class="tk-k">and</span> sigPD <span class="tk-k">and</span> inMkt <span class="tk-k">and</span> xUpPDH
-<span class="tk-k">bool</span> pdlBreak = intra <span class="tk-k">and</span> sigPD <span class="tk-k">and</span> inMkt <span class="tk-k">and</span> xDnPDL
-<span class="tk-k">bool</span> vwapUp   = intra <span class="tk-k">and</span> sigVWAP <span class="tk-k">and</span> inMkt <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset <span class="tk-k">and</span> xUpVW
-<span class="tk-k">bool</span> vwapDn   = intra <span class="tk-k">and</span> sigVWAP <span class="tk-k">and</span> inMkt <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset <span class="tk-k">and</span> xDnVW
-<span class="tk-k">bool</span> emaUp    = intra <span class="tk-k">and</span> sigEMA <span class="tk-k">and</span> xUpEMA
-<span class="tk-k">bool</span> emaDn    = intra <span class="tk-k">and</span> sigEMA <span class="tk-k">and</span> xDnEMA
-<span class="tk-k">bool</span> extUp    = intra <span class="tk-k">and</span> sigExt <span class="tk-k">and</span> inMkt <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset <span class="tk-k">and</span> xUpExt
-<span class="tk-k">bool</span> extDn    = intra <span class="tk-k">and</span> sigExt <span class="tk-k">and</span> inMkt <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset <span class="tk-k">and</span> xDnExt
+<span class="tk-c">// Exits (checked on finished bars, never on the entry bar)</span>
+<span class="tk-k">if</span> barstate.isconfirmed <span class="tk-k">and</span> pos != <span class="tk-n">0</span> <span class="tk-k">and</span> bar_index &gt; entryIx
+    line.set_x2(lnStop, bar_index)
+    line.set_x2(lnTgt, bar_index)
+    line.set_x2(lnEntry, bar_index)
+    <span class="tk-k">float</span> exitPx = <span class="tk-k">na</span>
+    <span class="tk-k">string</span> why = <span class="tk-s">""</span>
+    <span class="tk-k">if</span> newDay
+        exitPx := open
+        why := <span class="tk-s">"CLOSE"</span>
+    <span class="tk-k">else</span> <span class="tk-k">if</span> pos == <span class="tk-n">1</span> <span class="tk-k">and</span> low &lt;= stopPx
+        exitPx := math.min(open, stopPx)
+        why := <span class="tk-s">"STOP"</span>
+    <span class="tk-k">else</span> <span class="tk-k">if</span> pos == <span class="tk-n">1</span> <span class="tk-k">and</span> high &gt;= tgtPx
+        exitPx := math.max(open, tgtPx)
+        why := <span class="tk-s">"TARGET"</span>
+    <span class="tk-k">else</span> <span class="tk-k">if</span> pos == -<span class="tk-n">1</span> <span class="tk-k">and</span> high &gt;= stopPx
+        exitPx := math.max(open, stopPx)
+        why := <span class="tk-s">"STOP"</span>
+    <span class="tk-k">else</span> <span class="tk-k">if</span> pos == -<span class="tk-n">1</span> <span class="tk-k">and</span> low &lt;= tgtPx
+        exitPx := math.min(open, tgtPx)
+        why := <span class="tk-s">"TARGET"</span>
+    <span class="tk-k">else</span> <span class="tk-k">if</span> eodBar
+        exitPx := close
+        why := <span class="tk-s">"CLOSE"</span>
+    <span class="tk-k">if</span> <span class="tk-k">not</span> <span class="tk-k">na</span>(exitPx)
+        <span class="tk-k">float</span> risk = math.abs(entry - stopPx)
+        <span class="tk-k">float</span> r = risk &gt; <span class="tk-n">0</span> ? (exitPx - entry) * pos / risk : <span class="tk-n">0.0</span>
+        nTrades += <span class="tk-n">1</span>
+        nWins   += r &gt; <span class="tk-n">0</span> ? <span class="tk-n">1</span> : <span class="tk-n">0</span>
+        sumR    += r
+        <span class="tk-k">string</span> rTxt = (r &gt;= <span class="tk-n">0</span> ? <span class="tk-s">"+"</span> : <span class="tk-s">""</span>) + str.tostring(r, <span class="tk-s">"0.0"</span>) + <span class="tk-s">"R"</span>
+        <span class="tk-k">string</span> head = why == <span class="tk-s">"TARGET"</span> ? <span class="tk-s">"TARGET ✓"</span> : why == <span class="tk-s">"STOP"</span> ? <span class="tk-s">"STOP ✗"</span> : <span class="tk-s">"EXIT"</span>
+        <span class="tk-k">label</span>.new(bar_index, <span class="tk-n">0.0</span>, head + <span class="tk-s">"\n"</span> + rTxt, yloc = pos == <span class="tk-n">1</span> ? yloc.abovebar : yloc.belowbar, style = pos == <span class="tk-n">1</span> ? <span class="tk-k">label</span>.style_label_down : <span class="tk-k">label</span>.style_label_up, <span class="tk-k">color</span> = r &gt; <span class="tk-n">0</span> ? cBuy : r &lt; <span class="tk-n">0</span> ? cSell : <span class="tk-k">color</span>.gray, textcolor = <span class="tk-k">color</span>.white, size = size.small)
+        lastResult := (pos == <span class="tk-n">1</span> ? <span class="tk-s">"BUY "</span> : <span class="tk-s">"SELL "</span>) + head + <span class="tk-s">" "</span> + rTxt
+        alertMsg := msgFmt == <span class="tk-s">"Plain text"</span> ? <span class="tk-s">"EXIT "</span> + syminfo.ticker + <span class="tk-s">" @ "</span> + px(exitPx) + <span class="tk-s">" · "</span> + head + <span class="tk-s">" "</span> + rTxt : <span class="tk-s">'{"action":"exit","ticker":"'</span> + syminfo.ticker + <span class="tk-s">'","price":'</span> + px(exitPx) + <span class="tk-s">',"reason":"'</span> + str.lower(why) + <span class="tk-s">'","r":'</span> + str.tostring(r, <span class="tk-s">"0.00"</span>) + <span class="tk-s">'}'</span>
+        pos := <span class="tk-n">0</span>
+        exitedNow := <span class="tk-k">true</span>
 
-<span class="tk-c">// ───── Plots ──────────────────────────────────────────────────────────────</span>
-<span class="tk-k">bool</span> vwOn = intra <span class="tk-k">and</span> showVwap
-pVw  = plot(vwOn <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset ? vwapVal : <span class="tk-k">na</span>, <span class="tk-s">"VWAP"</span>, cVwap, <span class="tk-n">2</span>, plot.style_linebr)
-pU1  = plot(vwOn <span class="tk-k">and</span> showBand1 <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset ? up1 : <span class="tk-k">na</span>, <span class="tk-s">"VWAP upper inner"</span>, <span class="tk-k">color</span>.new(cVwap, <span class="tk-n">55</span>), <span class="tk-n">1</span>, plot.style_linebr)
-pD1  = plot(vwOn <span class="tk-k">and</span> showBand1 <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset ? dn1 : <span class="tk-k">na</span>, <span class="tk-s">"VWAP lower inner"</span>, <span class="tk-k">color</span>.new(cVwap, <span class="tk-n">55</span>), <span class="tk-n">1</span>, plot.style_linebr)
-pU2  = plot(vwOn <span class="tk-k">and</span> showBand2 <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset ? up2 : <span class="tk-k">na</span>, <span class="tk-s">"VWAP upper outer"</span>, <span class="tk-k">color</span>.new(cBear, <span class="tk-n">45</span>), <span class="tk-n">1</span>, plot.style_linebr)
-pD2  = plot(vwOn <span class="tk-k">and</span> showBand2 <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset ? dn2 : <span class="tk-k">na</span>, <span class="tk-s">"VWAP lower outer"</span>, <span class="tk-k">color</span>.new(cBull, <span class="tk-n">45</span>), <span class="tk-n">1</span>, plot.style_linebr)
-fill(pU1, pD1, <span class="tk-k">color</span>.new(cVwap, <span class="tk-n">93</span>), <span class="tk-s">"VWAP inner fill"</span>)
+<span class="tk-c">// Entries (on the close of a finished bar)</span>
+<span class="tk-k">bool</span> canTrade = intra <span class="tk-k">and</span> barstate.isconfirmed <span class="tk-k">and</span> orReady <span class="tk-k">and</span> beforeCut <span class="tk-k">and</span> <span class="tk-k">not</span> eodBar <span class="tk-k">and</span> pos == <span class="tk-n">0</span> <span class="tk-k">and</span> <span class="tk-k">not</span> exitedNow
+<span class="tk-k">bool</span> buySig   = canTrade <span class="tk-k">and</span> <span class="tk-k">not</span> buyUsed <span class="tk-k">and</span> xUp <span class="tk-k">and</span> volOK <span class="tk-k">and</span> (<span class="tk-k">not</span> useVwapF <span class="tk-k">or</span> <span class="tk-k">na</span>(vwapVal) <span class="tk-k">or</span> close &gt; vwapVal)
+<span class="tk-k">bool</span> sellSig  = canTrade <span class="tk-k">and</span> allowSell <span class="tk-k">and</span> <span class="tk-k">not</span> sellUsed <span class="tk-k">and</span> xDn <span class="tk-k">and</span> volOK <span class="tk-k">and</span> (<span class="tk-k">not</span> useVwapF <span class="tk-k">or</span> <span class="tk-k">na</span>(vwapVal) <span class="tk-k">or</span> close &lt; vwapVal)
 
-plot(showFast ? emaFast : <span class="tk-k">na</span>, <span class="tk-s">"Fast EMA"</span>, cFast, <span class="tk-n">1</span>)
-plot(showSlow ? emaSlow : <span class="tk-k">na</span>, <span class="tk-s">"Slow EMA"</span>, cSlow, <span class="tk-n">2</span>)
-plot(showTrend ? smaTrend : <span class="tk-k">na</span>, <span class="tk-s">"Trend SMA"</span>, cTrend, <span class="tk-n">2</span>)
+<span class="tk-k">if</span> buySig <span class="tk-k">or</span> sellSig
+    pos     := buySig ? <span class="tk-n">1</span> : -<span class="tk-n">1</span>
+    entry   := close
+    stopPx  := stopChoice == <span class="tk-s">"Middle of range"</span> ? orMid : pos == <span class="tk-n">1</span> ? orL : orH
+    <span class="tk-k">float</span> risk = math.abs(entry - stopPx)
+    tgtPx   := entry + pos * targetR * risk
+    qty     := risk &gt; <span class="tk-n">0</span> ? riskUsd / (risk * pv) : <span class="tk-k">na</span>
+    entryIx := bar_index
+    <span class="tk-k">if</span> buySig
+        buyUsed := <span class="tk-k">true</span>
+    <span class="tk-k">else</span>
+        sellUsed := <span class="tk-k">true</span>
+    <span class="tk-k">label</span>.new(bar_index, <span class="tk-n">0.0</span>, pos == <span class="tk-n">1</span> ? <span class="tk-s">"BUY"</span> : <span class="tk-s">"SELL"</span>, yloc = pos == <span class="tk-n">1</span> ? yloc.belowbar : yloc.abovebar, style = pos == <span class="tk-n">1</span> ? <span class="tk-k">label</span>.style_label_up : <span class="tk-k">label</span>.style_label_down, <span class="tk-k">color</span> = pos == <span class="tk-n">1</span> ? cBuy : cSell, textcolor = <span class="tk-k">color</span>.white, size = size.normal)
+    lnStop  := line.new(bar_index, stopPx, bar_index + <span class="tk-n">1</span>, stopPx, <span class="tk-k">color</span> = cSell, width = <span class="tk-n">2</span>)
+    lnTgt   := line.new(bar_index, tgtPx, bar_index + <span class="tk-n">1</span>, tgtPx, <span class="tk-k">color</span> = cBuy, width = <span class="tk-n">2</span>)
+    lnEntry := line.new(bar_index, entry, bar_index + <span class="tk-n">1</span>, entry, <span class="tk-k">color</span> = <span class="tk-k">color</span>.gray, style = line.style_dotted)
+    <span class="tk-k">string</span> act = pos == <span class="tk-n">1</span> ? <span class="tk-s">"BUY"</span> : <span class="tk-s">"SELL"</span>
+    alertMsg := msgFmt == <span class="tk-s">"Plain text"</span> ? act + <span class="tk-s">" "</span> + syminfo.ticker + <span class="tk-s">" @ "</span> + px(entry) + <span class="tk-s">" · stop "</span> + px(stopPx) + <span class="tk-s">" · target "</span> + px(tgtPx) + <span class="tk-s">" · "</span> + qtyStr(qty) + unit + <span class="tk-s">" (risk $"</span> + str.tostring(riskUsd, <span class="tk-s">"#,##0"</span>) + <span class="tk-s">")"</span> : <span class="tk-s">'{"action":"'</span> + str.lower(act) + <span class="tk-s">'","ticker":"'</span> + syminfo.ticker + <span class="tk-s">'","price":'</span> + px(entry) + <span class="tk-s">',"stop":'</span> + px(stopPx) + <span class="tk-s">',"target":'</span> + px(tgtPx) + <span class="tk-s">',"qty":'</span> + qtyStr(qty) + <span class="tk-s">'}'</span>
 
-pOH = plot(intra <span class="tk-k">and</span> showOR ? orH : <span class="tk-k">na</span>, <span class="tk-s">"OR high"</span>, cOR, <span class="tk-n">2</span>, plot.style_linebr)
-pOL = plot(intra <span class="tk-k">and</span> showOR ? orL : <span class="tk-k">na</span>, <span class="tk-s">"OR low"</span>, cOR, <span class="tk-n">2</span>, plot.style_linebr)
-fill(pOH, pOL, <span class="tk-k">color</span>.new(cOR, <span class="tk-n">90</span>), <span class="tk-s">"OR fill"</span>)
-plot(intra <span class="tk-k">and</span> showORX <span class="tk-k">and</span> orDone ? orH + orRange : <span class="tk-k">na</span>, <span class="tk-s">"OR target +1×"</span>, <span class="tk-k">color</span>.new(cOR, <span class="tk-n">30</span>), <span class="tk-n">1</span>, plot.style_circles)
-plot(intra <span class="tk-k">and</span> showORX <span class="tk-k">and</span> orDone ? orH + <span class="tk-n">2</span> * orRange : <span class="tk-k">na</span>, <span class="tk-s">"OR target +2×"</span>, <span class="tk-k">color</span>.new(cOR, <span class="tk-n">30</span>), <span class="tk-n">1</span>, plot.style_circles)
-plot(intra <span class="tk-k">and</span> showORX <span class="tk-k">and</span> orDone ? orL - orRange : <span class="tk-k">na</span>, <span class="tk-s">"OR target −1×"</span>, <span class="tk-k">color</span>.new(cOR, <span class="tk-n">30</span>), <span class="tk-n">1</span>, plot.style_circles)
-plot(intra <span class="tk-k">and</span> showORX <span class="tk-k">and</span> orDone ? orL - <span class="tk-n">2</span> * orRange : <span class="tk-k">na</span>, <span class="tk-s">"OR target −2×"</span>, <span class="tk-k">color</span>.new(cOR, <span class="tk-n">30</span>), <span class="tk-n">1</span>, plot.style_circles)
+<span class="tk-k">if</span> alertMsg != <span class="tk-s">""</span>
+    alert(alertMsg, alert.freq_once_per_bar_close)
+
+<span class="tk-k">bool</span> exitAlert = exitedNow
+alertcondition(buySig, <span class="tk-s">"BUY"</span>, <span class="tk-s">"{{ticker}}: DT Core BUY at {{close}}"</span>)
+alertcondition(sellSig, <span class="tk-s">"SELL"</span>, <span class="tk-s">"{{ticker}}: DT Core SELL at {{close}}"</span>)
+alertcondition(exitAlert, <span class="tk-s">"EXIT"</span>, <span class="tk-s">"{{ticker}}: DT Core trade closed at {{close}}"</span>)
+
+<span class="tk-c">// ───── Lines and shading ──────────────────────────────────────────────────</span>
+<span class="tk-k">bool</span> vwOn = intra <span class="tk-k">and</span> showVwap <span class="tk-k">and</span> <span class="tk-k">not</span> vwapReset
+plot(vwOn ? vwapVal : <span class="tk-k">na</span>, <span class="tk-s">"VWAP"</span>, close &gt;= vwapVal ? cBuy : cSell, <span class="tk-n">2</span>, plot.style_linebr)
+plot(vwOn <span class="tk-k">and</span> showBands ? vwapVal + sd : <span class="tk-k">na</span>, <span class="tk-s">"VWAP +1σ"</span>, <span class="tk-k">color</span>.new(cVwap, <span class="tk-n">40</span>), <span class="tk-n">1</span>, plot.style_linebr)
+plot(vwOn <span class="tk-k">and</span> showBands ? vwapVal - sd : <span class="tk-k">na</span>, <span class="tk-s">"VWAP −1σ"</span>, <span class="tk-k">color</span>.new(cVwap, <span class="tk-n">40</span>), <span class="tk-n">1</span>, plot.style_linebr)
+plot(vwOn <span class="tk-k">and</span> showBands ? vwapVal + <span class="tk-n">2</span> * sd : <span class="tk-k">na</span>, <span class="tk-s">"VWAP +2σ"</span>, <span class="tk-k">color</span>.new(cVwap, <span class="tk-n">60</span>), <span class="tk-n">1</span>, plot.style_linebr)
+plot(vwOn <span class="tk-k">and</span> showBands ? vwapVal - <span class="tk-n">2</span> * sd : <span class="tk-k">na</span>, <span class="tk-s">"VWAP −2σ"</span>, <span class="tk-k">color</span>.new(cVwap, <span class="tk-n">60</span>), <span class="tk-n">1</span>, plot.style_linebr)
+plot(showEma ? ema9 : <span class="tk-k">na</span>, <span class="tk-s">"9 EMA"</span>, cEma1, <span class="tk-n">1</span>)
+plot(showEma ? ema20 : <span class="tk-k">na</span>, <span class="tk-s">"20 EMA"</span>, cEma2, <span class="tk-n">1</span>)
+
+pOH = plot(intra <span class="tk-k">and</span> showOR ? orH : <span class="tk-k">na</span>, <span class="tk-s">"Opening range high"</span>, cOR, <span class="tk-n">2</span>, plot.style_linebr)
+pOL = plot(intra <span class="tk-k">and</span> showOR ? orL : <span class="tk-k">na</span>, <span class="tk-s">"Opening range low"</span>, cOR, <span class="tk-n">2</span>, plot.style_linebr)
+fill(pOH, pOL, <span class="tk-k">color</span>.new(cOR, <span class="tk-n">88</span>), <span class="tk-s">"Opening range"</span>)
 
 plot(intra <span class="tk-k">and</span> showPD <span class="tk-k">and</span> <span class="tk-k">not</span> newDay ? pdh : <span class="tk-k">na</span>, <span class="tk-s">"Prior day high"</span>, cPD, <span class="tk-n">1</span>, plot.style_linebr)
 plot(intra <span class="tk-k">and</span> showPD <span class="tk-k">and</span> <span class="tk-k">not</span> newDay ? pdl : <span class="tk-k">na</span>, <span class="tk-s">"Prior day low"</span>, cPD, <span class="tk-n">1</span>, plot.style_linebr)
-plot(intra <span class="tk-k">and</span> showPD <span class="tk-k">and</span> <span class="tk-k">not</span> newDay ? pdc : <span class="tk-k">na</span>, <span class="tk-s">"Prior day close"</span>, <span class="tk-k">color</span>.new(cPD, <span class="tk-n">40</span>), <span class="tk-n">1</span>, plot.style_circles)
+plot(intra <span class="tk-k">and</span> showPM ? preH : <span class="tk-k">na</span>, <span class="tk-s">"Pre-market high"</span>, cPM, <span class="tk-n">1</span>, plot.style_linebr)
+plot(intra <span class="tk-k">and</span> showPM ? preL : <span class="tk-k">na</span>, <span class="tk-s">"Pre-market low"</span>, cPM, <span class="tk-n">1</span>, plot.style_linebr)
 
-plot(intra <span class="tk-k">and</span> showPM ? pmH : <span class="tk-k">na</span>, <span class="tk-s">"Pre-open high"</span>, cPM, <span class="tk-n">1</span>, plot.style_linebr)
-plot(intra <span class="tk-k">and</span> showPM ? pmL : <span class="tk-k">na</span>, <span class="tk-s">"Pre-open low"</span>, cPM, <span class="tk-n">1</span>, plot.style_linebr)
+bgcolor(intra <span class="tk-k">and</span> showLunch <span class="tk-k">and</span> inLunch ? <span class="tk-k">color</span>.new(<span class="tk-k">color</span>.gray, <span class="tk-n">90</span>) : <span class="tk-k">na</span>, title = <span class="tk-s">"Midday"</span>)
 
-pCT = plot(intra <span class="tk-k">and</span> showCPR <span class="tk-k">and</span> <span class="tk-k">not</span> newDay ? cprTop : <span class="tk-k">na</span>, <span class="tk-s">"CPR top"</span>, <span class="tk-k">color</span>.new(cCPR, <span class="tk-n">30</span>), <span class="tk-n">1</span>, plot.style_linebr)
-pCB = plot(intra <span class="tk-k">and</span> showCPR <span class="tk-k">and</span> <span class="tk-k">not</span> newDay ? cprBot : <span class="tk-k">na</span>, <span class="tk-s">"CPR bottom"</span>, <span class="tk-k">color</span>.new(cCPR, <span class="tk-n">30</span>), <span class="tk-n">1</span>, plot.style_linebr)
-fill(pCT, pCB, <span class="tk-k">color</span>.new(cCPR, <span class="tk-n">85</span>), <span class="tk-s">"CPR fill"</span>)
-
-bgcolor(intra <span class="tk-k">and</span> shadeLunch <span class="tk-k">and</span> inLunch ? <span class="tk-k">color</span>.new(<span class="tk-k">color</span>.gray, <span class="tk-n">92</span>) : <span class="tk-k">na</span>, title = <span class="tk-s">"Midday chop"</span>)
-
-plotshape(orbLong, <span class="tk-s">"ORB long"</span>, shape.triangleup, location.belowbar, cBull, text = <span class="tk-s">"ORB"</span>, textcolor = cBull, size = size.small)
-plotshape(orbShort, <span class="tk-s">"ORB short"</span>, shape.triangledown, location.abovebar, cBear, text = <span class="tk-s">"ORB"</span>, textcolor = cBear, size = size.small)
-plotshape(pdhBreak, <span class="tk-s">"PDH break"</span>, shape.diamond, location.belowbar, cPD, text = <span class="tk-s">"PDH"</span>, textcolor = cPD, size = size.tiny)
-plotshape(pdlBreak, <span class="tk-s">"PDL break"</span>, shape.diamond, location.abovebar, cPD, text = <span class="tk-s">"PDL"</span>, textcolor = cPD, size = size.tiny)
-plotshape(vwapUp, <span class="tk-s">"VWAP reclaim"</span>, shape.circle, location.belowbar, cVwap, text = <span class="tk-s">"VW"</span>, textcolor = cVwap, size = size.tiny)
-plotshape(vwapDn, <span class="tk-s">"VWAP loss"</span>, shape.circle, location.abovebar, cVwap, text = <span class="tk-s">"VW"</span>, textcolor = cVwap, size = size.tiny)
-plotshape(emaUp, <span class="tk-s">"EMA cross up"</span>, shape.arrowup, location.belowbar, cFast, size = size.tiny)
-plotshape(emaDn, <span class="tk-s">"EMA cross down"</span>, shape.arrowdown, location.abovebar, cFast, size = size.tiny)
-plotshape(extUp, <span class="tk-s">"Stretch above outer band"</span>, shape.xcross, location.abovebar, cBear, text = <span class="tk-s">"2σ"</span>, textcolor = cBear, size = size.tiny)
-plotshape(extDn, <span class="tk-s">"Stretch below outer band"</span>, shape.xcross, location.belowbar, cBull, text = <span class="tk-s">"2σ"</span>, textcolor = cBull, size = size.tiny)
-
-<span class="tk-c">// ───── Right-edge price tags ──────────────────────────────────────────────</span>
+<span class="tk-c">// ───── Price tags at the right edge ───────────────────────────────────────</span>
 addTag(<span class="tk-k">array</span>&lt;<span class="tk-k">label</span>&gt; arr, <span class="tk-k">float</span> y, <span class="tk-k">string</span> name, <span class="tk-k">color</span> col) =&gt;
     <span class="tk-k">if</span> <span class="tk-k">not</span> <span class="tk-k">na</span>(y)
-        <span class="tk-k">array</span>.push(arr, <span class="tk-k">label</span>.new(bar_index + <span class="tk-n">3</span>, y, name + <span class="tk-s">" "</span> + str.tostring(y, format.mintick), style = <span class="tk-k">label</span>.style_label_left, <span class="tk-k">color</span> = <span class="tk-k">color</span>.new(col, <span class="tk-n">100</span>), textcolor = col, size = size.small))
+        <span class="tk-k">array</span>.push(arr, <span class="tk-k">label</span>.new(bar_index + <span class="tk-n">2</span>, y, name + <span class="tk-s">" "</span> + str.tostring(y, format.mintick), style = <span class="tk-k">label</span>.style_label_left, <span class="tk-k">color</span> = <span class="tk-k">color</span>.new(col, <span class="tk-n">100</span>), textcolor = col, size = size.small))
 
 <span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">label</span>&gt; tags = <span class="tk-k">array</span>.new&lt;<span class="tk-k">label</span>&gt;()
 <span class="tk-k">if</span> barstate.islast
@@ -573,132 +659,210 @@ addTag(<span class="tk-k">array</span>&lt;<span class="tk-k">label</span>&gt; ar
     <span class="tk-k">if</span> intra <span class="tk-k">and</span> showTags
         <span class="tk-k">if</span> showVwap
             addTag(tags, vwapVal, <span class="tk-s">"VWAP"</span>, cVwap)
-        <span class="tk-k">if</span> showOR <span class="tk-k">and</span> orDone
-            addTag(tags, orH, <span class="tk-s">"ORH"</span>, cOR)
-            addTag(tags, orL, <span class="tk-s">"ORL"</span>, cOR)
+        <span class="tk-k">if</span> showOR <span class="tk-k">and</span> orReady
+            addTag(tags, orH, <span class="tk-s">"Range high"</span>, cOR)
+            addTag(tags, orL, <span class="tk-s">"Range low"</span>, cOR)
         <span class="tk-k">if</span> showPD
-            addTag(tags, pdh, <span class="tk-s">"PDH"</span>, cPD)
-            addTag(tags, pdl, <span class="tk-s">"PDL"</span>, cPD)
+            addTag(tags, pdh, <span class="tk-s">"Prior high"</span>, cPD)
+            addTag(tags, pdl, <span class="tk-s">"Prior low"</span>, cPD)
         <span class="tk-k">if</span> showPM
-            addTag(tags, pmH, <span class="tk-s">"PMH"</span>, cPM)
-            addTag(tags, pmL, <span class="tk-s">"PML"</span>, cPM)
+            addTag(tags, preH, preTag + <span class="tk-s">" high"</span>, cPM)
+            addTag(tags, preL, preTag + <span class="tk-s">" low"</span>, cPM)
 
-<span class="tk-c">// ───── Dashboard ──────────────────────────────────────────────────────────</span>
+<span class="tk-c">// ───── Status panel ───────────────────────────────────────────────────────</span>
 posOf(<span class="tk-k">string</span> p) =&gt;
     <span class="tk-k">switch</span> p
         <span class="tk-s">"Top left"</span>     =&gt; position.top_left
         <span class="tk-s">"Bottom left"</span>  =&gt; position.bottom_left
         <span class="tk-s">"Bottom right"</span> =&gt; position.bottom_right
         =&gt; position.top_right
+<span class="tk-k">string</span> tSize = <span class="tk-k">switch</span> panelSize
+    <span class="tk-s">"Tiny"</span>   =&gt; size.tiny
+    <span class="tk-s">"Normal"</span> =&gt; size.normal
+    =&gt; size.small
 
-<span class="tk-k">float</span> riskUsd = acct * riskPct / <span class="tk-n">100</span>
-<span class="tk-k">float</span> pv      = syminfo.pointvalue
-<span class="tk-k">float</span> stopL = <span class="tk-k">switch</span> stopMode
-    <span class="tk-s">"Opening range"</span> =&gt; orL
-    <span class="tk-s">"VWAP"</span>          =&gt; vwapVal
-    =&gt; close - atrMult * atrTF
-<span class="tk-k">float</span> stopS = <span class="tk-k">switch</span> stopMode
-    <span class="tk-s">"Opening range"</span> =&gt; orH
-    <span class="tk-s">"VWAP"</span>          =&gt; vwapVal
-    =&gt; close + atrMult * atrTF
-<span class="tk-k">float</span> distL = close - stopL
-<span class="tk-k">float</span> distS = stopS - close
-<span class="tk-k">float</span> qtyL  = <span class="tk-k">not</span> <span class="tk-k">na</span>(distL) <span class="tk-k">and</span> distL &gt; <span class="tk-n">0</span> ? riskUsd / (distL * pv) : <span class="tk-k">na</span>
-<span class="tk-k">float</span> qtyS  = <span class="tk-k">not</span> <span class="tk-k">na</span>(distS) <span class="tk-k">and</span> distS &gt; <span class="tk-n">0</span> ? riskUsd / (distS * pv) : <span class="tk-k">na</span>
-<span class="tk-k">bool</span>  fracQty = syminfo.<span class="tk-k">type</span> == <span class="tk-s">"crypto"</span> <span class="tk-k">or</span> syminfo.<span class="tk-k">type</span> == <span class="tk-s">"forex"</span>
-<span class="tk-k">string</span> unit   = syminfo.<span class="tk-k">type</span> == <span class="tk-s">"futures"</span> ? <span class="tk-s">" ct"</span> : fracQty ? <span class="tk-s">" units"</span> : <span class="tk-s">" sh"</span>
-
-qtyText(<span class="tk-k">float</span> q, <span class="tk-k">float</span> stop) =&gt;
-    <span class="tk-k">na</span>(q) ? <span class="tk-s">"stop on wrong side"</span> : <span class="tk-s">"stop "</span> + str.tostring(stop, format.mintick) + <span class="tk-s">" · "</span> + (fracQty ? str.tostring(q, <span class="tk-s">"0.####"</span>) : str.tostring(math.floor(q))) + unit
-
-<span class="tk-k">var</span> <span class="tk-k">table</span> dash = <span class="tk-k">table</span>.new(posOf(dashPos), <span class="tk-n">2</span>, <span class="tk-n">9</span>, bgcolor = <span class="tk-k">color</span>.new(chart.bg_color, <span class="tk-n">8</span>), border_color = <span class="tk-k">color</span>.new(chart.fg_color, <span class="tk-n">85</span>), border_width = <span class="tk-n">1</span>)
+<span class="tk-k">var</span> <span class="tk-k">table</span> panel = <span class="tk-k">table</span>.new(posOf(panelPos), <span class="tk-n">2</span>, <span class="tk-n">7</span>, bgcolor = <span class="tk-k">color</span>.new(chart.bg_color, <span class="tk-n">6</span>), border_color = <span class="tk-k">color</span>.new(chart.fg_color, <span class="tk-n">85</span>), border_width = <span class="tk-n">1</span>)
 
 row(<span class="tk-k">int</span> r, <span class="tk-k">string</span> k, <span class="tk-k">string</span> v, <span class="tk-k">color</span> vc) =&gt;
-    <span class="tk-k">table</span>.cell(dash, <span class="tk-n">0</span>, r, k, text_color = <span class="tk-k">color</span>.new(chart.fg_color, <span class="tk-n">30</span>), text_size = size.small, text_halign = text.align_left)
-    <span class="tk-k">table</span>.cell(dash, <span class="tk-n">1</span>, r, v, text_color = vc, text_size = size.small, text_halign = text.align_right)
+    <span class="tk-k">table</span>.cell(panel, <span class="tk-n">0</span>, r, k, text_color = <span class="tk-k">color</span>.new(chart.fg_color, <span class="tk-n">35</span>), text_size = tSize, text_halign = text.align_left)
+    <span class="tk-k">table</span>.cell(panel, <span class="tk-n">1</span>, r, v, text_color = vc, text_size = tSize, text_halign = text.align_left)
 
-<span class="tk-k">if</span> barstate.islast <span class="tk-k">and</span> showDash
-    <span class="tk-k">color</span> fg = chart.fg_color
-    row(<span class="tk-n">0</span>, <span class="tk-s">"DT Core"</span>, syminfo.ticker + <span class="tk-s">" · "</span> + timeframe.period, fg)
+clock(<span class="tk-k">int</span> t) =&gt;
+    str.format_time(t, <span class="tk-s">"h:mm a"</span>, showTz)
+
+<span class="tk-k">if</span> barstate.islast <span class="tk-k">and</span> showPanel
+    <span class="tk-k">color</span> fg   = chart.fg_color
+    <span class="tk-k">color</span> wait = cVwap
+    row(<span class="tk-n">0</span>, <span class="tk-s">"DT Core"</span>, syminfo.ticker + <span class="tk-s">" · "</span> + timeframe.period + (tfMin &gt;= <span class="tk-n">1</span> ? <span class="tk-s">" min"</span> : <span class="tk-s">""</span>), fg)
     <span class="tk-k">if</span> <span class="tk-k">not</span> intra
-        row(<span class="tk-n">1</span>, <span class="tk-s">"Timeframe"</span>, <span class="tk-s">"use an intraday chart (1–15 min)"</span>, cBear)
+        row(<span class="tk-n">1</span>, <span class="tk-s">"Status"</span>, <span class="tk-s">"Switch to a 1–15 minute chart"</span>, cSell)
     <span class="tk-k">else</span>
-        <span class="tk-k">bool</span> aboveV = <span class="tk-k">not</span> <span class="tk-k">na</span>(vwapVal) <span class="tk-k">and</span> close &gt; vwapVal
-        <span class="tk-k">bool</span> belowV = <span class="tk-k">not</span> <span class="tk-k">na</span>(vwapVal) <span class="tk-k">and</span> close &lt; vwapVal
-        <span class="tk-k">bool</span> emaBull = emaFast &gt; emaSlow
-        <span class="tk-k">string</span> biasTxt = (<span class="tk-k">na</span>(vwapVal) ? <span class="tk-s">"no volume"</span> : aboveV ? <span class="tk-s">"above VWAP"</span> : <span class="tk-s">"below VWAP"</span>) + <span class="tk-s">" · "</span> + str.tostring(fastLen) + (emaBull ? <span class="tk-s">" &gt; "</span> : <span class="tk-s">" &lt; "</span>) + str.tostring(slowLen)
-        <span class="tk-k">color</span> biasCol = aboveV <span class="tk-k">and</span> emaBull ? cBull : belowV <span class="tk-k">and</span> <span class="tk-k">not</span> emaBull ? cBear : fg
-        row(<span class="tk-n">1</span>, <span class="tk-s">"Bias"</span>, biasTxt, biasCol)
+        <span class="tk-k">bool</span> up = <span class="tk-k">not</span> <span class="tk-k">na</span>(vwapVal) <span class="tk-k">and</span> close &gt; vwapVal
+        <span class="tk-k">bool</span> dn = <span class="tk-k">not</span> <span class="tk-k">na</span>(vwapVal) <span class="tk-k">and</span> close &lt; vwapVal
+        row(<span class="tk-n">1</span>, <span class="tk-s">"Trend"</span>, up ? <span class="tk-s">"UP · price above VWAP"</span> : dn ? <span class="tk-s">"DOWN · price below VWAP"</span> : <span class="tk-s">"—"</span>, up ? cBuy : dn ? cSell : fg)
 
-        <span class="tk-k">string</span> rvTxt = <span class="tk-k">na</span>(rvol) ? <span class="tk-s">"no history yet"</span> : str.tostring(rvol, <span class="tk-s">"0.00"</span>) + <span class="tk-s">"×"</span> + (rvol &gt;= <span class="tk-n">2</span> ? <span class="tk-s">"  in play"</span> : <span class="tk-s">""</span>)
-        <span class="tk-k">color</span> rvCol = <span class="tk-k">na</span>(rvol) ? fg : rvol &gt;= <span class="tk-n">2</span> ? cBull : rvol &gt;= <span class="tk-n">1</span> ? fg : <span class="tk-k">color</span>.new(fg, <span class="tk-n">45</span>)
-        row(<span class="tk-n">2</span>, <span class="tk-s">"RVOL (time of day)"</span>, rvTxt, rvCol)
+        <span class="tk-k">string</span> st = <span class="tk-s">""</span>
+        <span class="tk-k">string</span> plan = <span class="tk-s">""</span>
+        <span class="tk-k">color</span> stc = fg
+        <span class="tk-k">bool</span> doneToday = buyUsed <span class="tk-k">and</span> (sellUsed <span class="tk-k">or</span> <span class="tk-k">not</span> allowSell)
+        <span class="tk-k">if</span> pos == <span class="tk-n">1</span>
+            st := <span class="tk-s">"IN A BUY TRADE"</span>
+            stc := cBuy
+            plan := <span class="tk-s">"entry "</span> + px(entry) + <span class="tk-s">" · stop "</span> + px(stopPx) + <span class="tk-s">" · target "</span> + px(tgtPx)
+        <span class="tk-k">else</span> <span class="tk-k">if</span> pos == -<span class="tk-n">1</span>
+            st := <span class="tk-s">"IN A SELL TRADE"</span>
+            stc := cSell
+            plan := <span class="tk-s">"entry "</span> + px(entry) + <span class="tk-s">" · stop "</span> + px(stopPx) + <span class="tk-s">" · target "</span> + px(tgtPx)
+        <span class="tk-k">else</span> <span class="tk-k">if</span> <span class="tk-k">not</span> hasOpen
+            st := <span class="tk-s">"Waiting for the open"</span>
+            plan := useNY ? <span class="tk-s">"Opens 9:30 AM New York"</span> : <span class="tk-s">"Range starts at the opening bell"</span>
+        <span class="tk-k">else</span> <span class="tk-k">if</span> <span class="tk-k">not</span> orReady
+            st := <span class="tk-s">"Opening range forming"</span>
+            stc := wait
+            plan := <span class="tk-s">"Done at "</span> + clock(orEndT) + <span class="tk-s">" · so far "</span> + px(orH) + <span class="tk-s">" – "</span> + px(orL)
+        <span class="tk-k">else</span> <span class="tk-k">if</span> beforeCut <span class="tk-k">and</span> <span class="tk-k">not</span> doneToday
+            st := <span class="tk-s">"Watching until "</span> + clock(cutT)
+            stc := wait
+            plan := (buyUsed ? <span class="tk-s">""</span> : <span class="tk-s">"BUY above "</span> + px(orH)) + (<span class="tk-k">not</span> buyUsed <span class="tk-k">and</span> allowSell <span class="tk-k">and</span> <span class="tk-k">not</span> sellUsed ? <span class="tk-s">" · "</span> : <span class="tk-s">""</span>) + (allowSell <span class="tk-k">and</span> <span class="tk-k">not</span> sellUsed ? <span class="tk-s">"SELL below "</span> + px(orL) : <span class="tk-s">""</span>)
+        <span class="tk-k">else</span>
+            st := <span class="tk-s">"No new signals today"</span>
+            plan := lastResult == <span class="tk-s">""</span> ? <span class="tk-s">"Next chance: tomorrow's open"</span> : <span class="tk-s">"Last: "</span> + lastResult
+        row(<span class="tk-n">2</span>, <span class="tk-s">"Status"</span>, st, stc)
+        row(<span class="tk-n">3</span>, <span class="tk-s">"Plan"</span>, plan, fg)
 
-        <span class="tk-k">float</span> gapRef = <span class="tk-k">na</span>(dayO) ? close : dayO
-        <span class="tk-k">float</span> gap = <span class="tk-k">not</span> <span class="tk-k">na</span>(pdc) <span class="tk-k">and</span> pdc &gt; <span class="tk-n">0</span> ? (gapRef - pdc) / pdc * <span class="tk-n">100</span> : <span class="tk-k">na</span>
-        <span class="tk-k">string</span> gapTxt = <span class="tk-k">na</span>(gap) ? <span class="tk-s">"—"</span> : (gap &gt;= <span class="tk-n">0</span> ? <span class="tk-s">"+"</span> : <span class="tk-s">""</span>) + str.tostring(gap, <span class="tk-s">"0.00"</span>) + <span class="tk-s">"%"</span> + (<span class="tk-k">na</span>(dayO) ? <span class="tk-s">" pre-open"</span> : <span class="tk-s">""</span>)
-        row(<span class="tk-n">3</span>, <span class="tk-s">"Gap vs prior close"</span>, gapTxt, <span class="tk-k">na</span>(gap) ? fg : gap &gt;= <span class="tk-n">0</span> ? cBull : cBear)
+        <span class="tk-k">float</span> sizeRisk = stopChoice == <span class="tk-s">"Middle of range"</span> ? (orH - orL) / <span class="tk-n">2</span> : orH - orL
+        <span class="tk-k">float</span> qtyIdea  = pos != <span class="tk-n">0</span> ? qty : <span class="tk-k">not</span> <span class="tk-k">na</span>(sizeRisk) <span class="tk-k">and</span> sizeRisk &gt; <span class="tk-n">0</span> ? riskUsd / (sizeRisk * pv) : <span class="tk-k">na</span>
+        row(<span class="tk-n">4</span>, <span class="tk-s">"Size"</span>, <span class="tk-k">na</span>(qtyIdea) ? <span class="tk-s">"—"</span> : (pos == <span class="tk-n">0</span> ? <span class="tk-s">"≈ "</span> : <span class="tk-s">""</span>) + qtyStr(qtyIdea) + unit + <span class="tk-s">" · risk $"</span> + str.tostring(riskUsd, <span class="tk-s">"#,##0"</span>), fg)
 
-        <span class="tk-k">float</span> used = <span class="tk-k">na</span>(dayH) <span class="tk-k">or</span> <span class="tk-k">na</span>(dAtr) <span class="tk-k">or</span> dAtr == <span class="tk-n">0</span> ? <span class="tk-k">na</span> : (dayH - dayL) / dAtr * <span class="tk-n">100</span>
-        <span class="tk-k">string</span> atrTxt = <span class="tk-k">na</span>(dAtr) ? <span class="tk-s">"—"</span> : str.tostring(dAtr, format.mintick) + (<span class="tk-k">na</span>(used) ? <span class="tk-s">""</span> : <span class="tk-s">" · "</span> + str.tostring(used, <span class="tk-s">"0"</span>) + <span class="tk-s">"% used"</span>)
-        row(<span class="tk-n">4</span>, <span class="tk-s">"Daily ATR(14)"</span>, atrTxt, <span class="tk-k">not</span> <span class="tk-k">na</span>(used) <span class="tk-k">and</span> used &gt;= <span class="tk-n">100</span> ? cBear : fg)
+        row(<span class="tk-n">5</span>, <span class="tk-s">"Volume"</span>, <span class="tk-k">na</span>(rvol) ? (totVol == <span class="tk-n">0</span> ? <span class="tk-s">"no volume data"</span> : <span class="tk-s">"building history"</span>) : str.tostring(rvol, <span class="tk-s">"0.0"</span>) + <span class="tk-s">"× normal"</span> + (rvol &gt;= <span class="tk-n">2</span> ? <span class="tk-s">" · in play"</span> : rvol &lt; <span class="tk-n">1</span> ? <span class="tk-s">" · quiet"</span> : <span class="tk-s">""</span>), <span class="tk-k">na</span>(rvol) ? fg : rvol &gt;= <span class="tk-n">2</span> ? cBuy : fg)
 
-        <span class="tk-k">string</span> orTxt = <span class="tk-k">na</span>(orH) ? <span class="tk-s">"waiting for open"</span> : str.tostring(orRange, format.mintick) + <span class="tk-s">" ("</span> + str.tostring(orRange / close * <span class="tk-n">100</span>, <span class="tk-s">"0.00"</span>) + <span class="tk-s">"%)"</span> + (orDone ? <span class="tk-s">""</span> : <span class="tk-s">" forming"</span>)
-        row(<span class="tk-n">5</span>, <span class="tk-s">"Opening range"</span>, orTxt, cOR)
-
-        row(<span class="tk-n">6</span>, <span class="tk-s">"Risk per trade"</span>, str.tostring(riskUsd, <span class="tk-s">"#,##0"</span>) + <span class="tk-s">" ("</span> + str.tostring(riskPct) + <span class="tk-s">"%)"</span>, fg)
-        row(<span class="tk-n">7</span>, <span class="tk-s">"Long ▲"</span>, qtyText(qtyL, stopL), cBull)
-        row(<span class="tk-n">8</span>, <span class="tk-s">"Short ▼"</span>, qtyText(qtyS, stopS), cBear)
-
-<span class="tk-c">// ───── Alerts ─────────────────────────────────────────────────────────────</span>
-<span class="tk-c">// Easiest: one alert on "Any alert() function call" covers every enabled signal.</span>
-<span class="tk-k">string</span> msg = <span class="tk-s">""</span>
-<span class="tk-k">if</span> orbLong
-    msg += <span class="tk-s">"ORB long · "</span>
-<span class="tk-k">if</span> orbShort
-    msg += <span class="tk-s">"ORB short · "</span>
-<span class="tk-k">if</span> pdhBreak
-    msg += <span class="tk-s">"PDH break · "</span>
-<span class="tk-k">if</span> pdlBreak
-    msg += <span class="tk-s">"PDL break · "</span>
-<span class="tk-k">if</span> vwapUp
-    msg += <span class="tk-s">"VWAP reclaim · "</span>
-<span class="tk-k">if</span> vwapDn
-    msg += <span class="tk-s">"VWAP lost · "</span>
-<span class="tk-k">if</span> emaUp
-    msg += <span class="tk-s">"EMA cross up · "</span>
-<span class="tk-k">if</span> emaDn
-    msg += <span class="tk-s">"EMA cross down · "</span>
-<span class="tk-k">if</span> extUp
-    msg += <span class="tk-s">"stretched above outer band · "</span>
-<span class="tk-k">if</span> extDn
-    msg += <span class="tk-s">"stretched below outer band · "</span>
-<span class="tk-k">if</span> msg != <span class="tk-s">""</span>
-    alert(syminfo.ticker + <span class="tk-s">" "</span> + timeframe.period + <span class="tk-s">": "</span> + msg + <span class="tk-s">"last "</span> + str.tostring(close, format.mintick) + (<span class="tk-k">na</span>(rvol) ? <span class="tk-s">""</span> : <span class="tk-s">" · RVOL "</span> + str.tostring(rvol, <span class="tk-s">"0.0"</span>) + <span class="tk-s">"×"</span>), alert.freq_once_per_bar_close)
-
-alertcondition(orbLong, <span class="tk-s">"ORB long"</span>, <span class="tk-s">"{{ticker}} {{interval}}: opening range breakout LONG at {{close}}"</span>)
-alertcondition(orbShort, <span class="tk-s">"ORB short"</span>, <span class="tk-s">"{{ticker}} {{interval}}: opening range breakdown SHORT at {{close}}"</span>)
-alertcondition(pdhBreak, <span class="tk-s">"Prior day high break"</span>, <span class="tk-s">"{{ticker}} {{interval}}: closed above prior day high at {{close}}"</span>)
-alertcondition(pdlBreak, <span class="tk-s">"Prior day low break"</span>, <span class="tk-s">"{{ticker}} {{interval}}: closed below prior day low at {{close}}"</span>)
-alertcondition(vwapUp, <span class="tk-s">"VWAP reclaim"</span>, <span class="tk-s">"{{ticker}} {{interval}}: reclaimed VWAP at {{close}}"</span>)
-alertcondition(vwapDn, <span class="tk-s">"VWAP lost"</span>, <span class="tk-s">"{{ticker}} {{interval}}: lost VWAP at {{close}}"</span>)
-alertcondition(emaUp, <span class="tk-s">"EMA cross up"</span>, <span class="tk-s">"{{ticker}} {{interval}}: fast EMA crossed above slow EMA"</span>)
-alertcondition(emaDn, <span class="tk-s">"EMA cross down"</span>, <span class="tk-s">"{{ticker}} {{interval}}: fast EMA crossed below slow EMA"</span>)</pre>
+        <span class="tk-k">string</span> score = nTrades == <span class="tk-n">0</span> ? <span class="tk-s">"no trades yet on this chart"</span> : str.tostring(nDays) + <span class="tk-s">" days · "</span> + str.tostring(nTrades) + <span class="tk-s">" trades · "</span> + str.tostring(nWins * <span class="tk-n">100.0</span> / nTrades, <span class="tk-s">"0"</span>) + <span class="tk-s">"% wins · "</span> + (sumR &gt;= <span class="tk-n">0</span> ? <span class="tk-s">"+"</span> : <span class="tk-s">""</span>) + str.tostring(sumR, <span class="tk-s">"0.0"</span>) + <span class="tk-s">"R"</span>
+        row(<span class="tk-n">6</span>, <span class="tk-s">"Results"</span>, score, sumR &gt; <span class="tk-n">0</span> ? cBuy : sumR &lt; <span class="tk-n">0</span> ? cSell : fg)</pre>
     </article>
+  </section>
 
-    <article class="script" id="momentum">
-      <div class="script-head">
-        <div class="row"><h3>DT Momentum</h3><span class="pill">pane · 95 lines</span></div>
-        <p>One pane, three oscillators. Pick one under Settings → Oscillator.</p>
-        <ul>
-          <li><b>Squeeze</b> (Carter): red dots mean Bollinger Bands sit inside the Keltner Channel and volatility is coiled. The first green dot is the "fire"; trade in the direction of the histogram.</li>
-          <li><b>3/10</b> (Raschke): SMA(3) − SMA(10) with a 16-period signal line. In a trend, the first cross back in the trend's direction after a pullback is the entry.</li>
-          <li><b>RSI</b> (Wilder): 14-period with 70/30. Alerts fire when RSI leaves an extreme, not when it enters one.</li>
-        </ul>
-      </div>
-      <div class="codebar"><span class="mono">DT_Momentum.pine</span><div class="btns"><button class="ghost" data-expand="code-mom" type="button">Expand</button><button class="copy" data-copy="code-mom" type="button">Copy</button></div></div>
-      <p class="copy-note" hidden></p>
-      <pre class="code" id="code-mom"><span class="tk-c">//@version=6</span>
+  <section id="signals">
+    <div class="eyebrow">Legend</div>
+    <h2>Reading the signals</h2>
+    <p>Labels appear when a candle closes and never move or disappear afterward.</p>
+    <ul class="key">
+      <li><span><span class="sw buy">BUY</span></span><span>A candle closed above the opening range, above VWAP, on strong volume. Entry is that candle's closing price.</span></li>
+      <li><span><span class="sw sell">SELL</span></span><span>The mirror image below the range. SELL means sell short. If you only buy stocks, read it as "no longs today" or turn it off in settings.</span></li>
+      <li><span><span class="ln stop"></span></span><span><b>Stop.</b> Where the trade is wrong. Put this stop order in at your broker the moment you enter.</span></li>
+      <li><span><span class="ln tgt"></span></span><span><b>Target.</b> Twice as far from entry as the stop, so a win pays 2× what a loss costs.</span></li>
+      <li><span><span class="ln entry"></span></span><span>Entry price.</span></li>
+      <li><span><span class="sw buy">TARGET ✓</span></span><span>Target hit: <b>+2.0R</b>. R means "times your risk". +2R on $125 risk is +$250.</span></li>
+      <li><span><span class="sw sell">STOP ✗</span></span><span>Stop hit: <b>−1.0R</b>, a planned, limited loss.</span></li>
+      <li><span><span class="sw grey">EXIT</span></span><span>Neither was hit, so the trade closed 5 minutes before the market close.</span></li>
+      <li><span><span class="ln vw"></span></span><span><b>VWAP</b>, the day's average price weighted by volume. Green when price is above it (buyers in control), red when below.</span></li>
+      <li><span><span class="box or"></span></span><span><b>Opening range.</b> High and low of the first minutes after the open. Breakouts from this box are the signals.</span></li>
+      <li><span><span class="ln pd"></span></span><span>Yesterday's high and low. Price often pauses here.</span></li>
+      <li><span><span class="ln pm"></span></span><span>Pre-market high and low (overnight on futures). Shown even if your chart hides extended hours.</span></li>
+      <li><span><span class="box mid"></span></span><span><b>Midday</b>, 2 to 4 hours after the open. Volume dries up and breakouts fail more often.</span></li>
+    </ul>
+  </section>
+
+  <section id="panel">
+    <div class="eyebrow">Top-right corner</div>
+    <h2>The status panel</h2>
+    <p>It tells you what DT Core is doing right now, in words.</p>
+    <div class="example">Example, matching the chart above</div>
+    <div class="mock" aria-label="Example status panel">
+      <div class="mock-row"><span class="k">DT Core</span><span class="v">NVDA · 5 min</span></div>
+      <div class="mock-row"><span class="k">Trend</span><span class="v up">UP · price above VWAP</span></div>
+      <div class="mock-row"><span class="k">Status</span><span class="v up">IN A BUY TRADE</span></div>
+      <div class="mock-row"><span class="k">Plan</span><span class="v">entry 102.00 · stop 100.75 · target 104.50</span></div>
+      <div class="mock-row"><span class="k">Size</span><span class="v">100 shares · risk $125</span></div>
+      <div class="mock-row"><span class="k">Volume</span><span class="v up">2.4× normal · in play</span></div>
+      <div class="mock-row"><span class="k">Results</span><span class="v up">22 days · 15 trades · 53% wins · +4.5R</span></div>
+    </div>
+    <p><b>Status</b> moves through the day like this:</p>
+    <div class="flow"><span>Waiting for the open</span><i>→</i><span>Opening range forming</span><i>→</i><span>Watching until 11:30 AM</span><i>→</i><span>IN A BUY / SELL TRADE</span><i>→</i><span>No new signals today</span></div>
+    <ul class="rules">
+      <li><b>Plan</b><span>While watching, it shows the exact trigger prices ("BUY above 101.60 · SELL below 99.90"). In a trade, it shows entry, stop and target.</span></li>
+      <li><b>Size</b><span>Shares to buy so that hitting the stop loses exactly your risk per trade (Tharp's position sizing). "≈" means an estimate before the trade exists.</span></li>
+      <li><b>Volume</b><span>Today's volume against the same time on the last 10 days. 2× or more means the stock is "in play" (Bellafiore, Aziz); breakouts work best then.</span></li>
+      <li><b>Results</b><span>How DT Core's rules did on the days loaded on this chart. A rough test: it ignores commissions and slippage, and if one candle touches both stop and target, it counts the stop.</span></li>
+    </ul>
+  </section>
+
+  <section id="settings">
+    <div class="eyebrow">Tap DT Core → Settings</div>
+    <h2>Settings that matter</h2>
+    <p>The defaults are sensible. These are the ones worth knowing.</p>
+    <div class="table-scroll">
+      <table class="stack">
+        <thead><tr><th>Setting</th><th>Default</th><th>What it does</th></tr></thead>
+        <tbody>
+          <tr><td>Opening range length</td><td class="set">Auto</td><td class="why">How long to wait after the open. Auto picks 5 minutes on a 1-minute chart, 15 on a 5-minute chart, 30 on a 15-minute chart.</td></tr>
+          <tr><td>Market open</td><td class="set">Auto</td><td class="why">The exchange's opening bell for stocks; 9:30 New York for futures, crypto and forex.</td></tr>
+          <tr><td>Stop new signals</td><td class="set">2 hours after open</td><td class="why">No new entries after 11:30 AM for US stocks. Open trades keep running.</td></tr>
+          <tr><td>Stop placement</td><td class="set">Middle of range</td><td class="why">Smaller risk, so more shares. "Other side of range" gives the trade more room.</td></tr>
+          <tr><td>Target (× risk)</td><td class="set">2</td><td class="why">Aziz's 2-to-1 minimum. With 2R wins, winning 40% of trades still comes out ahead before costs.</td></tr>
+          <tr><td>Only on strong volume</td><td class="set">On</td><td class="why">The breakout candle needs 1.5× the average volume of the last 20 candles.</td></tr>
+          <tr><td>Only on the right side of VWAP</td><td class="set">On</td><td class="why">BUY only above VWAP, SELL only below it.</td></tr>
+          <tr><td>Show SELL (short) signals</td><td class="set">On</td><td class="why">Turn off if you only buy.</td></tr>
+          <tr><td>Account size, risk per trade</td><td class="set">$25,000 · 0.5%</td><td class="why">Drive the Size row and the share count in alerts.</td></tr>
+          <tr><td>Alert message</td><td class="set">Plain text</td><td class="why">Switch to JSON only if you connect an automation service.</td></tr>
+          <tr><td>Show on chart</td><td class="set">—</td><td class="why">Turn lines on or off. VWAP bands and the 9/20 EMA start hidden.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="alerts">
+    <div class="eyebrow">Hands-off</div>
+    <h2>Alerts and automation</h2>
+    <p><b>One alert per stock</b> sends every BUY, SELL and exit to your phone with prices and share count.</p>
+    <ol class="steps">
+      <li><div><b>Open the stock's 5-minute chart.</b> DT Core must be on it.</div></li>
+      <li><div><b>Add an alert.</b> Tap the alarm-clock button, or long-press the chart → Add alert.</div></li>
+      <li><div><b>Condition:</b> DT Core → <span class="path">Any alert() function call</span>.</div></li>
+      <li><div><b>Notify:</b> app push on, sound on. Create.</div></li>
+    </ol>
+    <p>What arrives on your phone:</p>
+    <div class="msg">BUY NVDA @ 102.00 · stop 100.75 · target 104.50 · 100 shares (risk $125)
+EXIT NVDA @ 104.50 · TARGET ✓ +2.0R</div>
+    <p class="fine">Change a setting and old alerts keep the old settings: delete and recreate them. iPhone: Settings → Notifications → TradingView → allow notifications and sounds, and keep it out of Scheduled Summary.</p>
+
+    <h3>Three levels of automation</h3>
+    <div class="levels">
+      <div class="level"><b class="n">1</b><div><b>Alert → you place the order.</b><p>Works on any plan that includes indicator alerts. Copy the stop and target from the message into your order.</p></div></div>
+      <div class="level"><b class="n">2</b><div><b>One bracket order at your broker.</b><p>Enter with a bracket (OCO) order: entry, stop and target in one ticket. The exit then happens without you, even if you look away. This is the biggest step toward hands-off trading and needs nothing extra.</p></div></div>
+      <div class="level"><b class="n">3</b><div><b>Webhook → automation service → broker.</b><p>Needs a paid TradingView plan for webhooks. Set Alert message to JSON, paste the service's webhook URL into the alert, and it places orders for you. Run it on a paper account for weeks before real money.</p></div></div>
+    </div>
+    <div class="msg">{"action":"buy","ticker":"NVDA","price":102.00,"stop":100.75,"target":104.50,"qty":100}
+{"action":"exit","ticker":"NVDA","price":104.50,"reason":"target","r":2.00}</div>
+  </section>
+
+  <section id="rules">
+    <div class="eyebrow">What it does, in order</div>
+    <h2>The rules behind the signals</h2>
+    <ol class="steps">
+      <li><div><b>Mark the opening range.</b> The high and low of the first minutes after the open. Toby Crabel showed in 1990 that breakouts from it carry follow-through; Andrew Aziz teaches the same trade for stocks.</div></li>
+      <li><div><b>Wait for a candle to close outside it.</b> With strong volume, and on the side of VWAP that agrees (Shannon: VWAP is the day's fair price).</div></li>
+      <li><div><b>Size from the stop.</b> Stop at the middle of the range; shares = dollars at risk ÷ distance to the stop (Tharp).</div></li>
+      <li><div><b>Let the trade end itself.</b> Target at 2× risk, stop, or 5 minutes before the close. At most one BUY and one SELL a day, none after the cutoff.</div></li>
+    </ol>
+    <ul class="rules">
+      <li><b>0.5–1% per trade</b><span>Elder's ceiling is 2%. Start small while you learn.</span></li>
+      <li><b>Daily stop at −3R</b><span>Three full losses and you're done for the day.</span></li>
+      <li><b>Paper trade first</b><span>Run 20 or more signals on TradingView's Paper Trading account before using real money. Many days produce no signal; that's by design.</span></li>
+      <li><b>Check your broker's rules</b><span>US margin accounts face pattern-day-trader requirements.</span></li>
+    </ul>
+  </section>
+
+  <section id="extras">
+    <div class="eyebrow">Not needed for the signals</div>
+    <h2>Optional extras</h2>
+    <p>Add these only if your plan has room for more indicators.</p>
+    <details class="extra">
+      <summary>DT Momentum · squeeze, 3/10 or RSI in one pane</summary>
+      <article class="script">
+        <div class="script-head"><p>Pick one oscillator under Settings → Oscillator. Squeeze (Carter): red dots mean energy is building; the first green dot is the release. 3/10 (Raschke) and RSI (Wilder) are the other choices.</p></div>
+        <div class="codebar"><span class="mono">DT_Momentum.pine · 95 lines</span><div class="btns"><button class="ghost" data-expand="code-mom" type="button">Expand</button><button class="copy" data-copy="code-mom" type="button">Copy</button></div></div>
+        <p class="copy-note" hidden></p>
+        <pre class="code" id="code-mom"><span class="tk-c">//@version=6</span>
 <span class="tk-c">// ═══════════════════════════════════════════════════════════════════════════</span>
 <span class="tk-c">//  DT Momentum · three classic day-trading oscillators in ONE pane</span>
 <span class="tk-c">//  Squeeze  — John Carter, Mastering the Trade (Bollinger inside Keltner)</span>
@@ -793,16 +957,15 @@ alertcondition(t3Up, <span class="tk-s">"3/10 bullish cross"</span>, <span class
 alertcondition(t3Dn, <span class="tk-s">"3/10 bearish cross"</span>, <span class="tk-s">"{{ticker}} {{interval}}: 3/10 oscillator crossed below its signal"</span>)
 alertcondition(rsUp, <span class="tk-s">"RSI leaves oversold"</span>, <span class="tk-s">"{{ticker}} {{interval}}: RSI crossed back above oversold"</span>)
 alertcondition(rsDn, <span class="tk-s">"RSI leaves overbought"</span>, <span class="tk-s">"{{ticker}} {{interval}}: RSI crossed back below overbought"</span>)</pre>
-    </article>
-
-    <article class="script" id="volume">
-      <div class="script-head">
-        <div class="row"><h3>DT Volume</h3><span class="pill">pane · 33 lines</span></div>
-        <p>Replaces the built-in Volume. Ordinary bars are faded; bars at 2× or more of the 20-bar average print in full color, so breakout participation stands out at a glance.</p>
-      </div>
-      <div class="codebar"><span class="mono">DT_Volume.pine</span><div class="btns"><button class="ghost" data-expand="code-vol" type="button">Expand</button><button class="copy" data-copy="code-vol" type="button">Copy</button></div></div>
-      <p class="copy-note" hidden></p>
-      <pre class="code" id="code-vol"><span class="tk-c">//@version=6</span>
+      </article>
+    </details>
+    <details class="extra">
+      <summary>DT Volume · volume bars that light up on spikes</summary>
+      <article class="script">
+        <div class="script-head"><p>Replaces the built-in Volume. Bars at 2× the recent average print in full color.</p></div>
+        <div class="codebar"><span class="mono">DT_Volume.pine · 33 lines</span><div class="btns"><button class="ghost" data-expand="code-vol" type="button">Expand</button><button class="copy" data-copy="code-vol" type="button">Copy</button></div></div>
+        <p class="copy-note" hidden></p>
+        <pre class="code" id="code-vol"><span class="tk-c">//@version=6</span>
 <span class="tk-c">// ═══════════════════════════════════════════════════════════════════════════</span>
 <span class="tk-c">//  DT Volume · volume columns that light up on spikes</span>
 <span class="tk-c">//  Replaces the built-in Volume indicator. Faded bars are ordinary volume;</span>
@@ -835,221 +998,24 @@ plot(vAvg * spikeX, <span class="tk-s">"Spike threshold"</span>, <span class="tk
 
 alertcondition(spikeUp, <span class="tk-s">"Volume spike on up bar"</span>, <span class="tk-s">"{{ticker}} {{interval}}: volume spike on an up bar at {{close}}"</span>)
 alertcondition(spikeDn, <span class="tk-s">"Volume spike on down bar"</span>, <span class="tk-s">"{{ticker}} {{interval}}: volume spike on a down bar at {{close}}"</span>)</pre>
-    </article>
-    <p class="fine">After adding DT Core, open its settings (tap the indicator name on the chart → Settings) and set Account size and Risk per trade under Dashboard and risk. The Long and Short rows then show stop price and share count for the current bar.</p>
-  </section>
-
-  <section id="settings">
-    <div class="eyebrow">Chart → Settings</div>
-    <h2>Chart settings</h2>
-    <p>Open a chart, tap the gear (or long-press the chart → Settings). Section names below follow the app; a few move between versions.</p>
-    <div class="table-scroll">
-      <table class="stack">
-        <thead><tr><th>Setting</th><th>Set to</th><th>Why</th></tr></thead>
-        <tbody>
-          <tr class="t-group"><td colspan="3">Symbol</td></tr>
-          <tr><td>Chart type</td><td class="set">Candles</td><td class="why">Heikin Ashi averages prices, so its bars don't show real opens, closes or fills.</td></tr>
-          <tr><td>Extended trading hours</td><td class="set on">On (stocks)</td><td class="why">Needed for pre-market high/low, the pre-open gap and a session VWAP that includes pre-market. Prefer a 9:30 VWAP? Keep it on and set DT Core → VWAP → Anchor to RTH open.</td></tr>
-          <tr><td>Timezone</td><td class="set">Exchange (New York)</td><td class="why">DT Core's session windows (0930-0945, 1130-1330) are entered in exchange time.</td></tr>
-          <tr><td>Adjust for dividends</td><td class="set off">Off</td><td class="why">Keeps prior-day levels equal to the prices that actually traded.</td></tr>
-          <tr class="t-group"><td colspan="3">Status line</td></tr>
-          <tr><td>Indicator arguments</td><td class="set off">Off</td><td class="why">Saves a full line of screen on a phone.</td></tr>
-          <tr><td>Indicator values</td><td class="set on">On</td><td class="why">Shows VWAP and EMA values under the symbol name.</td></tr>
-          <tr><td>OHLC and bar change</td><td class="set on">On</td><td class="why">Read the current bar without tapping it.</td></tr>
-          <tr><td>Volume</td><td class="set off">Off</td><td class="why">DT Volume shows it in its own pane.</td></tr>
-          <tr class="t-group"><td colspan="3">Scales and lines</td></tr>
-          <tr><td>Last price line and label</td><td class="set on">On</td><td class="why">Where price is versus your levels.</td></tr>
-          <tr><td>Countdown to bar close</td><td class="set on">On</td><td class="why">Every signal confirms at the bar close. Know when that is.</td></tr>
-          <tr><td>Previous day close line</td><td class="set off">Off</td><td class="why">DT Core already draws it (dotted).</td></tr>
-          <tr><td>Indicator name and value labels</td><td class="set off">Off</td><td class="why">DT Core prints its own right-edge tags. With both on, the price scale gets crowded.</td></tr>
-          <tr><td>Scale price chart only</td><td class="set on">On</td><td class="why">A far-away 200 SMA won't squash the candles.</td></tr>
-          <tr><td>Log scale</td><td class="set off">Off</td><td class="why">Intraday ranges are small; linear keeps distances honest.</td></tr>
-          <tr class="t-group"><td colspan="3">Canvas / appearance</td></tr>
-          <tr><td>Session breaks</td><td class="set on">On</td><td class="why">A vertical line where each trading day starts.</td></tr>
-          <tr><td>Grid lines</td><td class="set off">Off or faint</td><td class="why">Less noise around the levels you care about.</td></tr>
-          <tr><td>Right margin</td><td class="set">≈10 bars</td><td class="why">Room for DT Core's price tags at the right edge.</td></tr>
-          <tr><td>Watermark</td><td class="set off">Off</td><td class="why">Screen space.</td></tr>
-          <tr class="t-group"><td colspan="3">Events and trading</td></tr>
-          <tr><td>Earnings, dividends, splits</td><td class="set on">On</td><td class="why">Earnings days rewrite the playbook; size down or sit out.</td></tr>
-          <tr><td>Economic events</td><td class="set on">On (futures, forex)</td><td class="why">8:30 and 10:00 ET releases and 2:00 PM Fed days move everything.</td></tr>
-          <tr><td>Positions and executions</td><td class="set on">On</td><td class="why">Shows paper or broker fills against your levels for review.</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="fine">Favorite intervals for the toolbar: 1m, 5m, 15m, 1h, 1D. Long-press an interval to star it.</p>
-  </section>
-
-  <section id="timeframes">
-    <div class="eyebrow">Inputs per chart</div>
-    <h2>Timeframes and presets</h2>
-    <p>Shannon's multiple-timeframe approach and Elder's Triple Screen both put roughly a factor of five between charts: the higher one sets direction, the lower one times the entry. DT Core's opening range should be at least one bar long on the chart you use.</p>
-    <div class="table-scroll">
-      <table class="stack">
-        <thead><tr><th>Chart</th><th>Job</th><th>Opening range</th><th>Other inputs</th></tr></thead>
-        <tbody>
-          <tr><td>1D</td><td>Bias and big levels</td><td class="set">—</td><td class="why">DT Core reports "use an intraday chart". Read trend from the 20/50/200 and mark swing highs and lows.</td></tr>
-          <tr><td>15m</td><td>Structure, squeeze</td><td class="set">0930-1000</td><td class="why">30-minute range. DT Momentum on Squeeze.</td></tr>
-          <tr><td>5m</td><td>Main setup chart</td><td class="set">0930-0945</td><td class="why">The defaults. Brooks reads the 20 EMA on this chart.</td></tr>
-          <tr><td>1m</td><td>Entry timing</td><td class="set">0930-0935</td><td class="why">Signal window 0930-1030, ATR multiple 2.0, ORB volume filter 2.0. One-minute noise needs wider stops.</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <p class="fine">Futures: the same windows work in New York time (overnight high/low replaces pre-market). Crypto and forex have no opening bell, so pick your own window, for example the London or New York open, and adjust Timezone.</p>
-  </section>
-
-  <section id="alerts">
-    <div class="eyebrow">Alerts</div>
-    <h2>Alerts that reach your phone</h2>
-    <ol class="steps">
-      <li><div><b>Open the chart on the timeframe you trade.</b> An alert stores the symbol, timeframe and indicator inputs at the moment you create it.</div></li>
-      <li><div><b>Tap the alarm-clock Alert button</b> in the chart toolbar, or long-press the chart → Add alert.</div></li>
-      <li><div><b>Condition:</b> DT Core → <span class="mono">Any alert() function call</span>. One alert now covers every signal you enabled, and its message includes price and RVOL. The script already fires once per bar close.</div></li>
-      <li><div><b>Expiration:</b> the longest your plan allows. <b>Notifications:</b> app push and sound on; email optional; webhook URL if you automate.</div></li>
-      <li><div><b>Name it</b> like <span class="mono">NVDA 5m DT Core</span> and create.</div></li>
-    </ol>
-    <div class="table-scroll">
-      <table class="stack">
-        <thead><tr><th>Alert</th><th>Condition</th><th>Trigger</th><th>Use</th></tr></thead>
-        <tbody>
-          <tr><td>All DT Core signals</td><td class="set">DT Core → Any alert() function call</td><td class="set">set by script</td><td class="why">5m chart of each stock in play.</td></tr>
-          <tr><td>ORB only</td><td class="set">DT Core → ORB long / ORB short</td><td class="set">Once per bar close</td><td class="why">Fewer pings on the open.</td></tr>
-          <tr><td>Pre-market high</td><td class="set">Price → Crossing → PMH value</td><td class="set">Only once</td><td class="why">Type the PMH tag's price. Plain price alerts are available on every plan.</td></tr>
-          <tr><td>Prior day high / low</td><td class="set">Price → Crossing → PDH or PDL</td><td class="set">Only once</td><td class="why">The level gappers have to clear.</td></tr>
-          <tr><td>Trade management</td><td class="set">DT Core → VWAP lost</td><td class="set">Once per bar close</td><td class="why">Open long? Hear about it when price closes back under VWAP.</td></tr>
-          <tr><td>Squeeze fired</td><td class="set">DT Momentum → Squeeze fired up / down</td><td class="set">Once per bar close</td><td class="why">15m chart. Context, not an entry by itself.</td></tr>
-          <tr><td>Volume spike</td><td class="set">DT Volume → Volume spike on up bar</td><td class="set">Once per bar close</td><td class="why">Something is happening; go look.</td></tr>
-        </tbody>
-      </table>
-    </div>
-    <ul class="rules">
-      <li><b>Inputs are frozen</b><span>Change an indicator setting or timeframe and existing alerts keep the old ones. Delete and recreate them.</span></li>
-      <li><b>Bar close</b><span>"Once per bar" can fire on a cross that disappears before the bar closes. Use "Once per bar close" for every signal alert.</span></li>
-      <li><b>Server-side</b><span>Alerts run on TradingView's servers. The app can be closed and the phone locked.</span></li>
-      <li><b>Plan limits</b><span>Basic has very few alerts and may not allow indicator alerts at all. Check your plan page; price alerts on PMH and PDH work everywhere.</span></li>
-      <li><b>iOS settings</b><span>Settings → Notifications → TradingView: allow notifications and sounds, set banners to Persistent, keep it out of Scheduled Summary, and allow it in the Focus mode you trade in.</span></li>
-    </ul>
-  </section>
-
-  <section id="playbook">
-    <div class="eyebrow">Playbook</div>
-    <h2>Six setups DT Core is built to show</h2>
-    <p>Only trade stocks in play: a catalyst, a gap, and time-of-day RVOL of 2× or more on the dashboard (Bellafiore, Aziz). Everything below assumes that filter.</p>
-    <div class="setups">
-      <article class="setup">
-        <div class="row"><h3>Opening range breakout</h3><span class="tag both">long / short</span></div>
-        <dl>
-          <dt>Trigger</dt><dd>ORB marker: a candle closes beyond the range on 1.5× volume, on the matching side of VWAP.</dd>
-          <dt>Stop</dt><dd>Other side of the range, or its midpoint for half the risk.</dd>
-          <dt>Target</dt><dd>1× range (measured move), then 2× or the next level (PDH, PMH).</dd>
-          <dt>Skip</dt><dd>The dashboard shows most of the daily ATR already used, or the clock is past 11:30.</dd>
-        </dl>
-        <p class="src">Crabel, 1990; Aziz, 2015</p>
       </article>
-      <article class="setup">
-        <div class="row"><h3>VWAP reclaim</h3><span class="tag both">long / short</span></div>
-        <dl>
-          <dt>Trigger</dt><dd>After a morning flush, price closes back above VWAP (VW marker) and the next bar holds.</dd>
-          <dt>Stop</dt><dd>Below the reclaim bar's low or the lower inner band.</dd>
-          <dt>Target</dt><dd>Upper inner band, then PDH or the outer band.</dd>
-          <dt>Short</dt><dd>Mirror image: VWAP lost and the retest fails.</dd>
-        </dl>
-        <p class="src">Shannon, 2008 and 2023; Aziz, 2015</p>
-      </article>
-      <article class="setup">
-        <div class="row"><h3>First pullback</h3><span class="tag long">trend</span></div>
-        <dl>
-          <dt>Context</dt><dd>Above VWAP, 9 EMA over 20, making higher highs. The dashboard Bias row is green.</dd>
-          <dt>Trigger</dt><dd>The first pullback to the 9 or 20 EMA on lighter volume; buy the break of the pullback's high.</dd>
-          <dt>Stop</dt><dd>Below the pullback low.</dd>
-          <dt>Target</dt><dd>Retest of the high, then a measured move equal to the first leg.</dd>
-        </dl>
-        <p class="src">Aziz's bull flag; Brooks, 2011</p>
-      </article>
-      <article class="setup">
-        <div class="row"><h3>Key-level break</h3><span class="tag long">gappers</span></div>
-        <dl>
-          <dt>Trigger</dt><dd>A close through PMH or PDH (PDH marker) with a full-color DT Volume bar.</dd>
-          <dt>Stop</dt><dd>Back inside the level, or the breakout bar's low.</dd>
-          <dt>Target</dt><dd>2R, then trail under the 9 EMA.</dd>
-          <dt>Skip</dt><dd>The break comes on faded volume: those fail more often.</dd>
-        </dl>
-        <p class="src">Bellafiore, 2010; Aziz, 2015</p>
-      </article>
-      <article class="setup">
-        <div class="row"><h3>Squeeze release</h3><span class="tag both">long / short</span></div>
-        <dl>
-          <dt>Context</dt><dd>DT Momentum on Squeeze, 5m or 15m, with a run of red dots.</dd>
-          <dt>Trigger</dt><dd>First green dot. Trade only in the histogram's direction, and only on the matching side of VWAP.</dd>
-          <dt>Stop</dt><dd>Other side of the coil, or 1.5 ATR.</dd>
-          <dt>Exit</dt><dd>When the histogram weakens for two bars in a row.</dd>
-        </dl>
-        <p class="src">Carter, Mastering the Trade</p>
-      </article>
-      <article class="setup">
-        <div class="row"><h3>Outer-band fade</h3><span class="tag short">advanced</span></div>
-        <dl>
-          <dt>Context</dt><dd>Range days only: RVOL fading below 1.5×, price chopping around a wide pivot range.</dd>
-          <dt>Trigger</dt><dd>2σ marker, then a reversal bar back inside the band.</dd>
-          <dt>Stop</dt><dd>Just beyond the extreme.</dd>
-          <dt>Target</dt><dd>Inner band, then VWAP. On a trend day, don't fade: the 2σ marker means don't chase.</dd>
-        </dl>
-        <p class="src">Bollinger, 2001; Shannon, 2023</p>
-      </article>
-    </div>
-  </section>
-
-  <section id="risk">
-    <div class="eyebrow">Risk</div>
-    <h2>Risk rules</h2>
-    <ul class="rules">
-      <li><b>Define R first</b><span>R is entry minus stop. Size = dollars at risk ÷ R. DT Core's Long and Short rows do this division for the stop basis you pick (Tharp).</span></li>
-      <li><b>0.5–1% per trade</b><span>Elder's ceiling is 2% of the account per trade. Start at the low end while you learn the setups.</span></li>
-      <li><b>Daily stop at −3R</b><span>Hit it and you're done for the day. Elder's 6% rule does the same monthly: down 6% for the month, stop trading until next month.</span></li>
-      <li><b>Aim for 2R</b><span>Aziz looks for at least 2:1 reward to risk. With 2R winners, a 40% win rate is still profitable before costs.</span></li>
-      <li><b>Respect the clock</b><span>New ORB entries end at 11:30. Midday (shaded) volume is thin; size down or stand aside. Be flat before the close.</span></li>
-      <li><b>Journal every trade</b><span>A screenshot, the setup name, R result, and one sentence on execution. Steenbarger's point: review the process, not just the P&amp;L.</span></li>
-      <li><b>Check your broker's rules</b><span>US margin accounts face pattern-day-trader requirements. Confirm what applies to your account before trading live.</span></li>
-    </ul>
-  </section>
-
-  <section id="routine">
-    <div class="eyebrow">Each morning (ET)</div>
-    <h2>Pre-market routine</h2>
-    <p>Check items off as you go. This list resets each day and is stored on this device only.</p>
-    <div class="check" id="checklist">
-      <label><input type="checkbox" id="ck-1"><span><span class="time">8:00</span><b>Check the economic calendar.</b> 8:30 and 10:00 data, Fed speakers, and earnings for anything you hold.</span></label>
-      <label><input type="checkbox" id="ck-2"><span><span class="time">8:15</span><b>Scan for gappers.</b> In the screener: pre-market change ±3% or more, price above $5, 10-day average volume above 1M, a news catalyst.</span></label>
-      <label><input type="checkbox" id="ck-3"><span><span class="time">8:45</span><b>Pick two to four stocks in play.</b> Pre-market volume should already be heavy. Fewer names, better execution.</span></label>
-      <label><input type="checkbox" id="ck-4"><span><span class="time">9:00</span><b>Mark the daily picture.</b> On 1D: trend, swing highs and lows, distance to the 200 SMA.</span></label>
-      <label><input type="checkbox" id="ck-5"><span><span class="time">9:10</span><b>Set price alerts at PMH and PDH</b> (PML and PDL for shorts) on each name.</span></label>
-      <label><input type="checkbox" id="ck-6"><span><span class="time">9:20</span><b>Write the plan.</b> Setup, trigger, stop, size from the dashboard, first target.</span></label>
-      <label><input type="checkbox" id="ck-7"><span><span class="time">9:25</span><b>Set today's loss limit</b> in dollars (3R) and write it down.</span></label>
-      <label><input type="checkbox" id="ck-8"><span><span class="time">9:30</span><b>Let the opening range form.</b> No entries until the ORB window closes unless the plan says otherwise.</span></label>
-    </div>
-    <div class="check-foot"><span id="ck-status">0 of 8 done</span><button class="reset" id="ck-reset" type="button">Clear checklist</button></div>
+    </details>
   </section>
 
   <section id="sources">
     <div class="eyebrow">Literature</div>
-    <h2>Sources behind the defaults</h2>
+    <h2>Sources</h2>
     <ul class="sources">
-      <li><cite>Toby Crabel, <i>Day Trading with Short Term Price Patterns and Opening Range Breakout</i> (1990)</cite><span>Opening range breakout, early-session timing.</span></li>
-      <li><cite>Mark B. Fisher, <i>The Logical Trader</i> (2002)</cite><span>Opening range and pivot range framework (ACD).</span></li>
-      <li><cite>Frank O. Ochoa, <i>Secrets of a Pivot Boss</i> (2010)</cite><span>Central pivot range width as a trend-day tell.</span></li>
-      <li><cite>Andrew Aziz, <i>How to Day Trade for a Living</i> (2015)</cite><span>VWAP, 9/20 EMA, ORB, bull flag, stocks in play, relative volume, 2:1 targets.</span></li>
-      <li><cite>Brian Shannon, <i>Technical Analysis Using Multiple Timeframes</i> (2008) and <i>Maximum Trading Gains with Anchored VWAP</i> (2023)</cite><span>VWAP as the day's fair price; timeframe alignment.</span></li>
-      <li><cite>Mike Bellafiore, <i>One Good Trade</i> (2010)</cite><span>Trade stocks in play; process over outcome.</span></li>
-      <li><cite>Al Brooks, <i>Trading Price Action Trends</i> (2011)</cite><span>The 20-bar EMA on the 5-minute chart; pullbacks in trends.</span></li>
-      <li><cite>John F. Carter, <i>Mastering the Trade</i> (2005; 3rd ed. 2019)</cite><span>The squeeze: Bollinger Bands inside Keltner Channels.</span></li>
-      <li><cite>Linda Bradford Raschke and Laurence Connors, <i>Street Smarts</i> (1995)</cite><span>Short-term momentum patterns; Raschke's 3/10 oscillator.</span></li>
-      <li><cite>J. Welles Wilder Jr., <i>New Concepts in Technical Trading Systems</i> (1978)</cite><span>RSI and ATR.</span></li>
-      <li><cite>John Bollinger, <i>Bollinger on Bollinger Bands</i> (2001)</cite><span>Standard-deviation bands and volatility contraction.</span></li>
+      <li><cite>Toby Crabel, <i>Day Trading with Short Term Price Patterns and Opening Range Breakout</i> (1990)</cite><span>The opening range breakout.</span></li>
+      <li><cite>Andrew Aziz, <i>How to Day Trade for a Living</i> (2015)</cite><span>ORB for stocks, VWAP, relative volume, 2:1 targets.</span></li>
+      <li><cite>Brian Shannon, <i>Maximum Trading Gains with Anchored VWAP</i> (2023)</cite><span>VWAP as the day's fair price.</span></li>
+      <li><cite>Mike Bellafiore, <i>One Good Trade</i> (2010)</cite><span>Trade stocks in play.</span></li>
       <li><cite>Van K. Tharp, <i>Trade Your Way to Financial Freedom</i> (1998)</cite><span>R-multiples and position sizing.</span></li>
-      <li><cite>Alexander Elder, <i>The New Trading for a Living</i> (2014)</cite><span>2% and 6% rules; Triple Screen.</span></li>
-      <li><cite>Brett N. Steenbarger, <i>The Daily Trading Coach</i> (2009)</cite><span>Journaling and structured self-review.</span></li>
+      <li><cite>Alexander Elder, <i>The New Trading for a Living</i> (2014)</cite><span>The 2% per-trade ceiling.</span></li>
+      <li><cite>John F. Carter, <i>Mastering the Trade</i>; Linda Raschke and Laurence Connors, <i>Street Smarts</i>; J. Welles Wilder, <i>New Concepts in Technical Trading Systems</i></cite><span>The optional DT Momentum oscillators.</span></li>
     </ul>
     <hr>
-    <p class="fine">Educational material, not financial advice. Indicators describe what price has done; none of them predicts what it will do. Most day traders lose money, so paper trade first and risk only what you can afford to lose. Plan limits and app menus change; check TradingView's current plan page and help center.</p>
+    <p class="fine">Educational material, not financial advice. The signals follow fixed rules; they don't predict the future, and the Results row ignores trading costs. Most day traders lose money. Paper trade first and risk only what you can afford to lose.</p>
   </section>
 </div>
 
@@ -1069,7 +1035,6 @@ alertcondition(spikeDn, <span class="tk-s">"Volume spike on down bar"</span>, <s
     btn.addEventListener("click", function () {
       var pre = document.getElementById(btn.getAttribute("data-copy"));
       var note = btn.closest(".script").querySelector(".copy-note");
-      var text = pre.textContent;
       function ok() {
         btn.textContent = "Copied";
         btn.classList.add("done");
@@ -1083,7 +1048,7 @@ alertcondition(spikeDn, <span class="tk-s">"Volume spike on down bar"</span>, <s
         note.hidden = false;
       }
       if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(ok, fallback);
+        navigator.clipboard.writeText(pre.textContent).then(ok, fallback);
       } else {
         fallback();
       }
@@ -1092,11 +1057,10 @@ alertcondition(spikeDn, <span class="tk-s">"Volume spike on down bar"</span>, <s
   document.querySelectorAll("[data-expand]").forEach(function (btn) {
     btn.addEventListener("click", function () {
       var pre = document.getElementById(btn.getAttribute("data-expand"));
-      var open = pre.classList.toggle("expanded");
-      btn.textContent = open ? "Collapse" : "Expand";
+      btn.textContent = pre.classList.toggle("expanded") ? "Collapse" : "Expand";
     });
   });
-
+  // Label table cells with their column header for the stacked phone layout
   document.querySelectorAll("table.stack").forEach(function (t) {
     var heads = Array.prototype.map.call(t.querySelectorAll("thead th"), function (th) { return th.textContent; });
     t.querySelectorAll("tbody tr").forEach(function (tr) {
@@ -1106,36 +1070,7 @@ alertcondition(spikeDn, <span class="tk-s">"Volume spike on down bar"</span>, <s
     });
   });
 
-  // ── Daily checklist (this device only) ──
-  var KEY = "dt-kit-checklist";
-  var today = new Date().toLocaleDateString("en-CA");
-  var boxes = Array.prototype.slice.call(document.querySelectorAll("#checklist input"));
-  var status = document.getElementById("ck-status");
-  function load() {
-    try {
-      var saved = JSON.parse(localStorage.getItem(KEY) || "null");
-      if (saved && saved.day === today) {
-        boxes.forEach(function (b) { b.checked = saved.done.indexOf(b.id) !== -1; });
-      }
-    } catch (e) {}
-  }
-  function save() {
-    try {
-      localStorage.setItem(KEY, JSON.stringify({ day: today, done: boxes.filter(function (b) { return b.checked; }).map(function (b) { return b.id; }) }));
-    } catch (e) {}
-  }
-  function count() {
-    var n = boxes.filter(function (b) { return b.checked; }).length;
-    status.textContent = n + " of " + boxes.length + " done";
-  }
-  boxes.forEach(function (b) { b.addEventListener("change", function () { save(); count(); }); });
-  document.getElementById("ck-reset").addEventListener("click", function () {
-    boxes.forEach(function (b) { b.checked = false; });
-    save(); count();
-  });
-  load(); count();
-
-  // ── Schematic chart (illustrative data, 5-minute bars) ──
+  // ── Schematic: one BUY from range to target (illustrative 5-minute data) ──
   var closes = [99.8, 100.1, 99.9, 100.4, 100.2, 100.0, 100.3, 100.2,
     101.2, 100.5, 101.0,
     101.1, 101.3, 102.0,
@@ -1159,84 +1094,73 @@ alertcondition(spikeDn, <span class="tk-s">"Volume spike on down bar"</span>, <s
     if (i === 12) { h = 101.45; }
     return { o: o, h: h, l: l, c: c, v: vols[i] };
   });
-  var OR0 = 8, OR1 = 10, ORB = 13, PDHBAR = 19, LUNCH = 32, N = bars.length;
-  var PDH = 103.1;
+  var OPEN = 8, ENTRY = 13, LUNCH = 32, N = bars.length, PDH = 103.1;
   var orH = Math.max(bars[8].h, bars[9].h, bars[10].h), orL = Math.min(bars[8].l, bars[9].l, bars[10].l);
-  var pmH = -1e9, pmL = 1e9;
-  for (var i = 0; i < OR0; i++) { pmH = Math.max(pmH, bars[i].h); pmL = Math.min(pmL, bars[i].l); }
-  var sPV = 0, sV = 0, sPV2 = 0, vw = [], u1 = [], d1 = [], u2 = [], d2 = [], ema = [], k = 2 / 10;
-  bars.forEach(function (b, i) {
-    var src = (b.h + b.l + b.c) / 3;
-    sPV += src * b.v; sV += b.v; sPV2 += src * src * b.v;
-    var m = sPV / sV, sd = Math.sqrt(Math.max(sPV2 / sV - m * m, 0));
-    vw.push(m); u1.push(m + sd); d1.push(m - sd); u2.push(m + 2 * sd); d2.push(m - 2 * sd);
-    ema.push(i === 0 ? b.c : b.c * k + ema[i - 1] * (1 - k));
+  var pmH = -1e9, pmL = 1e9, i;
+  for (i = 0; i < OPEN; i++) { pmH = Math.max(pmH, bars[i].h); pmL = Math.min(pmL, bars[i].l); }
+  var entry = bars[ENTRY].c, stop = (orH + orL) / 2, target = entry + 2 * (entry - stop), exitBar = N - 1;
+  for (i = ENTRY + 1; i < N; i++) { if (bars[i].h >= target) { exitBar = i; break; } }
+  var vw = [], sPV = 0, sV = 0;
+  bars.forEach(function (b, k) {
+    if (k === OPEN) { sPV = 0; sV = 0; }
+    var src = (b.h + b.l + b.c) / 3; sPV += src * b.v; sV += b.v; vw.push(sPV / sV);
   });
 
-  var W = 520, H = 330, X0 = 6, X1 = 424, Y0 = 14, Y1 = 298;
-  var lo = Math.min.apply(null, bars.map(function (b) { return b.l; }).concat([pmL])) - 0.3;
-  var hi = Math.max.apply(null, bars.map(function (b) { return b.h; }).concat([PDH])) + 0.6;
+  var W = 520, H = 330, X0 = 6, X1 = 430, Y0 = 18, Y1 = 298;
+  var lo = Math.min(pmL, orL) - 0.5, hi = Math.max(target, PDH) + 0.7;
   var step = (X1 - X0) / N;
-  function x(i) { return X0 + step * (i + 0.5); }
+  function x(k) { return X0 + step * (k + 0.5); }
   function y(p) { return Y1 - (p - lo) / (hi - lo) * (Y1 - Y0); }
-  function clampY(p) { return Math.max(Y0, Math.min(Y1, y(p))); }
-  function path(arr, from) {
-    var d = "";
-    for (var i = from; i < arr.length; i++) d += (i === from ? "M" : "L") + x(i).toFixed(1) + " " + clampY(arr[i]).toFixed(1);
-    return d;
-  }
   var s = [];
   s.push('<svg viewBox="0 0 ' + W + ' ' + H + '" xmlns="http://www.w3.org/2000/svg" font-family="JetBrains Mono, ui-monospace, monospace" font-size="12">');
-  // background zones
-  s.push('<rect x="' + X0 + '" y="' + Y0 + '" width="' + (step * OR0) + '" height="' + (Y1 - Y0) + '" fill="var(--shade)"/>');
-  s.push('<rect x="' + (X0 + step * LUNCH) + '" y="' + Y0 + '" width="' + (step * (N - LUNCH)) + '" height="' + (Y1 - Y0) + '" fill="var(--shade)"/>');
-  // VWAP bands
-  var band = path(u1, 0) + " " + d1.map(function (v, i) { return "L" + x(d1.length - 1 - i).toFixed(1) + " " + clampY(d1[d1.length - 1 - i]).toFixed(1); }).join(" ") + "Z";
-  s.push('<path d="' + band + '" fill="var(--accent)" fill-opacity="0.09" stroke="none"/>');
-  s.push('<path d="' + path(u2, 0) + '" fill="none" stroke="var(--bear)" stroke-opacity="0.55" stroke-width="1"/>');
-  s.push('<path d="' + path(d2, 0) + '" fill="none" stroke="var(--bull)" stroke-opacity="0.55" stroke-width="1"/>');
-  // levels
-  function hline(p, from, col, dash, op) {
-    s.push('<line x1="' + (X0 + step * from).toFixed(1) + '" x2="' + X1 + '" y1="' + y(p).toFixed(1) + '" y2="' + y(p).toFixed(1) + '" stroke="' + col + '" stroke-width="1.2" ' + (dash ? 'stroke-dasharray="' + dash + '" ' : '') + 'stroke-opacity="' + (op || 1) + '"/>');
+  s.push('<rect x="' + (X0 + step * LUNCH).toFixed(1) + '" y="' + Y0 + '" width="' + (step * (N - LUNCH)).toFixed(1) + '" height="' + (Y1 - Y0) + '" fill="var(--shade)"/>');
+  function hl(p, from, to, col, extra) {
+    s.push('<line x1="' + (X0 + step * from).toFixed(1) + '" x2="' + (X0 + step * to).toFixed(1) + '" y1="' + y(p).toFixed(1) + '" y2="' + y(p).toFixed(1) + '" stroke="' + col + '" ' + (extra || 'stroke-width="1.2"') + '/>');
   }
-  s.push('<rect x="' + (X0 + step * OR0).toFixed(1) + '" y="' + y(orH).toFixed(1) + '" width="' + (X1 - X0 - step * OR0).toFixed(1) + '" height="' + (y(orL) - y(orH)).toFixed(1) + '" fill="var(--or)" fill-opacity="0.1"/>');
-  hline(orH, OR0, "var(--or)"); hline(orL, OR0, "var(--or)");
-  hline(PDH, 0, "var(--pd)"); hline(pmH, 0, "var(--muted)", "4 3", 0.8); hline(pmL, 0, "var(--muted)", "4 3", 0.8);
-  // VWAP and EMA
-  s.push('<path d="' + path(vw, 0) + '" fill="none" stroke="var(--accent)" stroke-width="2"/>');
-  s.push('<path d="' + path(ema, 0) + '" fill="none" stroke="var(--ema)" stroke-width="1.2"/>');
-  // candles
+  s.push('<rect x="' + (X0 + step * OPEN).toFixed(1) + '" y="' + y(orH).toFixed(1) + '" width="' + (X1 - X0 - step * OPEN).toFixed(1) + '" height="' + (y(orL) - y(orH)).toFixed(1) + '" fill="var(--or)" fill-opacity="0.12"/>');
+  hl(orH, OPEN, N, "var(--or)", 'stroke-width="1.6"'); hl(orL, OPEN, N, "var(--or)", 'stroke-width="1.6"');
+  hl(PDH, 0, N, "var(--pd)"); hl(pmH, 0, N, "var(--muted)", 'stroke-width="1" stroke-opacity="0.8"'); hl(pmL, 0, N, "var(--muted)", 'stroke-width="1" stroke-opacity="0.8"');
+  // trade lines from entry to exit
+  hl(stop, ENTRY, exitBar + 1, "#ef5350", 'stroke-width="2.4"');
+  hl(target, ENTRY, exitBar + 1, "#26a69a", 'stroke-width="2.4"');
+  hl(entry, ENTRY, exitBar + 1, "var(--muted)", 'stroke-width="1.2" stroke-dasharray="2 3"');
+  // VWAP, colored by which side price is on
+  for (i = OPEN + 1; i < N; i++) {
+    var col = bars[i].c >= vw[i] ? "#26a69a" : "#ef5350";
+    s.push('<line x1="' + x(i - 1).toFixed(1) + '" y1="' + y(vw[i - 1]).toFixed(1) + '" x2="' + x(i).toFixed(1) + '" y2="' + y(vw[i]).toFixed(1) + '" stroke="' + col + '" stroke-width="2.2" stroke-linecap="round"/>');
+  }
   var cw = Math.max(3, step * 0.56);
-  bars.forEach(function (b, i) {
-    var up = b.c >= b.o, col = up ? "var(--bull)" : "var(--bear)";
+  bars.forEach(function (b, k) {
+    var up = b.c >= b.o, c = up ? "var(--bull)" : "var(--bear)";
     var top = y(Math.max(b.o, b.c)), bot = y(Math.min(b.o, b.c));
-    s.push('<line x1="' + x(i).toFixed(1) + '" x2="' + x(i).toFixed(1) + '" y1="' + y(b.h).toFixed(1) + '" y2="' + y(b.l).toFixed(1) + '" stroke="' + col + '" stroke-width="1"/>');
-    s.push('<rect x="' + (x(i) - cw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + Math.max(1, bot - top).toFixed(1) + '" fill="' + col + '" fill-opacity="' + (i < OR0 ? 0.55 : 1) + '"/>');
+    s.push('<line x1="' + x(k).toFixed(1) + '" x2="' + x(k).toFixed(1) + '" y1="' + y(b.h).toFixed(1) + '" y2="' + y(b.l).toFixed(1) + '" stroke="' + c + '" stroke-width="1"/>');
+    s.push('<rect x="' + (x(k) - cw / 2).toFixed(1) + '" y="' + top.toFixed(1) + '" width="' + cw.toFixed(1) + '" height="' + Math.max(1, bot - top).toFixed(1) + '" fill="' + c + '" fill-opacity="' + (k < OPEN ? 0.5 : 1) + '"/>');
   });
-  // markers
-  var mb = bars[ORB], my = y(mb.l) + 10;
-  s.push('<path d="M' + x(ORB).toFixed(1) + ' ' + my.toFixed(1) + ' l5 8 h-10 Z" fill="var(--bull)"/>');
-  s.push('<text x="' + x(ORB).toFixed(1) + '" y="' + (my + 19).toFixed(1) + '" text-anchor="middle" fill="var(--bull)" font-weight="500">ORB</text>');
-  var pb = bars[PDHBAR], py = y(pb.l) + 10;
-  s.push('<path d="M' + x(PDHBAR).toFixed(1) + ' ' + py.toFixed(1) + ' l4 4 l-4 4 l-4 -4 Z" fill="var(--pd)"/>');
-  s.push('<text x="' + x(PDHBAR).toFixed(1) + '" y="' + (py + 19).toFixed(1) + '" text-anchor="middle" fill="var(--pd)" font-weight="500">PDH</text>');
-  // zone captions
-  s.push('<text x="' + (X0 + 4) + '" y="' + (Y1 - 6) + '" fill="var(--muted)">pre-market</text>');
-  s.push('<text x="' + (X0 + step * LUNCH + 4).toFixed(1) + '" y="' + (Y1 - 6) + '" fill="var(--muted)">midday chop</text>');
-  // time axis
-  [[OR0, "9:30"], [14, "10:00"], [20, "10:30"], [26, "11:00"], [LUNCH, "11:30"], [38, "12:00"]].forEach(function (t) {
-    s.push('<text x="' + x(t[0]).toFixed(1) + '" y="' + (H - 6) + '" text-anchor="middle" fill="var(--muted)">' + t[1] + '</text>');
+  function tagBox(cx, yTop, text, fill, pointUp) {
+    var w = text.length * 7.6 + 12, hgt = 20, bx = Math.min(Math.max(cx - w / 2, X0), X1 - w);
+    var by = pointUp ? yTop + 6 : yTop - 6 - hgt;
+    s.push('<path d="M' + cx.toFixed(1) + ' ' + (pointUp ? yTop + 1 : yTop - 1).toFixed(1) + ' l-5 ' + (pointUp ? 5 : -5) + ' h10 Z" fill="' + fill + '"/>');
+    s.push('<rect x="' + bx.toFixed(1) + '" y="' + by.toFixed(1) + '" width="' + w.toFixed(1) + '" height="' + hgt + '" rx="3" fill="' + fill + '"/>');
+    s.push('<text x="' + (bx + w / 2).toFixed(1) + '" y="' + (by + 14).toFixed(1) + '" text-anchor="middle" fill="#fff" font-weight="600" font-size="13" font-family="Public Sans, -apple-system, sans-serif">' + text + '</text>');
+  }
+  tagBox(x(ENTRY), y(bars[ENTRY].l) + 4, "BUY", "#26a69a", true);
+  tagBox(x(exitBar), y(bars[exitBar].h) - 4, "TARGET ✓ +2.0R", "#26a69a", false);
+  s.push('<text x="' + (x(OPEN) - 2).toFixed(1) + '" y="' + (y(orL) + 14).toFixed(1) + '" fill="var(--or)" font-weight="500">range</text>');
+  s.push('<text x="' + (X0 + step * LUNCH + 4).toFixed(1) + '" y="' + (Y0 + 12) + '" fill="var(--muted)">midday</text>');
+  s.push('<text x="' + (X0 + 2) + '" y="' + (Y0 + 12) + '" fill="var(--muted)">pre-market</text>');
+  [[OPEN, "9:30"], [14, "10:00"], [20, "10:30"], [26, "11:00"], [LUNCH, "11:30"], [38, "12:00"]].forEach(function (t) {
+    s.push('<text x="' + x(t[0]).toFixed(1) + '" y="' + (H - 8) + '" text-anchor="middle" fill="var(--muted)">' + t[1] + '</text>');
   });
-  // right-edge tags, spread apart so none overlap
   var tags = [
-    { p: vw[N - 1], t: "VWAP", c: "var(--accent)" },
-    { p: orH, t: "ORH", c: "var(--or)" }, { p: orL, t: "ORL", c: "var(--or)" },
-    { p: PDH, t: "PDH", c: "var(--pd)" },
-    { p: pmH, t: "PMH", c: "var(--muted)" }, { p: pmL, t: "PML", c: "var(--muted)" }
+    { p: target, t: "Target", c: "#26a69a" }, { p: stop, t: "Stop", c: "#ef5350" },
+    { p: vw[N - 1], t: "VWAP", c: "#26a69a" },
+    { p: orH, t: "Range high", c: "var(--or)" }, { p: orL, t: "Range low", c: "var(--or)" },
+    { p: PDH, t: "Prior high", c: "var(--pd)" },
+    { p: pmH, t: "PM high", c: "var(--muted)" }, { p: pmL, t: "PM low", c: "var(--muted)" }
   ].map(function (g) { g.y = y(g.p); return g; }).sort(function (a, b) { return a.y - b.y; });
   for (var j = 1; j < tags.length; j++) if (tags[j].y - tags[j - 1].y < 15) tags[j].y = tags[j - 1].y + 15;
   tags.forEach(function (g) {
-    s.push('<text x="' + (X1 + 6) + '" y="' + (g.y + 3.5).toFixed(1) + '" fill="' + g.c + '" font-weight="500">' + g.t + ' ' + g.p.toFixed(2) + '</text>');
+    s.push('<text x="' + (X1 + 5) + '" y="' + (g.y + 4).toFixed(1) + '" fill="' + g.c + '" font-weight="500" font-size="12.5">' + g.t + '</text>');
   });
   s.push('</svg>');
   document.getElementById("schematic").innerHTML = s.join("");

@@ -1,0 +1,304 @@
+//@version=6
+// AMD Day Trader - morning Accumulation / Manipulation / Distribution buys, graded by the market's day
+//
+// THE SETUP (tested on 47 US stocks, 5-minute candles, Feb 23 - Oct 2 2026)
+//   A  Accumulation : the opening range, the first 15 minutes (the "box").
+//   M  Manipulation : before 11:00 AM price dips BELOW the box low or yesterday's low and takes
+//                     the stops resting there (Wyckoff spring, ICT "Judas swing").
+//   D  Distribution : before 12:00 PM a strong green candle closes back ABOVE the box high.
+//                     BUY at that close. Stop under the manipulation low (never more than 2 ATR).
+//                     Target 2R. Anything still open is sold at 3:55 PM. One setup per stock per day.
+//
+// GRADES - the market's day, read from SPY's daily chart before the open
+//   A  fear day : SPY's RSI(2) closed at 10 or lower yesterday, or SPY opened 1 daily ATR or more
+//                 lower. Grade A was profitable in both test periods (+0.49R and +0.45R a trade).
+//   B  normal   : the same pattern lost money from July to October 2026. Paper-test only.
+//   X  SPY opened 1 daily ATR or more higher: stocks tend to drift down all day. No signals.
+//
+// Webhook messages are JSON for the AMD moomoo bridge. Educational tool, not financial advice.
+strategy("AMD Day Trader", overlay = true, initial_capital = 25000, process_orders_on_close = true, pyramiding = 0, margin_long = 25, margin_short = 25, slippage = 3, use_bar_magnifier = true, max_labels_count = 500)
+
+// ----- Inputs -----
+string G1 = "Setup"
+int    orMin    = input.int(15, "Opening range (minutes)", options = [15, 30], group = G1, tooltip = "The accumulation box. 15 minutes gave more trades and held up better in testing.")
+string takeWhat = input.string("A only", "Trade which signals", options = ["A only", "A and B"], group = G1, tooltip = "A only: market fear days, the version that tested positive. A and B: every day except X days. B lost money from July to October 2026, so use it only to paper-test.")
+float  targetR  = input.float(2.0, "Target (x risk)", minval = 1.0, step = 0.5, group = G1)
+float  capAtr   = input.float(2.0, "Widest stop (x ATR)", minval = 0.5, step = 0.5, group = G1, tooltip = "The stop goes under the manipulation low, but never more than this many 5-minute ATRs below the entry.")
+
+string G2 = "Market day"
+string mktSym   = input.symbol("AMEX:SPY", "Market", group = G2)
+float  rsiFear  = input.float(10, "Fear day: market RSI(2) at or below", minval = 1, maxval = 50, group = G2)
+float  gapAtr   = input.float(1.0, "Big gap (x market daily ATR)", minval = 0.25, step = 0.25, group = G2)
+bool   useMktVw = input.bool(true, "Only buy while the market is above its VWAP", group = G2)
+
+string G3 = "Risk"
+float acct      = input.float(25000, "Account size ($)", minval = 0, group = G3)
+float riskPct   = input.float(0.5, "Risk per trade (% of account)", minval = 0.05, maxval = 5, step = 0.05, group = G3, tooltip = "What one stop-out costs. 0.25 to 1% is the usual range (Tharp, Elder).")
+float maxPosPct = input.float(100, "Largest position (% of account)", minval = 1, maxval = 400, group = G3)
+
+string G4 = "Display"
+bool   showBox   = input.bool(true, "Box, yesterday's low and trade lines", group = G4)
+bool   showDay   = input.bool(true, "Tint A days green and X days red", group = G4)
+bool   showB     = input.bool(true, "Mark B signals that are not traded", group = G4)
+bool   showPanel = input.bool(true, "Status panel", group = G4)
+string panelPos  = input.string("Top right", "Panel position", options = ["Top right", "Top left", "Bottom right", "Bottom left"], group = G4)
+string panelSize = input.string("Small", "Panel text size", options = ["Tiny", "Small", "Normal"], group = G4)
+
+color cBuy  = #26a69a
+color cSell = #ef5350
+color cBox  = #29b6f6
+color cPd   = #ffca28
+color cMute = #9e9e9e
+
+// ----- Time, all in New York -----
+string NY     = "America/New_York"
+bool   intra  = timeframe.isintraday
+float  tfMin  = timeframe.in_seconds() / 60.0
+int    nyMin  = hour(time, NY) * 60 + minute(time, NY)
+int    nyDate = year(time, NY) * 10000 + month(time, NY) * 100 + dayofmonth(time, NY)
+bool   rth    = intra and nyMin >= 570 and nyMin < 960
+
+var int curDate = na
+bool dayStart = rth and (na(curDate) or nyDate != curDate)
+if dayStart
+    curDate := nyDate
+
+int  orEnd    = 570 + orMin
+bool inOR     = rth and nyMin < orEnd
+bool afterOR  = rth and nyMin >= orEnd
+bool manipWin = afterOR and nyMin < 660
+bool trigWin  = afterOR and nyMin < 720
+bool eodBar   = rth and nyMin + tfMin >= 955
+
+// ----- Daily levels and the market's day -----
+string rthId = ticker.modify(syminfo.tickerid, session = session.regular)
+string mktId = ticker.modify(mktSym, session = session.regular)
+float pdl = request.security(rthId, "D", low[1], lookahead = barmerge.lookahead_on)
+[mRsi, mOpen, mPrevClose, mAtr] = request.security(mktId, "D", [ta.rsi(close, 2)[1], open, close[1], ta.sma(ta.tr(true), 14)[1]], lookahead = barmerge.lookahead_on)
+bool mAboveVwap = request.security(mktId, timeframe.period, close > ta.vwap(hlc3))
+
+float  mGap  = mAtr > 0 ? (mOpen - mPrevClose) / mAtr : na
+string grade = na(mGap) ? "B" : mGap >= gapAtr ? "X" : (mRsi <= rsiFear or mGap <= -gapAtr) ? "A" : "B"
+float  atr   = ta.atr(14)
+
+// ----- Accumulation: the opening range -----
+var float orH = na
+var float orL = na
+if dayStart
+    orH := high
+    orL := low
+else if inOR
+    orH := math.max(orH, high)
+    orL := math.min(orL, low)
+
+// ----- Manipulation: a dip below the box low or yesterday's low before 11:00 -----
+var bool   swept     = false
+var float  manipLow  = na
+var bool   setupUsed = false
+var bool   tookToday = false
+var string dayNote   = ""
+if dayStart
+    swept     := false
+    manipLow  := na
+    setupUsed := false
+    tookToday := false
+    dayNote   := ""
+
+float sweepLine = na(pdl) ? orL : math.max(orL, pdl)
+bool  sweepNow  = manipWin and not swept and not na(orL) and low < sweepLine
+if sweepNow
+    swept     := true
+    manipLow  := low
+else if swept and not setupUsed
+    manipLow := math.min(manipLow, low)
+
+// ----- Distribution: a strong close back above the box high before 12:00 -----
+float rng     = high - low
+bool  strong  = close > open and rng > 0 and (close - low) >= 0.6 * rng
+bool  trigger = trigWin and swept and not setupUsed and strong and close > orH and close[1] <= orH
+
+float stopPx = math.max(manipLow, close - capAtr * atr) - 0.1 * atr
+float riskPx = close - stopPx
+bool  riskOk = riskPx >= 0.3 * atr
+bool  mktOk  = not useMktVw or mAboveVwap
+bool  sigA   = trigger and riskOk and mktOk and grade == "A"
+bool  sigB   = trigger and riskOk and mktOk and grade == "B"
+bool  take   = (sigA or (sigB and takeWhat == "A and B")) and strategy.position_size == 0 and not eodBar
+
+// ----- Helpers -----
+float riskUsd = acct * riskPct / 100
+
+px(float p) =>
+    str.tostring(p, format.mintick)
+
+sgn(float x) =>
+    (x >= 0 ? "+" : "") + str.tostring(x, "0.00")
+
+clock(int mins) =>
+    int hh  = math.floor(mins / 60.0)
+    int mm  = mins - hh * 60
+    int h12 = hh % 12 == 0 ? 12 : hh % 12
+    str.tostring(h12) + ":" + (mm < 10 ? "0" : "") + str.tostring(mm) + (hh < 12 ? " AM" : " PM")
+
+// Shares so a stop-out loses the risk amount, capped by the largest position allowed
+qtyFor(float risk) =>
+    float byRisk = risk > 0 ? riskUsd / (risk * syminfo.pointvalue) : 0.0
+    float byCash = close > 0 ? acct * maxPosPct / 100 / (close * syminfo.pointvalue) : 0.0
+    math.max(1.0, math.floor(math.min(byRisk, byCash)))
+
+// Webhook messages read by the AMD moomoo bridge
+jsonBuy(float q, float stp, float tgt, string g) =>
+    '{"v":1,"ticker":"' + syminfo.ticker + '","action":"buy","qty":' + str.tostring(q, "0") + ',"price":' + px(close) + ',"stop":' + px(stp) + ',"target":' + px(tgt) + ',"grade":"' + g + '"}'
+
+jsonExit(string why, float p) =>
+    '{"v":1,"ticker":"' + syminfo.ticker + '","action":"exit","reason":"' + why + '","price":' + px(p) + '}'
+
+// ----- Orders -----
+var float  tEntry = na
+var float  tStop  = na
+var float  tTgt   = na
+var float  tRisk  = na
+var float  tQty   = na
+var string tGrade = ""
+string note = ""
+
+if trigger
+    setupUsed := true
+    if not take
+        dayNote := grade == "X" ? "Setup at " + clock(nyMin) + " - X day, no longs" : not riskOk ? "Setup at " + clock(nyMin) + " - stop too tight, skipped" : not mktOk ? "Setup at " + clock(nyMin) + " - market below VWAP, skipped" : sigB ? "B signal at " + clock(nyMin) + " (not traded) - " + px(close) : "Setup at " + clock(nyMin) + " - skipped"
+        if sigB
+            note := syminfo.ticker + ": B signal (not traded) at " + px(close) + " - stop " + px(stopPx) + " - target " + px(close + targetR * riskPx)
+
+if take
+    float q   = qtyFor(riskPx)
+    float tgt = close + targetR * riskPx
+    tEntry    := close
+    tStop     := stopPx
+    tTgt      := tgt
+    tRisk     := riskPx
+    tQty      := q
+    tGrade    := grade
+    tookToday := true
+    dayNote   := "BUY " + grade + " at " + clock(nyMin) + " - " + px(close)
+    strategy.entry("BUY", strategy.long, qty = q, comment = "BUY " + grade, alert_message = jsonBuy(q, stopPx, tgt, grade))
+    strategy.exit("EXIT", from_entry = "BUY", stop = stopPx, limit = tgt, comment_profit = "TARGET", comment_loss = "STOP", alert_profit = jsonExit("target", tgt), alert_loss = jsonExit("stop", stopPx))
+    label.new(bar_index, 0.0, "BUY " + grade, yloc = yloc.belowbar, style = label.style_label_up, color = cBuy, textcolor = color.white, size = size.normal)
+    note := syminfo.ticker + ": BUY " + str.tostring(q, "0") + " shares at " + px(close) + " - stop " + px(stopPx) + " - target " + px(tgt) + " - grade " + grade + " (risk $" + str.tostring(q * riskPx * syminfo.pointvalue, "#,##0") + ")"
+
+if eodBar and strategy.position_size > 0
+    strategy.close("BUY", comment = "CLOSE 3:55", alert_message = jsonExit("eod", close))
+
+// ----- Results, kept per grade -----
+var array<float> rA = array.new<float>()
+var array<float> rB = array.new<float>()
+var int seen = 0
+bool closedNow = false
+
+if strategy.closedtrades > seen
+    int   k  = strategy.closedtrades - 1
+    float ep = strategy.closedtrades.entry_price(k)
+    float xp = strategy.closedtrades.exit_price(k)
+    float r  = tRisk > 0 ? (xp - ep) / tRisk : 0.0
+    string why = xp >= tTgt - 2 * syminfo.mintick ? "TARGET" : xp <= tStop + 2 * syminfo.mintick ? "STOP" : "CLOSE 3:55"
+    if tGrade == "A"
+        array.push(rA, r)
+    else
+        array.push(rB, r)
+    label.new(strategy.closedtrades.exit_bar_index(k), 0.0, why + " " + sgn(r) + "R", yloc = yloc.abovebar, style = label.style_label_down, color = r > 0 ? cBuy : r < 0 ? cSell : cMute, textcolor = color.white, size = size.small)
+    note := (note == "" ? "" : note + " | ") + syminfo.ticker + ": " + why + " " + sgn(r) + "R at " + px(xp)
+    dayNote := dayNote + " -> " + why + " " + sgn(r) + "R"
+    seen := strategy.closedtrades
+    closedNow := true
+
+// ----- Phone notifications in plain words (alert type: alert() function calls only) -----
+if sweepNow and grade != "X"
+    note := (note == "" ? "" : note + " | ") + syminfo.ticker + ": manipulation - dipped below " + px(sweepLine) + ". Grade " + grade + " day. BUY if a strong candle closes above " + px(orH) + " before 12:00"
+if note != ""
+    alert(note, alert.freq_once_per_bar_close)
+
+// ----- Chart -----
+bool boxOn = showBox and afterOR and not na(orH)
+pH = plot(boxOn ? orH : na, "Box high (buy line)", cBox, 2, plot.style_linebr)
+pL = plot(boxOn ? orL : na, "Box low", cBox, 1, plot.style_linebr)
+fill(pH, pL, color.new(cBox, 92), "Box")
+plot(showBox and rth and not dayStart ? pdl : na, "Yesterday's low", cPd, 1, plot.style_linebr)
+plot(showBox and swept and not setupUsed and trigWin ? manipLow : na, "Manipulation low", cSell, 1, plot.style_circles)
+
+bool inTrade = strategy.position_size > 0 or closedNow
+plot(showBox and inTrade ? tStop : na, "Stop", cSell, 2, plot.style_linebr)
+plot(showBox and inTrade ? tTgt : na, "Target", cBuy, 2, plot.style_linebr)
+plot(showBox and inTrade ? tEntry : na, "Entry", cMute, 1, plot.style_linebr)
+
+plotshape(sweepNow and grade != "X", "Manipulation", shape.triangleup, location.belowbar, color.new(cPd, 0), text = "M", size = size.tiny)
+plotshape(showB and sigB and not take, "B signal (not traded)", shape.circle, location.belowbar, cMute, text = "B", size = size.tiny)
+bgcolor(showDay and rth and grade == "A" ? color.new(cBuy, 92) : showDay and rth and grade == "X" ? color.new(cSell, 92) : na, title = "Day grade")
+
+// ----- Status panel -----
+posOf(string p) =>
+    switch p
+        "Top left"     => position.top_left
+        "Bottom left"  => position.bottom_left
+        "Bottom right" => position.bottom_right
+        => position.top_right
+
+string tSize = switch panelSize
+    "Tiny"   => size.tiny
+    "Normal" => size.normal
+    => size.small
+
+var table panel = table.new(posOf(panelPos), 2, 9, bgcolor = color.new(chart.bg_color, 5), border_color = color.new(chart.fg_color, 85), border_width = 1)
+
+row(int r, string k, string v, color vc) =>
+    table.cell(panel, 0, r, k, text_color = color.new(chart.fg_color, 35), text_size = tSize, text_halign = text.align_left)
+    table.cell(panel, 1, r, v, text_color = vc, text_size = tSize, text_halign = text.align_left)
+
+stat(array<float> a) =>
+    int n = array.size(a)
+    string s = "no trades on this chart yet"
+    if n > 0
+        int w = 0
+        for x in a
+            if x > 0
+                w += 1
+        float tot = array.sum(a)
+        s := str.tostring(n) + " trades - " + str.tostring(100.0 * w / n, "0") + "% won - avg " + sgn(tot / n) + "R - total " + sgn(tot) + "R"
+    s
+
+if barstate.islast and showPanel
+    color fg = chart.fg_color
+    row(0, "AMD Day Trader", syminfo.ticker + " - " + timeframe.period + (intra ? " min" : ""), fg)
+    if not intra
+        row(1, "Status", "Open a 5-minute chart", cSell)
+    else
+        string gTxt = grade == "A" ? "A - fear day: buy signals are live" : grade == "X" ? "X - market gapped up big: no longs today" : "B - normal day: signals are paper only"
+        string gWhy = "market RSI(2) " + (na(mRsi) ? "-" : str.tostring(mRsi, "0")) + ", gap " + (na(mGap) ? "-" : sgn(mGap)) + " ATR"
+        row(1, "Today", gTxt, grade == "A" ? cBuy : grade == "X" ? cSell : fg)
+        row(2, "Why", gWhy + (useMktVw ? " - market " + (mAboveVwap ? "above" : "below") + " VWAP" : ""), fg)
+
+        string ph = ""
+        color  pc = fg
+        if not rth
+            ph := "Market closed - box forms 9:30 to " + clock(orEnd)
+        else if inOR
+            ph := "1 ACCUMULATION - box forming until " + clock(orEnd)
+            pc := cBox
+        else if setupUsed
+            ph := dayNote
+            pc := tookToday ? cBuy : fg
+        else if not swept and manipWin
+            ph := "2 Waiting for MANIPULATION - a dip below " + px(sweepLine) + " by 11:00"
+            pc := cPd
+        else if not swept
+            ph := "No setup today - no dip below the box by 11:00"
+        else if trigWin
+            ph := "3 Manipulation done (low " + px(manipLow) + ") - BUY on a strong close above " + px(orH) + " by 12:00"
+            pc := cBuy
+        else
+            ph := "No setup today - no close above the box by 12:00"
+        row(3, "Phase", ph, pc)
+
+        string plan = strategy.position_size > 0 ? "IN TRADE - " + str.tostring(tQty, "0") + " sh, entry " + px(tEntry) + ", stop " + px(tStop) + ", target " + px(tTgt) : "risk $" + str.tostring(riskUsd, "#,##0") + " a trade - target " + str.tostring(targetR, "0.0") + "R - sold by 3:55 PM"
+        row(4, "Plan", plan, strategy.position_size > 0 ? cBuy : fg)
+        row(5, "Grade A record", stat(rA), fg)
+        row(6, "Grade B record", takeWhat == "A and B" ? stat(rB) : "not traded (switch on in settings to test)", fg)
+        row(7, "Chart setting", tfMin == 5 ? "5-minute - the tested setting" : "tested on 5-minute charts only", tfMin == 5 ? fg : cSell)

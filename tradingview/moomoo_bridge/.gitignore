@@ -1,3 +1,5 @@
 config.json
 bridge.log
+state_*.json
+PAUSE
 __pycache__/

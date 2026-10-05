@@ -9,7 +9,7 @@
 indicator("DT Volume", format = format.volume)
 
 int   avgLen = input.int(20, "Average length", minval = 1)
-float spikeX = input.float(1.5, "Spike threshold (x average)", minval = 1, step = 0.1, tooltip = "1.5 matches the volume DT Core requires for a BUY or SELL.")
+float spikeX = input.float(1.5, "Spike threshold (x average)", minval = 1, step = 0.1, tooltip = "Bars at or above this multiple of the average are drawn in full color.")
 color cUp    = input.color(#26a69a, "Up", inline = "c")
 color cDn    = input.color(#ef5350, "Down", inline = "c")
 color cAvg   = input.color(#f5a623, "Average", inline = "c")

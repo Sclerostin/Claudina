@@ -1,0 +1,132 @@
+604500 candles, 50 symbols, 155 days (2026-02-23 to 2026-10-02); SPY, QQQ and IWM are not traded
+
+=== 1. Controls and 5-minute setups, development period only (Feb 23 - Jun 30)
+  random entries, 1 ATR stop, 2R target          n  4303  win  31.7%  avg -0.117R  t  -5.51  maxDD  596.1R  per day 48.35
+  VWAP -2 sd spring                              n  3434  win  34.2%  avg -0.065R  t  -2.71  maxDD  325.4R  per day 38.58
+  VWAP -2 sd spring, RVOL >= 1.5                 n   299  win  36.8%  avg +0.039R  t   0.47  maxDD   30.4R  per day 4.10
+  swing AMD (any swing low swept + MSS)          n  1672  win  42.0%  avg -0.056R  t  -2.10  maxDD  129.7R  per day 18.79
+  swing AMD, RVOL >= 1.5                         n   168  win  44.6%  avg -0.053R  t  -0.64  maxDD   13.7R  per day 2.55
+
+=== 2. Session AMD (Power of Three) by trigger line, development, 15-min range, entries by 12:00
+  trigger reclaim, stop under manipulation low   n  1380  win  40.7%  avg -0.002R  t  -0.05  maxDD   90.7R  per day 15.51
+  trigger mid, stop under manipulation low       n  1200  win  45.0%  avg +0.056R  t   1.76  maxDD   72.8R  per day 13.48
+  trigger vwap, stop under manipulation low      n  1773  win  43.4%  avg +0.028R  t   0.98  maxDD  126.0R  per day 19.92
+  trigger mss, stop under manipulation low       n   833  win  49.7%  avg +0.067R  t   2.03  maxDD   45.2R  per day 9.47
+  trigger orh, stop under manipulation low       n   585  win  50.9%  avg +0.084R  t   2.13  maxDD   27.8R  per day 6.96
+
+=== 3. Afternoon AMD on the lunch range, development
+  range 11:30-13:00, trigger orh                 n   181  win  42.5%  avg -0.028R  t  -0.52  maxDD   20.6R  per day 3.18
+  range 11:30-13:00, trigger mss                 n   641  win  41.8%  avg -0.088R  t  -2.50  maxDD   81.4R  per day 7.63
+  range 12:00-13:30, trigger orh                 n   109  win  32.1%  avg -0.266R  t  -4.76  maxDD   30.4R  per day 2.18
+  range 12:00-13:30, trigger mss                 n   423  win  37.4%  avg -0.168R  t  -4.14  maxDD   89.4R  per day 5.42
+
+=== 4. Exits for the session AMD (trigger orh, SPY above VWAP), development
+  stop manip, time stop none {'eod': 0.67, 'stop': 0.23, 'target': 0.1} n   475  win  51.4%  avg +0.111R  t   2.51  maxDD   27.2R  per day 6.51
+  stop manip, time stop 12 {'time': 0.86, 'stop': 0.11, 'target': 0.03} n   475  win  48.2%  avg +0.003R  t   0.09  maxDD   27.2R  per day 6.51
+  stop manip, time stop 24 {'time': 0.8, 'stop': 0.15, 'target': 0.05} n   475  win  49.1%  avg +0.055R  t   1.54  maxDD   17.1R  per day 6.51
+  stop cap2.0, time stop none {'stop': 0.45, 'eod': 0.3, 'target': 0.25} n   475  win  46.5%  avg +0.139R  t   2.38  maxDD   34.1R  per day 6.51
+  stop cap2.0, time stop 12 {'time': 0.69, 'stop': 0.24, 'target': 0.07} n   475  win  47.6%  avg +0.021R  t   0.48  maxDD   33.7R  per day 6.51
+  stop cap2.0, time stop 24 {'time': 0.54, 'stop': 0.33, 'target': 0.14} n   475  win  47.2%  avg +0.091R  t   1.84  maxDD   25.7R  per day 6.51
+
+=== 5. Re-entries after the first trade, development (30-min range)
+  re-entries only: amd                           n    47  win  36.2%  avg -0.209R  t  -1.69  maxDD   12.2R  per day 1.57
+  re-entries only: retest_orh                    n    72  win  30.6%  avg -0.214R  t  -1.34  maxDD   22.9R  per day 2.06
+  re-entries only: retest_vwap                   n    60  win  31.7%  avg -0.184R  t  -1.06  maxDD   16.3R  per day 1.82
+
+=== 6. One-at-a-time robustness of the frozen rules, development
+  cap = 1.5                                      n   291  win  45.4%  avg +0.206R  t   2.50  maxDD   23.1R  per day 5.11
+  cap = 2.0                                      n   291  win  49.5%  avg +0.218R  t   2.92  maxDD   19.1R  per day 5.11
+  cap = 2.5                                      n   291  win  51.2%  avg +0.204R  t   2.94  maxDD   17.0R  per day 5.11
+  or_bars = 3                                    n   475  win  46.5%  avg +0.139R  t   2.38  maxDD   34.1R  per day 6.51
+  or_bars = 6                                    n   291  win  49.5%  avg +0.218R  t   2.92  maxDD   19.1R  per day 5.11
+  trig_end = 690                                 n   253  win  51.4%  avg +0.275R  t   3.39  maxDD   16.0R  per day 4.69
+  trig_end = 720                                 n   291  win  49.5%  avg +0.218R  t   2.92  maxDD   19.1R  per day 5.11
+  trig_end = 780                                 n   364  win  48.9%  avg +0.187R  t   2.83  maxDD   20.6R  per day 5.35
+  levels = ('orl',)                              n   106  win  48.1%  avg +0.099R  t   0.85  maxDD   17.4R  per day 2.52
+  levels = ('pdl',)                              n   231  win  51.1%  avg +0.278R  t   3.26  maxDD   17.6R  per day 4.44
+  levels = ('orl', 'pdl')                        n   291  win  49.5%  avg +0.218R  t   2.92  maxDD   19.1R  per day 5.11
+  spy = None                                     n   342  win  48.8%  avg +0.189R  t   2.79  maxDD   18.6R  per day 4.89
+  spy = above_vwap                               n   291  win  49.5%  avg +0.218R  t   2.92  maxDD   19.1R  per day 5.11
+  trend = None                                   n   291  win  49.5%  avg +0.218R  t   2.92  maxDD   19.1R  per day 5.11
+  trend = sma50                                  n   126  win  42.1%  avg +0.068R  t   0.60  maxDD    9.4R  per day 2.62
+  min_rvol = None                                n   291  win  49.5%  avg +0.218R  t   2.92  maxDD   19.1R  per day 5.11
+  min_rvol = 1.0                                 n    95  win  46.3%  avg +0.185R  t   1.45  maxDD    9.1R  per day 2.44
+
+=== 7. HOLDOUT: frozen rules, run once on Jul 1 - Oct 2
+  AMD Day Trader, 30-min range  [dev]            n   291  win  49.5%  avg +0.218R  t   2.92  maxDD   19.1R  per day 5.11
+  AMD Day Trader, 30-min range  [holdout]        n   143  win  32.2%  avg -0.222R  t  -2.38  maxDD   37.4R  per day 3.58
+  same rules, 15-min range  [dev]                n   475  win  46.5%  avg +0.139R  t   2.38  maxDD   34.1R  per day 6.51
+  same rules, 15-min range  [holdout]            n   252  win  36.9%  avg -0.087R  t  -1.17  maxDD   38.4R  per day 4.94
+  30-min: chance true average <= 0 (day bootstrap): holdout 0.96, all 0.31; exits {'stop': 199, 'eod': 148, 'target': 87}; average hold 169 min
+  15-min: chance true average <= 0 (day bootstrap): holdout 0.80, all 0.25; exits {'stop': 345, 'eod': 221, 'target': 161}; average hold 170 min
+
+=== 8. Average R by month
+         AMD 30-min avgR  AMD 30-min n  AMD 15-min avgR  AMD 15-min n  random avgR  random n  SPY up-days %  SPY open-to-close bp
+2026-02             0.32            19             0.16            19        -0.08       231           60.0                   5.1
+2026-03             0.09            77             0.03           116        -0.22      1113           36.0                  -9.8
+2026-04             0.89            61             0.73           105         0.03      1055           71.0                  33.4
+2026-05             0.05            80            -0.00           132        -0.07      1004           60.0                  17.1
+2026-06            -0.15            54            -0.16           103        -0.16      1014           48.0                 -19.0
+2026-07            -0.12            50             0.02            92        -0.07      1076           64.0                  -3.3
+2026-08            -0.31            41            -0.01            81        -0.07       980           33.0                  -1.2
+2026-09            -0.23            50            -0.27            77        -0.18      1011           33.0                  -5.2
+2026-10            -1.02             2            -1.02             2        -0.10        99            0.0                  -8.1
+
+=== 9. New hypothesis after the holdout: relative strength while SPY sweeps its lows
+  RS, 15-min range, trigger orh  [dev]           n  1018  win  41.7%  avg +0.071R  t   1.73  maxDD   63.4R  per day 14.34
+  RS, 15-min range, trigger orh  [holdout]       n   735  win  36.3%  avg -0.099R  t  -2.20  maxDD   72.8R  per day 13.87
+  RS, 30-min range, trigger orh  [dev]           n   707  win  41.3%  avg +0.046R  t   0.94  maxDD   56.9R  per day 11.98
+  RS, 30-min range, trigger orh  [holdout]       n   596  win  36.2%  avg -0.118R  t  -2.40  maxDD   73.7R  per day 12.42
+
+=== 10. New hypothesis after the holdout: trade only while the setup's last 10 days are positive
+  AMD 30-min, strategy-momentum gate  [dev]      n   164  win  50.0%  avg +0.276R  t   2.63  maxDD   14.7R  per day 4.21
+  AMD 30-min, strategy-momentum gate  [holdout]  n    28  win  25.0%  avg -0.361R  t  -1.65  maxDD   13.3R  per day 3.50
+
+=== 11. Day bias from daily bars 2015 - 2026: average open-to-close move in daily ATRs
+  113742 stock-days; all days: 2015-22 +0.008, 2023-26 +0.019, 2026 (5-min sample) +0.020
+  SPY gaps up > 1 ATR     2015-22: -0.113 (1116)  2023-26: -0.229 (656)  2026 (5-min sample): -0.071 (188)
+  SPY gaps down > 1 ATR   2015-22: +0.065 (1642)  2023-26: +0.075 (752)  2026 (5-min sample): +0.071 (141)
+  SPY RSI(2) <= 10        2015-22: +0.043 (6520)  2023-26: +0.044 (3459)  2026 (5-min sample): +0.184 (658)
+  SPY RSI(2) <= 30        2015-22: +0.028 (18863)  2023-26: +0.049 (8829)  2026 (5-min sample): +0.034 (1974)
+  SPY RSI(2) > 30         2015-22: +0.001 (50842)  2023-26: +0.010 (27923)  2026 (5-min sample): +0.015 (5311)
+  Mondays                 2015-22: +0.031 (13021)  2023-26: +0.101 (6828)  2026 (5-min sample): +0.092 (1410)
+
+=== 12. AMD Day Trader as shipped: grade A = morning AMD on a market fear day
+  days by grade: {'B': 135, 'A': 16, 'X': 4}
+  15-min range (default), grade A  [dev]         n    60  win  58.3%  avg +0.489R  t   2.85  maxDD    4.7R  per day 5.45
+  15-min range (default), grade A  [holdout]     n    32  win  59.4%  avg +0.453R  t   2.19  maxDD    3.2R  per day 6.40
+  15-min range (default), grade B  [dev]         n   406  win  44.6%  avg +0.088R  t   1.41  maxDD   34.8R  per day 6.66
+  15-min range (default), grade B  [holdout]     n   215  win  34.4%  avg -0.153R  t  -1.91  maxDD   35.6R  per day 4.89
+  15-min range (default), grade X  [dev]         n     9  win  55.6%  avg +0.117R  t   0.29  maxDD    3.0R  per day 9.00
+  15-min range (default), grade X  [holdout]     n     5  win   0.0%  avg -0.688R  t  -4.79  maxDD    2.4R  per day 2.50
+  30-min range, grade A  [dev]                   n    36  win  61.1%  avg +0.559R  t   2.58  maxDD    5.9R  per day 5.14
+  30-min range, grade A  [holdout]               n    16  win  50.0%  avg +0.161R  t   0.49  maxDD    5.1R  per day 4.00
+  30-min range, grade B  [dev]                   n   252  win  47.6%  avg +0.166R  t   2.09  maxDD   18.2R  per day 5.14
+  30-min range, grade B  [holdout]               n   127  win  29.9%  avg -0.270R  t  -2.81  maxDD   37.9R  per day 3.53
+  30-min range, grade X  [dev]                   n     3  win  66.7%  avg +0.460R  t   0.53  maxDD    1.0R  per day 3.00
+  30-min range, grade X  [holdout]               no trades
+  random control, grade A  [dev]                 n   526  win  33.5%  avg -0.043R  t  -0.70  maxDD   63.4R  per day 47.82
+  random control, grade A  [holdout]             n   222  win  34.2%  avg -0.018R  t  -0.19  maxDD   42.7R  per day 44.40
+  random control, grade B  [dev]                 n  3796  win  31.9%  avg -0.109R  t  -4.78  maxDD  429.4R  per day 49.95
+  random control, grade B  [holdout]             n  2833  win  31.7%  avg -0.115R  t  -4.35  maxDD  323.8R  per day 48.02
+  random control, grade X  [dev]                 n    95  win  24.2%  avg -0.334R  t  -2.53  maxDD   32.7R  per day 47.50
+  random control, grade X  [holdout]             n   111  win  31.5%  avg -0.131R  t  -0.99  maxDD   22.8R  per day 55.50
+             n  total   avg
+date                       
+2026-03-03  14  13.21  0.94
+2026-03-04   8   2.27  0.28
+2026-03-09  12   8.24  0.69
+2026-03-13   1  -1.02 -1.02
+2026-03-16   1  -0.64 -0.64
+2026-03-23   3   2.99  1.00
+2026-03-30   3  -3.07 -1.02
+2026-03-31   4   3.41  0.85
+2026-06-08   5  -3.88 -0.78
+2026-06-11   6   1.85  0.31
+2026-06-29   3   6.00  2.00
+2026-07-17  18  12.22  0.68
+2026-07-21   7   3.40  0.49
+2026-07-23   1  -1.04 -1.04
+2026-07-30   2   0.99  0.50
+2026-09-02   4  -1.08 -0.27
+  grade A, 15-min: 92 trades on 16 days; positive days 10 of 16; without the best two days +0.307R; chance true average <= 0 (day bootstrap) 0.006; exits {'eod': 32, 'target': 32, 'stop': 28}; average hold 195 min

@@ -1,22 +1,19 @@
-"""DT Core -> moomoo bridge.
+"""AMD Day Trader -> moomoo bridge.
 
-Receives TradingView webhook alerts from the DT Core strategy and places the
-orders in your moomoo account through moomoo OpenAPI (the OpenD gateway).
+TradingView sends each AMD Day Trader order to this program as a webhook. The bridge checks it
+against your limits and places it in your moomoo account through moomoo OpenAPI (OpenD).
 
-  buy   market buy, then a protective stop-loss order at moomoo
-  sell  market short sale, then a protective buy-to-cover stop
-  exit  cancel this ticker's open orders and close the position at market
+  buy   limit buy at the alert price + a small cushion (never chases further), then a
+        protective STOP order at moomoo for the shares that filled
+  exit  cancel the stock's open orders and sell the position at market
 
-DT Core handles the target: when TradingView's simulation reaches the target,
-the stop or the end of the day, it sends "exit" and the bridge closes the trade.
-The stop order at moomoo is a safety net in case an alert is late or lost.
+The bridge also runs on its own clock and does not depend on TradingView for safety:
+  - every position it opened is sold at 3:55 PM New York time
+  - a stop that fills at moomoo is noticed and booked
+  - with moomoo quotes available, it sells at the target the moment the price gets there
 
-Modes (set "mode" in config.json):
-  dry_run  log what would be sent, touch nothing (start here)
-  paper    moomoo paper trading account
-  live     real money
-
-Run:  python bridge.py            reads config.json next to this file
+Modes (config.json "mode"):  dry_run (log only) -> paper (moomoo paper account) -> live
+Run:  python bridge.py           reads config.json next to this file
 """
 import json
 import logging
@@ -24,10 +21,13 @@ import re
 import sys
 import threading
 import time
+from datetime import datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 HERE = Path(__file__).resolve().parent
+NY = ZoneInfo("America/New_York")
 log = logging.getLogger("bridge")
 
 DEFAULTS = {
@@ -38,10 +38,19 @@ DEFAULTS = {
     "opend_port": 11111,
     "listen_host": "127.0.0.1",
     "listen_port": 8080,
+    "grades": ["A"],
+    "allowed_tickers": [],
+    "max_open_positions": 3,
+    "max_trades_per_day": 6,
+    "max_daily_loss_r": 3.0,
     "max_qty": 1000,
     "max_order_value": 25000,
-    "allowed_tickers": [],
-    "allow_short": True,
+    "entry_cushion_pct": 0.15,
+    "fill_timeout_sec": 20,
+    "entry_window": ["09:45", "12:05"],
+    "flatten_at": "15:55",
+    "watch_targets": True,
+    "watch_every_sec": 3,
 }
 TICKER = re.compile(r"^[A-Z][A-Z0-9.\-]{0,9}$")
 
@@ -50,60 +59,84 @@ class OrderError(Exception):
     """An order was refused by the bridge's checks or by moomoo."""
 
 
+def hhmm(text):
+    h, m = text.split(":")
+    return int(h) * 60 + int(m)
+
+
 def load_config(path):
     cfg = dict(DEFAULTS)
     cfg.update(json.loads(Path(path).read_text()))
-    if len(cfg["secret"]) < 16 or cfg["secret"].startswith("CHANGE"):
-        raise SystemExit("config.json: set 'secret' to a random string of 16+ letters and digits")
-    if not cfg["secret"].isalnum():
-        raise SystemExit("config.json: 'secret' may only contain letters and digits")
+    if len(cfg["secret"]) < 16 or cfg["secret"].startswith("CHANGE") or not cfg["secret"].isalnum():
+        raise SystemExit("config.json: set 'secret' to 16 or more random letters and digits")
     if cfg["mode"] not in ("dry_run", "paper", "live"):
         raise SystemExit("config.json: 'mode' must be dry_run, paper or live")
     if cfg["mode"] == "live" and not cfg["trade_password"]:
         raise SystemExit("config.json: live mode needs 'trade_password' (your moomoo trading password)")
     cfg["allowed_tickers"] = [t.upper() for t in cfg["allowed_tickers"]]
+    cfg["grades"] = [g.upper() for g in cfg["grades"]]
     return cfg
 
 
+# ------------------------------------------------------------------ brokers
 class DryRunBroker:
-    """Logs every order instead of sending it. Tracks positions so the log reads like a real day."""
+    """Logs orders instead of sending them; fills everything at the alert's price."""
 
     def __init__(self):
-        self.positions = {}
+        self.positions, self.orders, self.n = {}, {}, 0
 
     def position(self, code):
         return self.positions.get(code, 0)
 
-    def market(self, code, side, qty, ref_price):
-        log.info("DRY RUN  market %s %s x%d (ref %.2f)", side.upper(), code, qty, ref_price)
-        sign = 1 if side in ("buy", "cover") else -1
-        self.positions[code] = self.positions.get(code, 0) + sign * qty
-        return qty
+    def buy_limit(self, code, qty, limit, ref):
+        log.info("DRY RUN  buy %s x%d, limit %.2f", code, qty, limit)
+        self.positions[code] = self.positions.get(code, 0) + qty
+        return qty, ref
 
-    def stop(self, code, side, qty, stop_price):
-        log.info("DRY RUN  stop %s %s x%d at %.2f", side.upper(), code, qty, stop_price)
+    def sell_market(self, code, qty, ref):
+        log.info("DRY RUN  sell %s x%d at market", code, qty)
+        self.positions[code] = self.positions.get(code, 0) - qty
+        return qty, ref
+
+    def place_stop(self, code, qty, stop):
+        self.n += 1
+        self.orders[str(self.n)] = dict(code=code, qty=qty, stop=stop, open=True)
+        log.info("DRY RUN  stop %s x%d at %.2f", code, qty, stop)
+        return str(self.n)
 
     def cancel_open(self, code):
+        for o in self.orders.values():
+            if o["code"] == code:
+                o["open"] = False
         log.info("DRY RUN  cancel open orders for %s", code)
+
+    def order_fill(self, order_id):
+        return 0, 0.0, "NONE"
+
+    def last_price(self, code):
+        return None
 
 
 class MoomooBroker:
-    """Talks to moomoo through the OpenD gateway running on this computer."""
+    """Talks to moomoo through the OpenD gateway."""
 
-    OPEN_STATUSES = ("UNSUBMITTED", "WAITING_SUBMIT", "SUBMITTING", "SUBMITTED", "FILLED_PART")
-    DEAD_STATUSES = ("SUBMIT_FAILED", "TIMEOUT", "FAILED", "CANCELLED_ALL", "DISABLED", "DELETED", "FILL_CANCELLED")
+    OPEN = ("UNSUBMITTED", "WAITING_SUBMIT", "SUBMITTING", "SUBMITTED", "FILLED_PART")
+    DEAD = ("SUBMIT_FAILED", "TIMEOUT", "FAILED", "CANCELLED_ALL", "CANCELLED_PART", "DISABLED", "DELETED",
+            "FILL_CANCELLED")
 
-    def __init__(self, cfg, mm=None, ctx=None):
+    def __init__(self, cfg, mm=None, ctx=None, quote_ctx=None):
         if mm is None:
             import moomoo as mm
-        self.mm = mm
+        self.mm, self.cfg = mm, cfg
         self.env = mm.TrdEnv.REAL if cfg["mode"] == "live" else mm.TrdEnv.SIMULATE
-        self.ctx = ctx or mm.OpenSecTradeContext(
-            filter_trdmarket=mm.TrdMarket.US,
-            host=cfg["opend_host"],
-            port=cfg["opend_port"],
-            security_firm=mm.SecurityFirm.FUTUINC,
-        )
+        self.ctx = ctx or mm.OpenSecTradeContext(filter_trdmarket=mm.TrdMarket.US, host=cfg["opend_host"],
+                                                 port=cfg["opend_port"], security_firm=mm.SecurityFirm.FUTUINC)
+        self.quotes = quote_ctx
+        if self.quotes is None and cfg["watch_targets"]:
+            try:
+                self.quotes = mm.OpenQuoteContext(host=cfg["opend_host"], port=cfg["opend_port"])
+            except Exception as e:                             # quotes are optional
+                log.warning("no moomoo quotes (%s): targets will come from TradingView alerts", e)
         if self.env == mm.TrdEnv.REAL:
             self._ok(self.ctx.unlock_trade(password=cfg["trade_password"]), "unlock trading")
 
@@ -114,7 +147,6 @@ class MoomooBroker:
         return data
 
     def position(self, code):
-        """Signed share count: positive long, negative short, 0 flat."""
         data = self._ok(self.ctx.position_list_query(code=code, trd_env=self.env), "position query")
         total = 0.0
         for _, row in data.iterrows():
@@ -122,60 +154,119 @@ class MoomooBroker:
             total += -qty if str(row.get("position_side", "")) == "SHORT" else qty
         return total
 
-    def market(self, code, side, qty, ref_price):
-        sides = {"buy": self.mm.TrdSide.BUY, "sell": self.mm.TrdSide.SELL,
-                 "short": self.mm.TrdSide.SELL_SHORT, "cover": self.mm.TrdSide.BUY_BACK}
-        data = self._ok(self.ctx.place_order(price=ref_price, qty=qty, code=code, trd_side=sides[side],
-                                             order_type=self.mm.OrderType.MARKET, trd_env=self.env),
-                        f"market {side} {code}")
-        order_id = str(data["order_id"].iloc[0])
-        log.info("sent market %s %s x%d (order %s)", side.upper(), code, qty, order_id)
-        return self._wait_fill(order_id)
+    def _place(self, code, qty, price, side, kind, aux=None):
+        kw = dict(price=price, qty=qty, code=code, trd_side=side, order_type=kind, trd_env=self.env,
+                  time_in_force=self.mm.TimeInForce.DAY)
+        if aux is not None:
+            kw["aux_price"] = aux
+        data = self._ok(self.ctx.place_order(**kw), f"{kind} order for {code}")
+        return str(data["order_id"].iloc[0])
 
-    def _wait_fill(self, order_id, timeout=15.0):
+    def order_fill(self, order_id):
+        """(filled shares, average price, status) of one order."""
+        data = self._ok(self.ctx.order_list_query(order_id=order_id, trd_env=self.env), "order status")
+        if not len(data):
+            return 0, 0.0, "UNKNOWN"
+        row = data.iloc[0]
+        return float(row["dealt_qty"]), float(row["dealt_avg_price"] or 0), str(row["order_status"])
+
+    def _wait(self, order_id, timeout):
         deadline = time.time() + timeout
-        dealt = 0.0
-        while time.time() < deadline:
-            data = self._ok(self.ctx.order_list_query(order_id=order_id, trd_env=self.env), "order status")
-            if len(data):
-                row = data.iloc[0]
-                status = str(row["order_status"])
-                dealt = float(row["dealt_qty"])
-                if status == "FILLED_ALL":
-                    log.info("order %s filled x%g at %s", order_id, dealt, row.get("dealt_avg_price"))
-                    return dealt
-                if status in self.DEAD_STATUSES:
-                    raise OrderError(f"order {order_id} ended as {status}")
+        while True:
+            dealt, avg, status = self.order_fill(order_id)
+            if status == "FILLED_ALL" or status in self.DEAD:
+                return dealt, avg, status
+            if time.time() >= deadline:
+                return dealt, avg, status
             time.sleep(1.0)
-        log.warning("order %s not fully filled after %.0fs (filled x%g)", order_id, timeout, dealt)
-        return dealt
 
-    def stop(self, code, side, qty, stop_price):
-        trd_side = self.mm.TrdSide.SELL if side == "sell" else self.mm.TrdSide.BUY_BACK
-        data = self._ok(self.ctx.place_order(price=stop_price, qty=qty, code=code, trd_side=trd_side,
-                                             order_type=self.mm.OrderType.STOP, aux_price=stop_price,
-                                             time_in_force=self.mm.TimeInForce.DAY, trd_env=self.env),
-                        f"protective stop for {code}")
-        log.info("protective stop %s %s x%d at %.2f (order %s)", side.upper(), code, qty, stop_price,
-                 data["order_id"].iloc[0])
+    def _cancel(self, order_id):
+        self._ok(self.ctx.modify_order(self.mm.ModifyOrderOp.CANCEL, order_id, 0, 0, trd_env=self.env),
+                 f"cancel order {order_id}")
+
+    def buy_limit(self, code, qty, limit, ref):
+        oid = self._place(code, qty, limit, self.mm.TrdSide.BUY, self.mm.OrderType.NORMAL)
+        log.info("sent limit buy %s x%d at %.2f (order %s)", code, qty, limit, oid)
+        dealt, avg, status = self._wait(oid, self.cfg["fill_timeout_sec"])
+        if status != "FILLED_ALL" and status not in self.DEAD:
+            self._cancel(oid)                                  # don't chase: drop what didn't fill
+            time.sleep(1.0)
+            dealt, avg, status = self.order_fill(oid)
+        log.info("buy %s: filled x%g at %.4f (%s)", code, dealt, avg, status)
+        return int(dealt), avg
+
+    def sell_market(self, code, qty, ref):
+        oid = self._place(code, qty, ref, self.mm.TrdSide.SELL, self.mm.OrderType.MARKET)
+        dealt, avg, status = self._wait(oid, self.cfg["fill_timeout_sec"])
+        log.info("sell %s: filled x%g at %.4f (%s, order %s)", code, dealt, avg, status, oid)
+        return int(dealt), avg
+
+    def place_stop(self, code, qty, stop):
+        oid = self._place(code, qty, stop, self.mm.TrdSide.SELL, self.mm.OrderType.STOP, aux=stop)
+        log.info("protective stop %s x%d at %.2f (order %s)", code, qty, stop, oid)
+        return oid
 
     def cancel_open(self, code):
         data = self._ok(self.ctx.order_list_query(code=code, trd_env=self.env), "order list")
         for _, row in data.iterrows():
-            if str(row["order_status"]) in self.OPEN_STATUSES:
-                self._ok(self.ctx.modify_order(self.mm.ModifyOrderOp.CANCEL, row["order_id"], 0, 0,
-                                               trd_env=self.env), f"cancel order {row['order_id']}")
+            if str(row["order_status"]) in self.OPEN:
+                self._cancel(row["order_id"])
                 log.info("cancelled order %s for %s", row["order_id"], code)
 
+    def last_price(self, code):
+        if self.quotes is None:
+            return None
+        ret, data = self.quotes.get_market_snapshot([code])
+        if ret != self.mm.RET_OK or not len(data):
+            log.warning("moomoo quotes unavailable (%s): targets will come from TradingView alerts", data)
+            self.quotes = None
+            return None
+        return float(data["last_price"].iloc[0])
 
+
+# ------------------------------------------------------------------ the bridge
 class Bridge:
-    """Checks each DT Core message and turns it into broker orders, one at a time."""
+    """Checks each message, places orders, and keeps today's book of trades."""
 
-    def __init__(self, cfg, broker):
-        self.cfg = cfg
-        self.broker = broker
-        self.lock = threading.Lock()
+    def __init__(self, cfg, broker, state_path=None, now=None):
+        self.cfg, self.broker = cfg, broker
+        self.now = now or (lambda: datetime.now(NY))
+        self.state_path = Path(state_path) if state_path else None
+        self.lock = threading.RLock()
+        self.paused = False
+        self.day, self.trades = None, {}
+        self._load()
 
+    # ---- today's book
+    def _roll(self):
+        today = self.now().date().isoformat()
+        if self.day != today:
+            self.day, self.trades = today, {}
+
+    def _load(self):
+        if self.state_path and self.state_path.exists():
+            s = json.loads(self.state_path.read_text())
+            self.day, self.trades = s.get("day"), s.get("trades", {})
+        self._roll()
+
+    def _save(self):
+        if self.state_path:
+            self.state_path.write_text(json.dumps({"day": self.day, "trades": self.trades}, indent=1))
+
+    def open_trades(self):
+        return {t: x for t, x in self.trades.items() if x["status"] == "open"}
+
+    def day_r(self):
+        return sum(x.get("r", 0.0) for x in self.trades.values() if x["status"] == "closed")
+
+    def summary(self):
+        with self.lock:
+            self._roll()
+            return {"mode": self.cfg["mode"], "paused": self.paused, "day": self.day,
+                    "open": sorted(self.open_trades()), "trades_today": len(self.trades),
+                    "day_r": round(self.day_r(), 2)}
+
+    # ---- messages from TradingView
     def handle(self, msg):
         if not isinstance(msg, dict):
             raise OrderError("message is not a JSON object")
@@ -183,72 +274,148 @@ class Bridge:
         action = str(msg.get("action", "")).lower().strip()
         if not TICKER.match(ticker):
             raise OrderError(f"bad ticker {ticker!r}")
-        if self.cfg["allowed_tickers"] and ticker not in self.cfg["allowed_tickers"]:
-            raise OrderError(f"{ticker} is not in allowed_tickers")
-        code = "US." + ticker
         with self.lock:
+            self._roll()
+            if action == "buy":
+                return self._buy(ticker, msg)
             if action == "exit":
-                return self._exit(code, float(msg.get("price") or 0))
-            if action in ("buy", "sell"):
-                return self._enter(code, action, msg)
+                return self._exit(ticker, str(msg.get("reason", "alert")), float(msg.get("price") or 0))
         raise OrderError(f"unknown action {action!r}")
 
-    def _enter(self, code, action, msg):
-        if action == "sell" and not self.cfg["allow_short"]:
-            raise OrderError("short selling is off (allow_short is false)")
+    def _buy(self, ticker, msg):
+        cfg = self.cfg
         try:
-            qty = int(float(msg["quantity"]))
-            price = float(msg.get("price") or 0)
-            stop = float(msg["stopLoss"]["stopPrice"])
-            target = float(msg["takeProfit"]["limitPrice"])
+            qty = int(float(msg["qty"]))
+            price, stop, target = float(msg["price"]), float(msg["stop"]), float(msg["target"])
+            grade = str(msg.get("grade", "")).upper()
         except (KeyError, TypeError, ValueError) as e:
             raise OrderError(f"missing or bad field: {e}") from e
-        if not 1 <= qty <= self.cfg["max_qty"]:
-            raise OrderError(f"quantity {qty} outside 1..{self.cfg['max_qty']}")
-        ref = price if price > 0 else max(stop, target)
-        if qty * ref > self.cfg["max_order_value"]:
-            raise OrderError(f"order value {qty * ref:,.0f} is over max_order_value {self.cfg['max_order_value']:,}")
-        if price > 0:
-            ordered = stop < price < target if action == "buy" else target < price < stop
-            if not ordered:
-                raise OrderError(f"prices out of order: stop {stop}, price {price}, target {target}")
+        mins = self.now().hour * 60 + self.now().minute
+        lo, hi = (hhmm(x) for x in cfg["entry_window"])
+        checks = [
+            (self.paused or (HERE / "PAUSE").exists(), "the bridge is paused"),
+            (grade not in cfg["grades"], f"grade {grade or '?'} is not in grades {cfg['grades']}"),
+            (bool(cfg["allowed_tickers"]) and ticker not in cfg["allowed_tickers"], f"{ticker} is not in allowed_tickers"),
+            (not lo <= mins <= hi, f"outside the entry window {cfg['entry_window'][0]}-{cfg['entry_window'][1]} New York time"),
+            (ticker in self.trades, f"{ticker} was already traded today (one setup per stock per day)"),
+            (len(self.open_trades()) >= cfg["max_open_positions"], f"{cfg['max_open_positions']} positions already open"),
+            (len(self.trades) >= cfg["max_trades_per_day"], f"{cfg['max_trades_per_day']} trades already today"),
+            (self.day_r() <= -cfg["max_daily_loss_r"], f"daily loss limit reached ({self.day_r():.1f}R)"),
+            (not 1 <= qty <= cfg["max_qty"], f"quantity {qty} outside 1..{cfg['max_qty']}"),
+            (qty * price > cfg["max_order_value"], f"order value {qty * price:,.0f} is over max_order_value"),
+            (not stop < price < target, f"prices out of order: stop {stop}, price {price}, target {target}"),
+        ]
+        for failed, why in checks:
+            if failed:
+                raise OrderError(why)
+        code = "US." + ticker
         if self.broker.position(code) != 0:
-            return f"skipped {action} {code}: already in a position"
-        filled = int(self.broker.market(code, "buy" if action == "buy" else "short", qty, ref))
+            raise OrderError(f"{ticker} is already held in the account")
+        limit = round(price * (1 + cfg["entry_cushion_pct"] / 100), 2)
+        filled, avg = self.broker.buy_limit(code, qty, limit, price)
         if filled <= 0:
-            raise OrderError(f"{action} {code} did not fill")
+            self.trades[ticker] = dict(status="skipped", grade=grade, why="not filled at or below the limit")
+            self._save()
+            return f"{ticker}: buy not filled at {limit} or better - skipped"
+        avg = avg or price
+        trade = dict(status="open", grade=grade, qty=filled, entry=avg, stop=stop, target=target,
+                     risk=max(avg - stop, 0.01), stop_id=None, opened=self.now().isoformat(timespec="seconds"))
+        self.trades[ticker] = trade
         try:
-            self.broker.stop(code, "sell" if action == "buy" else "cover", filled, stop)
+            trade["stop_id"] = self.broker.place_stop(code, filled, stop)
         except OrderError as e:
-            log.warning("protective stop not placed (%s). DT Core's exit alert will still close the trade.", e)
-        return f"entered {action.upper()} {code} x{filled}, stop {stop}, target {target}"
+            if self.cfg["mode"] == "live":
+                log.error("protective stop refused (%s): selling %s now rather than hold it unprotected", e, ticker)
+                self._close(ticker, "no stop", price)
+                self._save()
+                return f"{ticker}: bought x{filled} but the stop was refused, so it was sold again"
+            log.warning("protective stop not placed (%s); the bridge and TradingView will exit instead", e)
+        self._save()
+        return f"BUY {ticker} x{filled} at {avg:.2f} - stop {stop} - target {target} - grade {grade}"
 
-    def _exit(self, code, ref_price):
+    def _exit(self, ticker, reason, ref):
+        if ticker not in self.open_trades():
+            code = "US." + ticker
+            if self.broker.position(code) == 0:
+                return f"exit {ticker} ({reason}): nothing open"
+            log.warning("exit %s: position exists but was not opened by the bridge today - left alone", ticker)
+            return f"exit {ticker}: not a bridge trade, left alone"
+        return self._close(ticker, reason, ref)
+
+    def _close(self, ticker, reason, ref):
+        trade, code = self.trades[ticker], "US." + ticker
         self.broker.cancel_open(code)
-        pos = self.broker.position(code)
-        if pos > 0:
-            self.broker.market(code, "sell", int(pos), ref_price)
-        elif pos < 0:
-            self.broker.market(code, "cover", int(-pos), ref_price)
-        else:
-            return f"exit {code}: already flat"
-        return f"exit {code}: closed {abs(int(pos))} shares"
+        held = int(self.broker.position(code))
+        px = ref
+        if held > 0:
+            sold, avg = self.broker.sell_market(code, held, ref or trade["entry"])
+            px = avg or ref or trade["entry"]
+        else:                                                  # already out: the stop filled at moomoo
+            dealt, avg, _ = self.broker.order_fill(trade["stop_id"]) if trade.get("stop_id") else (0, 0.0, "")
+            px = avg if dealt else trade["stop"]
+            reason = "stop"
+        self._book(ticker, reason, px)
+        return f"exit {ticker} ({reason}) at {px:.2f}: {trade['r']:+.2f}R"
+
+    def _book(self, ticker, reason, px):
+        t = self.trades[ticker]
+        t.update(status="closed", exit=px, why=reason, r=round((px - t["entry"]) / t["risk"], 3),
+                 pnl=round((px - t["entry"]) * t["qty"], 2), closed=self.now().isoformat(timespec="seconds"))
+        log.info("closed %s (%s) at %.2f: %+.2fR, $%+.2f - today %+.2fR", ticker, reason, px, t["r"], t["pnl"], self.day_r())
+        self._save()
+
+    # ---- the bridge's own clock: stops filled at moomoo, targets, 3:55 PM
+    def tick(self):
+        with self.lock:
+            self._roll()
+            now = self.now()
+            flatten = now.hour * 60 + now.minute >= hhmm(self.cfg["flatten_at"])
+            for ticker, t in list(self.open_trades().items()):
+                code = "US." + ticker
+                try:
+                    if flatten:
+                        log.info("%s: closing %s before the bell", self.cfg["flatten_at"], ticker)
+                        self._close(ticker, "end of day", 0.0)
+                        continue
+                    if self.broker.position(code) == 0:
+                        self._close(ticker, "stop", t["stop"])
+                        continue
+                    last = self.broker.last_price(code) if self.cfg["watch_targets"] else None
+                    if last is not None and last >= t["target"]:
+                        self._close(ticker, "target", last)
+                    elif last is not None and t.get("stop_id") is None and last <= t["stop"]:
+                        self._close(ticker, "stop", last)
+                except OrderError as e:
+                    log.error("watch %s: %s", ticker, e)
+
+    def watch_forever(self):
+        while True:
+            try:
+                self.tick()
+            except Exception:
+                log.exception("watcher error")
+            time.sleep(self.cfg["watch_every_sec"])
 
 
+# ------------------------------------------------------------------ web server
 class Handler(BaseHTTPRequestHandler):
     bridge = None
     secret = ""
-    mode = ""
 
     def do_GET(self):
-        if self.path == "/health":
-            self._reply(200, f"ok - DT Core bridge in {self.mode} mode")
+        path = self.path.rstrip("/")
+        if path == "/health":
+            self._reply(200, json.dumps(self.bridge.summary()))
+        elif path in ("/pause/" + self.secret, "/resume/" + self.secret):
+            self.bridge.paused = path.startswith("/pause")
+            log.warning("bridge %s from %s", "PAUSED" if self.bridge.paused else "resumed", self.client_address[0])
+            self._reply(200, "paused: no new entries (exits still work)" if self.bridge.paused else "resumed")
         else:
             self._reply(404, "not found")
 
     def do_POST(self):
         if self.path.rstrip("/") != "/hook/" + self.secret:
-            log.warning("rejected request to an unknown path from %s", self.client_address[0])
+            log.warning("rejected a request to an unknown path from %s", self.client_address[0])
             self._reply(404, "not found")
             return
         length = int(self.headers.get("Content-Length") or 0)
@@ -259,11 +426,10 @@ class Handler(BaseHTTPRequestHandler):
         try:
             msg = json.loads(body)
         except ValueError:
-            log.error("not JSON (is the alert message set to {{strategy.order.alert_message}}?): %.200s", body)
-            self._reply(400, "expected JSON")
+            log.info("ignored a plain-text alert (not an order): %.120s", body)
+            self._reply(200, "ignored: not an order")
             return
-        # Answer TradingView right away; it gives up after a few seconds.
-        self._reply(200, "accepted")
+        self._reply(200, "accepted")                          # TradingView gives up after a few seconds
         threading.Thread(target=self._process, args=(msg,), daemon=True).start()
 
     def _process(self, msg):
@@ -287,10 +453,8 @@ class Handler(BaseHTTPRequestHandler):
         log.debug("http: " + fmt, *args)
 
 
-def make_server(cfg, broker):
-    Handler.bridge = Bridge(cfg, broker)
-    Handler.secret = cfg["secret"]
-    Handler.mode = cfg["mode"]
+def make_server(cfg, bridge):
+    Handler.bridge, Handler.secret = bridge, cfg["secret"]
     return ThreadingHTTPServer((cfg["listen_host"], cfg["listen_port"]), Handler)
 
 
@@ -299,9 +463,12 @@ def main():
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s",
                         handlers=[logging.StreamHandler(), logging.FileHandler(HERE / "bridge.log")])
     broker = DryRunBroker() if cfg["mode"] == "dry_run" else MoomooBroker(cfg)
-    server = make_server(cfg, broker)
-    log.info("DT Core bridge in %s mode on %s:%d", cfg["mode"].upper(), cfg["listen_host"], cfg["listen_port"])
-    log.info("TradingView webhook URL: https://<your tunnel address>/hook/<your secret>")
+    bridge = Bridge(cfg, broker, state_path=HERE / f"state_{cfg['mode']}.json")
+    threading.Thread(target=bridge.watch_forever, daemon=True).start()
+    server = make_server(cfg, bridge)
+    log.info("AMD bridge in %s mode on %s:%d - trading grades %s", cfg["mode"].upper(), cfg["listen_host"],
+             cfg["listen_port"], ",".join(cfg["grades"]))
+    log.info("webhook URL: https://<your tunnel address>/hook/<your secret>")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

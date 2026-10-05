@@ -1,0 +1,1001 @@
+<title>Edge Reader Kit</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one phone-first reading column, a sticky row of section chips, chart-paper ground. */
+:root {
+  --paper: #f2f5f7;
+  --card: #ffffff;
+  --ink: #15212c;
+  --ink-2: #4b5966;
+  --rule: #d8e0e6;
+  --grid: #e3e9ee;
+  --accent: #2f6fb0;
+  --good: #0f8a6a;
+  --bad: #c2413b;
+  --warn: #a86b12;
+  --panel: #101820;
+  --panel-ink: #e1e8ee;
+  --panel-ink-2: #8fa0ae;
+  --code-bg: #0f1820;
+  --code-fg: #d9e3ea;
+  --tk-c: #7d8f9c;
+  --tk-s: #9fd6a8;
+  --tk-n: #f1c27d;
+  --tk-k: #8fbff0;
+  --f-display: "Archivo", "Helvetica Neue", Arial, sans-serif;
+  --f-body: "IBM Plex Sans", -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0e141a; --card: #151d25; --ink: #e3e9ee; --ink-2: #a3b1bd; --rule: #26323d; --grid: #222d37;
+    --accent: #63a3e8; --good: #3cc79a; --bad: #f0716a; --warn: #e2a94c; --panel: #0a1016;
+    --code-bg: #0a1016; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0e141a; --card: #151d25; --ink: #e3e9ee; --ink-2: #a3b1bd; --rule: #26323d; --grid: #222d37;
+  --accent: #63a3e8; --good: #3cc79a; --bad: #f0716a; --warn: #e2a94c; --panel: #0a1016;
+  --code-bg: #0a1016; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--paper); color: var(--ink); font: 400 16px/1.55 var(--f-body); }
+.wrap { max-width: 760px; margin: 0 auto; padding-inline: 16px; padding-block: 8px 64px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; line-height: 1.15; }
+h1 { font-size: clamp(2.2rem, 8vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; }
+h2 { font-size: 1.6rem; font-weight: 800; }
+h3 { font-size: 1.1rem; font-weight: 700; }
+p { margin: 0; }
+ul { margin: 0; padding-left: 1.2em; display: grid; gap: 4px; }
+a { color: var(--accent); }
+.eyebrow { font: 500 0.75rem/1.4 var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-2); }
+.lede { font-size: 1.12rem; max-width: 62ch; }
+.muted { color: var(--ink-2); }
+.mono { font-family: var(--f-mono); font-size: 0.92em; }
+
+header.hero { display: grid; gap: 14px; padding-block: 28px 18px; }
+.formula { font: 500 0.95rem/1.6 var(--f-mono); background: var(--card); border: 1px solid var(--rule); border-radius: 10px;
+  padding: 12px 14px; overflow-x: auto; white-space: nowrap; }
+.formula b { color: var(--accent); font-weight: 500; }
+
+nav.toc { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--paper);
+  border-bottom: 1px solid var(--rule); margin-inline: -16px; padding: 8px 16px; overflow-x: auto; white-space: nowrap; }
+nav.toc a { display: inline-block; margin-right: 6px; padding: 5px 11px; border-radius: 999px; border: 1px solid var(--rule);
+  color: var(--ink); text-decoration: none; font-size: 0.85rem; background: var(--card); }
+nav.toc a:focus-visible, button:focus-visible, summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+section { display: grid; gap: 16px; padding-block: 34px 6px; scroll-margin-top: 56px; }
+
+/* the Edge Reader panel, drawn the way it looks on a dark chart */
+.panel { background: var(--panel); color: var(--panel-ink); border-radius: 10px; padding: 6px; overflow-x: auto; }
+.panel table { border-collapse: collapse; width: 100%; font: 400 0.82rem/1.4 var(--f-body); }
+.panel td { padding: 5px 8px; border-bottom: 1px solid #1f2a34; vertical-align: top; }
+.panel tr:last-child td { border-bottom: 0; }
+.panel td:first-child { color: var(--panel-ink-2); white-space: nowrap; }
+.p-bad { color: #f0716a; } .p-mute { color: #8fa0ae; }
+
+ol.steps { list-style: none; margin: 0; padding: 0; display: grid; counter-reset: s; }
+ol.steps > li { counter-increment: s; display: grid; grid-template-columns: 2.2rem 1fr; gap: 10px; padding-block: 12px;
+  border-top: 1px solid var(--rule); }
+ol.steps > li::before { content: counter(s); font: 700 1.05rem/1.6 var(--f-display); color: var(--accent); }
+ol.steps > li > div { min-width: 0; display: grid; gap: 4px; }
+
+.families { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .families { grid-template-columns: 1fr; } }
+.families > div { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; display: grid; gap: 4px; align-content: start; }
+.families .src { font-size: 0.8rem; color: var(--ink-2); }
+
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; background: var(--card); }
+table.data { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+table.data th, table.data td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.data th { font: 600 0.75rem/1.3 var(--f-mono); letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-2); }
+table.data tr:last-child td { border-bottom: 0; }
+td.n { font-family: var(--f-mono); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.figure { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 14px; display: grid; gap: 10px; position: relative; }
+.figure .title { font: 600 0.95rem/1.35 var(--f-body); }
+.figure .sub { font-size: 0.82rem; color: var(--ink-2); }
+.figure svg { width: 100%; height: auto; display: block; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--paper); font: 500 0.8rem/1.35 var(--f-body);
+  padding: 6px 9px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -100%); }
+details summary { cursor: pointer; font-size: 0.85rem; color: var(--ink-2); }
+details table { margin-top: 8px; }
+
+.tiles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 560px) { .tiles { grid-template-columns: 1fr; } }
+.tile { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: 12px 14px; display: grid; gap: 2px; align-content: start; }
+.tile .label { font-size: 0.82rem; color: var(--ink-2); }
+.tile .value { font: 600 1.6rem/1.2 var(--f-body); font-variant-numeric: tabular-nums; }
+.tile .note { font-size: 0.8rem; color: var(--ink-2); }
+
+.note { border-left: 3px solid var(--warn); padding: 2px 0 2px 12px; display: grid; gap: 4px; }
+.note.risk { border-color: var(--bad); }
+.grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 560px) { .grid2 { grid-template-columns: 1fr; } }
+.grid2 > div { min-width: 0; display: grid; gap: 6px; align-content: start; }
+
+.code { border-radius: 10px; overflow: hidden; border: 1px solid var(--rule); background: var(--code-bg); }
+.codebar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 8px 10px 8px 14px;
+  background: var(--card); border-bottom: 1px solid var(--rule); flex-wrap: wrap; }
+.codebar .file { font: 500 0.88rem/1.3 var(--f-mono); }
+.codebar .meta { font-size: 0.8rem; color: var(--ink-2); }
+.btns { display: flex; gap: 6px; }
+button { font: 600 0.85rem/1 var(--f-body); border-radius: 8px; padding: 9px 14px; cursor: pointer; border: 1px solid var(--rule);
+  background: var(--card); color: var(--ink); }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--card); }
+pre { margin: 0; padding: 12px 14px; overflow: auto; max-height: 220px; color: var(--code-fg); font: 400 0.76rem/1.5 var(--f-mono); tab-size: 4; }
+.code.open pre { max-height: none; }
+.tk-c { color: var(--tk-c); } .tk-s { color: var(--tk-s); } .tk-n { color: var(--tk-n); } .tk-k { color: var(--tk-k); }
+footer { padding-block: 40px 0; font-size: 0.85rem; color: var(--ink-2); display: grid; gap: 8px; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+<header class="hero">
+  <p class="eyebrow">Pine Script v6 · TradingView for iPhone · moomoo</p>
+  <h1>Edge Reader</h1>
+  <p class="lede">One method for every chart. On each 5-minute candle it checks 97 conditions from the trading literature and adds up what each one has been worth in past data. The result is the expected value of a trade right now, in R, after costs. It says <strong>BUY</strong> when that number clears your bar, <strong>SELL</strong> when the trade ends, and <strong>WAIT</strong> the rest of the time.</p>
+  <div class="formula">expected R = <b>day part</b> + <b>5-minute part</b> − <b>costs</b></div>
+</header>
+
+<nav class="toc" aria-label="Sections">
+  <a href="#reads">What it shows</a><a href="#method">The method</a><a href="#evidence">Evidence</a><a href="#measure">Teach it</a><a href="#install">Install</a><a href="#alerts">Alerts</a><a href="#execute">Execute</a><a href="#settings">Settings</a>
+</nav>
+
+<section id="reads">
+  <h2>What it shows</h2>
+  <p>A panel on the chart answers one question: is a trade here worth taking? This is a typical reading today.</p>
+  <div class="panel" aria-label="Example Edge Reader panel">
+    <table>
+      <tr><td>Edge Reader</td><td>NVDA - 5 min</td></tr>
+      <tr><td>Signal</td><td>WAIT - no edge above +0.05R</td></tr>
+      <tr><td>Long</td><td class="p-bad">-0.06R expected (needs +0.05)</td></tr>
+      <tr><td>Short</td><td>-0.09R expected (shorts off)</td></tr>
+      <tr><td>Day, for longs</td><td>Monday +0.09, daily RSI(14) under 30 +0.07, below its 200-day average +0.06</td></tr>
+      <tr><td>5-min, for longs</td><td class="p-mute">no 5-minute evidence yet - see Measure</td></tr>
+      <tr><td>Costs</td><td>-0.07R a trade at this price and ATR</td></tr>
+      <tr><td>This chart</td><td>no trades yet</td></tr>
+      <tr><td>Evidence</td><td class="p-mute">day points: 2015-2025 daily data; 5-minute points: none yet</td></tr>
+    </table>
+  </div>
+  <p class="muted">Illustrative reading. The labels and layout are what the script draws; the numbers change on every candle.</p>
+  <div class="grid2">
+    <div><h3>BUY</h3><p>Expected R for a long reaches your minimum (+0.05R by default). It enters at the candle's close with a stop 1.5 ATR below and a target at 2R, and the label shows the expected R.</p></div>
+    <div><h3>SELL</h3><p>The trade ends: at the target, at the stop, or at 3:55 PM. The label shows the R it made. With shorts switched on, SHORT and COVER work the same way.</p></div>
+  </div>
+</section>
+
+<section id="method">
+  <h2>The method</h2>
+  <p>Every condition is a yes/no fact you can see on a chart. Each has points: how much better or worse trades went, in R, when it was true. The points add up to the expected R.</p>
+  <div class="families">
+    <div><h3>Trend</h3><p>Daily trend and the 200-day average, intraday trend, SPY's trend.</p><p class="src">Dow, Elder's triple screen</p></div>
+    <div><h3>Location</h3><p>Distance from VWAP in standard deviations, the day's premium or discount, opening range, yesterday's levels, stretch from the average.</p><p class="src">Dalton, Shannon, ICT</p></div>
+    <div><h3>Phase</h3><p>Tight range (accumulation), a low swept and reclaimed (spring), a high swept and rejected (upthrust), a break of structure.</p><p class="src">Wyckoff, ICT AMD</p></div>
+    <div><h3>Volume</h3><p>Volume against the same time of day, climax candles, whether buyers or sellers carried the last candles.</p><p class="src">Wyckoff effort vs result, Aziz</p></div>
+    <div><h3>Momentum and strength</h3><p>RSI(2) and RSI(14), 3-day runs, strength against SPY today and over 20 days.</p><p class="src">Connors, Bellafiore</p></div>
+    <div><h3>Market and calendar</h3><p>SPY's gap, oversold or overbought state, time of day, Mondays, Fridays, the turn of the month.</p><p class="src">Crabel, calendar studies</p></div>
+  </div>
+  <p>The method is judged only on data it hasn't seen: points are fitted on the past and scored on the next year. A table that can't predict the next year doesn't get used.</p>
+</section>
+
+<section id="evidence">
+  <h2>What the evidence says</h2>
+  <div class="figure" id="calib">
+    <div><p class="title">Days it rated better really were better</p>
+      <p class="sub">Daily points, fitted on earlier years and scored on each next year, 2017 to 2026. Stock-days sorted into tenths by expected value; columns show what longs actually made from the open to the close, in R (half a daily ATR), after slippage.</p></div>
+    <svg id="calsvg" viewBox="0 0 640 260" role="img" aria-label="Column chart: realized R rises from about -0.05 in the lowest-rated tenth to +0.03 in the highest-rated tenth"></svg>
+    <div class="tip" id="caltip" hidden></div>
+    <details><summary>Show as a table</summary>
+      <table class="data"><thead><tr><th>Tenth (1 = rated worst)</th><th>Realized R</th></tr></thead><tbody id="caltable"></tbody></table>
+    </details>
+  </div>
+  <div class="tiles">
+    <div class="tile"><span class="label">Edge of the best tenth, before costs</span><span class="value">+0.05R</span><span class="note">on a 2R five-minute trade, 2026</span></div>
+    <div class="tile"><span class="label">Slippage per trade</span><span class="value">0.09R</span><span class="note">average, $0.01 + 0.01% per fill</span></div>
+    <div class="tile"><span class="label">5-minute weights that held up</span><span class="value">None</span><span class="note">they reversed from month to month</span></div>
+  </div>
+  <div class="note risk"><h3>So, for now, mostly WAIT</h3>
+    <p>The daily reading ranks days correctly in every unseen year, but the edge it finds is smaller than the cost of a 2R day trade. On the 5-minute chart, weights learned from one month predicted the opposite the next, and textbook weights worked in trending months and reversed in choppy ones. Seven months of 5-minute data can't settle that. Your TradingView history can.</p></div>
+  <p class="muted">Full write-up: <span class="mono">research/METHODOLOGY.md</span> on your GitHub branch, with the script that reproduces every number.</p>
+</section>
+
+<section id="measure">
+  <h2>Teach it with your data</h2>
+  <p>Measure mode turns Deep Backtesting into a data collector. It takes up to two trades a day at set times, whatever the conditions, and writes every condition into the trade's signal name. Those trades show what each condition is worth over years.</p>
+  <ol class="steps">
+    <li><div><p>Open a stock's 5-minute chart with Edge Reader. In its settings set <strong>Mode</strong> to <strong>Measure long</strong>.</p></div></li>
+    <li><div><p>Open the Strategy Tester, turn on <strong>Deep Backtesting</strong>, set the start as far back as it goes, and generate the report.</p></div></li>
+    <li><div><p>In <strong>List of trades</strong>, export the data as CSV. The export is on the TradingView website or desktop app. Name the file after the stock, for example <span class="mono">NVDA.csv</span>.</p></div></li>
+    <li><div><p>Repeat for 10 to 20 stocks. Do <strong>Measure short</strong> too if you might ever short.</p></div></li>
+    <li><div><p>Send me the files, or run <span class="mono">python refit.py *.csv --write</span> in <span class="mono">research/</span>. New 5-minute points are written into both scripts only if they predict the later years they weren't fitted on.</p></div></li>
+    <li><div><p>Copy the updated scripts into TradingView and set Mode back to <strong>Trade</strong>.</p></div></li>
+  </ol>
+  <p class="muted">As a check, I ran the same loop on 7 months of 2026 data from 47 stocks. It refused the new points: they did worse than average on the unseen months. That's the safeguard working.</p>
+</section>
+
+<section id="install">
+  <h2>Install</h2>
+  <ol class="steps">
+    <li><div><h3>Edge Reader</h3><p>Copy it below. In TradingView open the Pine Editor, create a new strategy, delete everything, paste and save. Line 1 must read <span class="mono">//@version=6</span>. Add it to a 5-minute chart, regular hours only.</p></div></li>
+    <li><div><h3>Your risk</h3><p>In its settings, under Risk, enter your account size and risk per trade. Under Properties, set Initial capital to the same amount. Under Costs, set the slippage you expect per fill.</p></div></li>
+    <li><div><h3>Edge Radar</h3><p>Create a new indicator the same way and paste Edge Radar. Put it on SPY's 5-minute chart and list your stocks. It ranks them by today's expected R from the daily part, after each stock's costs.</p></div></li>
+  </ol>
+  <div class="code"><div class="codebar"><div><div class="file">Edge_Reader.pine</div><div class="meta">strategy · 390 lines</div></div>
+    <div class="btns"><button type="button" class="expand">Expand</button><button type="button" class="primary copy">Copy</button></div></div>
+<pre><code><span class="tk-c">//@version=6</span>
+<span class="tk-c">// Edge Reader - reads the chart's conditions and says BUY, SELL or WAIT from measured evidence</span>
+<span class="tk-c">//</span>
+<span class="tk-c">// On every 5-minute candle it checks 51 daily-chart conditions and 46 five-minute conditions from</span>
+<span class="tk-c">// the day-trading literature (trend, location against VWAP and key levels, Wyckoff / ICT phase,</span>
+<span class="tk-c">// volume, momentum, the market, time of day). Each condition carries points measured from data.</span>
+<span class="tk-c">// The points add up to the expected R of a trade from this candle: stop 1.5 ATR, target 2R, out</span>
+<span class="tk-c">// by 3:55 PM, after slippage. BUY when the long expectation clears your minimum edge. SELL closes</span>
+<span class="tk-c">// the trade (target, stop or 3:55 PM). SHORT, if you switch shorts on, works the same way.</span>
+<span class="tk-c">//</span>
+<span class="tk-c">// Evidence today: the daily points come from 11 years of data (2015-2025) and rank days correctly</span>
+<span class="tk-c">// out of sample, but the edge is small. No 5-minute weighting survived out-of-sample testing, so</span>
+<span class="tk-c">// the 5-minute points start at zero. Expect WAIT most of the time. Measure mode collects your own</span>
+<span class="tk-c">// years of evidence with Deep Backtesting; research/refit.py turns it into new points.</span>
+<span class="tk-c">// Educational tool, not financial advice.</span>
+strategy(<span class="tk-s">"Edge Reader"</span>, overlay = <span class="tk-k">true</span>, initial_capital = <span class="tk-n">25000</span>, process_orders_on_close = <span class="tk-k">true</span>, pyramiding = <span class="tk-n">0</span>, margin_long = <span class="tk-n">25</span>, margin_short = <span class="tk-n">25</span>, slippage = <span class="tk-n">2</span>, use_bar_magnifier = <span class="tk-k">true</span>, max_labels_count = <span class="tk-n">500</span>)
+
+<span class="tk-c">// ----- Inputs -----</span>
+<span class="tk-k">string</span> G1 = <span class="tk-s">"Signals"</span>
+<span class="tk-k">string</span> mode       = input.<span class="tk-k">string</span>(<span class="tk-s">"Trade"</span>, <span class="tk-s">"Mode"</span>, options = [<span class="tk-s">"Trade"</span>, <span class="tk-s">"Measure long"</span>, <span class="tk-s">"Measure short"</span>], group = G1, tooltip = <span class="tk-s">"Trade: signals from the evidence. Measure: for Deep Backtesting only. Takes up to two trades a day at set times, whatever the conditions, and writes the conditions into each trade's signal name so refit.py can learn from them."</span>)
+<span class="tk-k">float</span>  minEdge    = input.<span class="tk-k">float</span>(<span class="tk-n">0.05</span>, <span class="tk-s">"Signal when expected R after costs is at least"</span>, step = <span class="tk-n">0.01</span>, group = G1, tooltip = <span class="tk-s">"Expected R already has slippage taken off. 0.05 leaves a margin for error."</span>)
+<span class="tk-k">bool</span>   allowShort = input.<span class="tk-k">bool</span>(<span class="tk-k">false</span>, <span class="tk-s">"Allow shorts"</span>, group = G1)
+
+<span class="tk-k">string</span> G2 = <span class="tk-s">"Costs"</span>
+<span class="tk-k">float</span> slipCents = input.<span class="tk-k">float</span>(<span class="tk-n">0.01</span>, <span class="tk-s">"Slippage per fill ($ per share)"</span>, minval = <span class="tk-n">0</span>, step = <span class="tk-n">0.005</span>, group = G2)
+<span class="tk-k">float</span> slipPct   = input.<span class="tk-k">float</span>(<span class="tk-n">0.01</span>, <span class="tk-s">"Slippage per fill (% of price)"</span>, minval = <span class="tk-n">0</span>, step = <span class="tk-n">0.005</span>, group = G2)
+
+<span class="tk-k">string</span> G3 = <span class="tk-s">"Market"</span>
+<span class="tk-k">string</span> mktSym = input.symbol(<span class="tk-s">"AMEX:SPY"</span>, <span class="tk-s">"Market"</span>, group = G3)
+
+<span class="tk-k">string</span> G4 = <span class="tk-s">"Risk"</span>
+<span class="tk-k">float</span> acct      = input.<span class="tk-k">float</span>(<span class="tk-n">25000</span>, <span class="tk-s">"Account size ($)"</span>, minval = <span class="tk-n">0</span>, group = G4)
+<span class="tk-k">float</span> riskPct   = input.<span class="tk-k">float</span>(<span class="tk-n">0.5</span>, <span class="tk-s">"Risk per trade (% of account)"</span>, minval = <span class="tk-n">0.05</span>, maxval = <span class="tk-n">5</span>, step = <span class="tk-n">0.05</span>, group = G4)
+<span class="tk-k">float</span> maxPosPct = input.<span class="tk-k">float</span>(<span class="tk-n">100</span>, <span class="tk-s">"Largest position (% of account)"</span>, minval = <span class="tk-n">1</span>, maxval = <span class="tk-n">400</span>, group = G4)
+
+<span class="tk-k">string</span> G5 = <span class="tk-s">"Display"</span>
+<span class="tk-k">bool</span>   showPanel = input.<span class="tk-k">bool</span>(<span class="tk-k">true</span>, <span class="tk-s">"Status panel"</span>, group = G5)
+<span class="tk-k">string</span> panelPos  = input.<span class="tk-k">string</span>(<span class="tk-s">"Top right"</span>, <span class="tk-s">"Panel position"</span>, options = [<span class="tk-s">"Top right"</span>, <span class="tk-s">"Top left"</span>, <span class="tk-s">"Bottom right"</span>, <span class="tk-s">"Bottom left"</span>], group = G5)
+<span class="tk-k">string</span> panelSize = input.<span class="tk-k">string</span>(<span class="tk-s">"Small"</span>, <span class="tk-s">"Panel text size"</span>, options = [<span class="tk-s">"Tiny"</span>, <span class="tk-s">"Small"</span>, <span class="tk-s">"Normal"</span>], group = G5)
+
+<span class="tk-k">float</span> STOP_ATR = <span class="tk-n">1.5</span>
+<span class="tk-k">float</span> TARGET_R = <span class="tk-n">2.0</span>
+<span class="tk-k">color</span> cBuy  = <span class="tk-n">#26a69a</span>
+<span class="tk-k">color</span> cSell = <span class="tk-n">#ef5350</span>
+<span class="tk-k">color</span> cMute = <span class="tk-n">#9e9e9e</span>
+<span class="tk-k">color</span> cWarn = <span class="tk-n">#ffca28</span>
+
+<span class="tk-c">// POINTS-BEGIN - written by research/points.py (refit.py); edit the numbers there, not here</span>
+<span class="tk-k">string</span> PTS_NOTE = <span class="tk-s">"day points: 2015-2025 daily data; 5-minute points: none yet (run Measure)"</span>
+<span class="tk-k">float</span> A_L = <span class="tk-n">0.0089</span>
+<span class="tk-k">float</span> K_L = <span class="tk-n">0.0846</span>
+<span class="tk-k">float</span> D0_L = -<span class="tk-n">0.2156</span>
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; D_L = <span class="tk-k">array</span>.from(<span class="tk-n">0.0010</span>, <span class="tk-n">0.0294</span>, <span class="tk-n">0.0647</span>, <span class="tk-n">0.0573</span>, -<span class="tk-n">0.0022</span>, <span class="tk-n">0.0145</span>, <span class="tk-n">0.0252</span>, <span class="tk-n">0.0093</span>, <span class="tk-n">0.0079</span>, <span class="tk-n">0.0169</span>, <span class="tk-n">0.0045</span>, <span class="tk-n">0.0330</span>, -<span class="tk-n">0.0130</span>, <span class="tk-n">0.0155</span>, <span class="tk-n">0.0008</span>, <span class="tk-n">0.0100</span>, -<span class="tk-n">0.0235</span>, -<span class="tk-n">0.0002</span>, -<span class="tk-n">0.0169</span>, -<span class="tk-n">0.0048</span>, -<span class="tk-n">0.0072</span>, -<span class="tk-n">0.0179</span>, <span class="tk-n">0.0697</span>, -<span class="tk-n">0.0460</span>, <span class="tk-n">0.0183</span>, <span class="tk-n">0.0062</span>, -<span class="tk-n">0.0024</span>, <span class="tk-n">0.0014</span>, <span class="tk-n">0.0273</span>, <span class="tk-n">0.0370</span>, <span class="tk-n">0.0294</span>, <span class="tk-n">0.0165</span>, <span class="tk-n">0.0016</span>, -<span class="tk-n">0.0269</span>, <span class="tk-n">0.0577</span>, <span class="tk-n">0.1192</span>, -<span class="tk-n">0.0003</span>, <span class="tk-n">0.0045</span>, -<span class="tk-n">0.2388</span>, <span class="tk-n">0.0417</span>, -<span class="tk-n">0.0158</span>, <span class="tk-n">0.0131</span>, <span class="tk-n">0.0764</span>, <span class="tk-n">0.0286</span>, -<span class="tk-n">0.0244</span>, <span class="tk-n">0.0294</span>, <span class="tk-n">0.0218</span>, -<span class="tk-n">0.0265</span>, <span class="tk-n">0.0943</span>, -<span class="tk-n">0.0030</span>, <span class="tk-n">0.0308</span>)
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; P_L = <span class="tk-k">array</span>.from(<span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>)
+<span class="tk-k">float</span> A_S = <span class="tk-n">0.0315</span>
+<span class="tk-k">float</span> K_S = <span class="tk-n">0.2931</span>
+<span class="tk-k">float</span> D0_S = -<span class="tk-n">0.1648</span>
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; D_S = <span class="tk-k">array</span>.from(-<span class="tk-n">0.0036</span>, -<span class="tk-n">0.0159</span>, <span class="tk-n">0.0674</span>, <span class="tk-n">0.0597</span>, -<span class="tk-n">0.0001</span>, -<span class="tk-n">0.0376</span>, -<span class="tk-n">0.0201</span>, -<span class="tk-n">0.0031</span>, <span class="tk-n">0.0053</span>, -<span class="tk-n">0.0123</span>, -<span class="tk-n">0.0012</span>, -<span class="tk-n">0.0188</span>, <span class="tk-n">0.0349</span>, -<span class="tk-n">0.0048</span>, <span class="tk-n">0.0135</span>, -<span class="tk-n">0.0036</span>, <span class="tk-n">0.0181</span>, -<span class="tk-n">0.0383</span>, <span class="tk-n">0.0070</span>, <span class="tk-n">0.0048</span>, -<span class="tk-n">0.0006</span>, -<span class="tk-n">0.0056</span>, -<span class="tk-n">0.0658</span>, -<span class="tk-n">0.0363</span>, -<span class="tk-n">0.0042</span>, <span class="tk-n">0.0192</span>, -<span class="tk-n">0.0323</span>, <span class="tk-n">0.0121</span>, -<span class="tk-n">0.0107</span>, -<span class="tk-n">0.0447</span>, -<span class="tk-n">0.0153</span>, -<span class="tk-n">0.0083</span>, <span class="tk-n">0.0095</span>, <span class="tk-n">0.0219</span>, <span class="tk-n">0.0496</span>, <span class="tk-n">0.0121</span>, -<span class="tk-n">0.0022</span>, -<span class="tk-n">0.0015</span>, <span class="tk-n">0.2434</span>, -<span class="tk-n">0.0546</span>, <span class="tk-n">0.0068</span>, -<span class="tk-n">0.0199</span>, -<span class="tk-n">0.0720</span>, -<span class="tk-n">0.0162</span>, <span class="tk-n">0.0260</span>, -<span class="tk-n">0.0240</span>, <span class="tk-n">0.0059</span>, <span class="tk-n">0.0427</span>, -<span class="tk-n">0.0949</span>, <span class="tk-n">0.0031</span>, -<span class="tk-n">0.0320</span>)
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; P_S = <span class="tk-k">array</span>.from(<span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>)
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">string</span>&gt; D_NAMES = <span class="tk-k">array</span>.from(<span class="tk-s">"stock in an uptrend"</span>, <span class="tk-s">"stock in a downtrend"</span>, <span class="tk-s">"above its 200-day average"</span>, <span class="tk-s">"below its 200-day average"</span>, <span class="tk-s">"near its 20-day low"</span>, <span class="tk-s">"near its 20-day high"</span>, <span class="tk-s">"stretched above its 20-day average"</span>, <span class="tk-s">"stretched below its 20-day average"</span>, <span class="tk-s">"narrowest day in 7"</span>, <span class="tk-s">"inside day yesterday"</span>, <span class="tk-s">"yesterday swept a low and reclaimed it"</span>, <span class="tk-s">"yesterday swept a high and failed"</span>, <span class="tk-s">"broke its 20-day high"</span>, <span class="tk-s">"broke its 20-day low"</span>, <span class="tk-s">"strong green day yesterday"</span>, <span class="tk-s">"strong red day yesterday"</span>, <span class="tk-s">"heavy volume yesterday"</span>, <span class="tk-s">"light volume yesterday"</span>, <span class="tk-s">"buyers led the last 5 days"</span>, <span class="tk-s">"sellers led the last 5 days"</span>, <span class="tk-s">"daily RSI(2) oversold"</span>, <span class="tk-s">"daily RSI(2) overbought"</span>, <span class="tk-s">"daily RSI(14) under 30"</span>, <span class="tk-s">"daily RSI(14) over 70"</span>, <span class="tk-s">"3 down days in a row"</span>, <span class="tk-s">"3 up days in a row"</span>, <span class="tk-s">"gapped up over 1 ATR"</span>, <span class="tk-s">"gapped up"</span>, <span class="tk-s">"gapped down"</span>, <span class="tk-s">"gapped down over 1 ATR"</span>, <span class="tk-s">"opened above yesterday's high"</span>, <span class="tk-s">"opened below yesterday's low"</span>, <span class="tk-s">"SPY in an uptrend"</span>, <span class="tk-s">"SPY in a downtrend"</span>, <span class="tk-s">"SPY above its 200-day"</span>, <span class="tk-s">"SPY below its 200-day"</span>, <span class="tk-s">"SPY oversold (RSI 2)"</span>, <span class="tk-s">"SPY overbought (RSI 2)"</span>, <span class="tk-s">"SPY gapped up over 1 ATR"</span>, <span class="tk-s">"SPY gapped down over 1 ATR"</span>, <span class="tk-s">"SPY gapped up"</span>, <span class="tk-s">"SPY gapped down"</span>, <span class="tk-s">"SPY down 3 days in a row"</span>, <span class="tk-s">"SPY up 3 days in a row"</span>, <span class="tk-s">"SPY stretched up"</span>, <span class="tk-s">"SPY stretched down"</span>, <span class="tk-s">"stronger than SPY over 20 days"</span>, <span class="tk-s">"weaker than SPY over 20 days"</span>, <span class="tk-s">"Monday"</span>, <span class="tk-s">"Friday"</span>, <span class="tk-s">"turn of the month"</span>)
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">string</span>&gt; P_NAMES = <span class="tk-k">array</span>.from(<span class="tk-s">"daily uptrend"</span>, <span class="tk-s">"daily downtrend"</span>, <span class="tk-s">"intraday uptrend"</span>, <span class="tk-s">"intraday downtrend"</span>, <span class="tk-s">"over 2 sd below VWAP"</span>, <span class="tk-s">"1-2 sd below VWAP"</span>, <span class="tk-s">"1-2 sd above VWAP"</span>, <span class="tk-s">"over 2 sd above VWAP"</span>, <span class="tk-s">"lower third of the day"</span>, <span class="tk-s">"upper third of the day"</span>, <span class="tk-s">"above the opening range"</span>, <span class="tk-s">"below the opening range"</span>, <span class="tk-s">"above yesterday's high"</span>, <span class="tk-s">"below yesterday's low"</span>, <span class="tk-s">"stretched far above the EMA"</span>, <span class="tk-s">"stretched far below the EMA"</span>, <span class="tk-s">"tight range (accumulation)"</span>, <span class="tk-s">"low swept and reclaimed"</span>, <span class="tk-s">"high swept and rejected"</span>, <span class="tk-s">"broke the last hour's high"</span>, <span class="tk-s">"broke the last hour's low"</span>, <span class="tk-s">"strong green candle"</span>, <span class="tk-s">"strong red candle"</span>, <span class="tk-s">"quiet volume"</span>, <span class="tk-s">"in play (1.5x volume)"</span>, <span class="tk-s">"climax volume candle"</span>, <span class="tk-s">"buyers in control"</span>, <span class="tk-s">"sellers in control"</span>, <span class="tk-s">"5-min RSI(2) oversold"</span>, <span class="tk-s">"5-min RSI(2) overbought"</span>, <span class="tk-s">"stronger than SPY today"</span>, <span class="tk-s">"weaker than SPY today"</span>, <span class="tk-s">"SPY above VWAP"</span>, <span class="tk-s">"market fear day"</span>, <span class="tk-s">"market euphoria day"</span>, <span class="tk-s">"gapped up over 1 ATR"</span>, <span class="tk-s">"gapped down over 1 ATR"</span>, <span class="tk-s">"first hour"</span>, <span class="tk-s">"lunch hours"</span>, <span class="tk-s">"afternoon"</span>, <span class="tk-s">"spring in an uptrend"</span>, <span class="tk-s">"spring at a discount"</span>, <span class="tk-s">"breakout with volume"</span>, <span class="tk-s">"deep dip in a daily uptrend"</span>, <span class="tk-s">"upthrust in a downtrend"</span>, <span class="tk-s">"breakdown with volume"</span>)
+<span class="tk-c">// POINTS-END</span>
+
+<span class="tk-c">// ----- Time, all in New York -----</span>
+<span class="tk-k">string</span> NY     = <span class="tk-s">"America/New_York"</span>
+<span class="tk-k">bool</span>   intra  = timeframe.isintraday
+<span class="tk-k">float</span>  tfMin  = timeframe.in_seconds() / <span class="tk-n">60.0</span>
+<span class="tk-k">int</span>    nyMin  = hour(time, NY) * <span class="tk-n">60</span> + minute(time, NY)
+<span class="tk-k">int</span>    nyDate = year(time, NY) * <span class="tk-n">10000</span> + month(time, NY) * <span class="tk-n">100</span> + dayofmonth(time, NY)
+<span class="tk-k">bool</span>   rth    = intra <span class="tk-k">and</span> nyMin &gt;= <span class="tk-n">570</span> <span class="tk-k">and</span> nyMin &lt; <span class="tk-n">960</span>
+
+<span class="tk-k">var</span> <span class="tk-k">int</span> curDate  = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">int</span> barOfDay = <span class="tk-n">0</span>
+<span class="tk-k">bool</span> dayStart = rth <span class="tk-k">and</span> (<span class="tk-k">na</span>(curDate) <span class="tk-k">or</span> nyDate != curDate)
+<span class="tk-k">if</span> dayStart
+    curDate  := nyDate
+    barOfDay := <span class="tk-n">0</span>
+<span class="tk-k">else</span> <span class="tk-k">if</span> rth
+    barOfDay += <span class="tk-n">1</span>
+<span class="tk-k">bool</span> eodBar  = rth <span class="tk-k">and</span> nyMin + tfMin &gt;= <span class="tk-n">955</span>
+<span class="tk-k">bool</span> entryOk = rth <span class="tk-k">and</span> barOfDay &gt;= <span class="tk-n">3</span> <span class="tk-k">and</span> nyMin &lt; <span class="tk-n">930</span>
+
+<span class="tk-c">// ----- Daily facts, known at the open (yesterday's candle and today's opening price) -----</span>
+dayFacts() =&gt;
+    <span class="tk-k">float</span> atrD = ta.sma(ta.tr(<span class="tk-k">true</span>), <span class="tk-n">14</span>)
+    <span class="tk-k">float</span> s20  = ta.sma(close, <span class="tk-n">20</span>)
+    <span class="tk-k">float</span> s50  = ta.sma(close, <span class="tk-n">50</span>)
+    <span class="tk-k">float</span> s200 = ta.sma(close, <span class="tk-n">200</span>)
+    <span class="tk-k">float</span> hi20 = ta.highest(high, <span class="tk-n">20</span>)
+    <span class="tk-k">float</span> lo20 = ta.lowest(low, <span class="tk-n">20</span>)
+    <span class="tk-k">float</span> rngD = high - low
+    <span class="tk-k">float</span> eff  = math.sum(volume * math.sign(close - open), <span class="tk-n">5</span>) / math.sum(volume, <span class="tk-n">5</span>)
+    <span class="tk-k">float</span> r2   = ta.rsi(close, <span class="tk-n">2</span>)
+    <span class="tk-k">float</span> r14  = ta.rsi(close, <span class="tk-n">14</span>)
+    <span class="tk-k">float</span> pos  = hi20 &gt; lo20 ? (close - lo20) / (hi20 - lo20) : <span class="tk-k">na</span>
+    <span class="tk-k">float</span> strD = atrD &gt; <span class="tk-n">0</span> ? (close - s20) / atrD : <span class="tk-k">na</span>
+    <span class="tk-k">float</span> rv   = volume / ta.sma(volume, <span class="tk-n">20</span>)
+    <span class="tk-k">bool</span>  trUp = close &gt; s20 <span class="tk-k">and</span> s20 &gt; s50
+    <span class="tk-k">bool</span>  trDn = close &lt; s20 <span class="tk-k">and</span> s20 &lt; s50
+    <span class="tk-k">bool</span>  nr7  = rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> rngD == ta.lowest(rngD, <span class="tk-n">7</span>)
+    <span class="tk-k">bool</span>  ins  = high &lt; high[<span class="tk-n">1</span>] <span class="tk-k">and</span> low &gt; low[<span class="tk-n">1</span>]
+    <span class="tk-k">bool</span>  dSpr = low &lt; low[<span class="tk-n">1</span>] <span class="tk-k">and</span> close &gt; low[<span class="tk-n">1</span>] <span class="tk-k">and</span> rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (close - low) &gt;= <span class="tk-n">0.6</span> * rngD
+    <span class="tk-k">bool</span>  dUpt = high &gt; high[<span class="tk-n">1</span>] <span class="tk-k">and</span> close &lt; high[<span class="tk-n">1</span>] <span class="tk-k">and</span> rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (high - close) &gt;= <span class="tk-n">0.6</span> * rngD
+    <span class="tk-k">bool</span>  bUp  = close &gt; hi20[<span class="tk-n">1</span>]
+    <span class="tk-k">bool</span>  bDn  = close &lt; lo20[<span class="tk-n">1</span>]
+    <span class="tk-k">bool</span>  bull = close &gt; open <span class="tk-k">and</span> rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (close - low) &gt;= <span class="tk-n">0.75</span> * rngD
+    <span class="tk-k">bool</span>  bear = close &lt; open <span class="tk-k">and</span> rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (high - close) &gt;= <span class="tk-n">0.75</span> * rngD
+    <span class="tk-k">bool</span>  dn3  = close &lt; close[<span class="tk-n">1</span>] <span class="tk-k">and</span> close[<span class="tk-n">1</span>] &lt; close[<span class="tk-n">2</span>] <span class="tk-k">and</span> close[<span class="tk-n">2</span>] &lt; close[<span class="tk-n">3</span>]
+    <span class="tk-k">bool</span>  up3  = close &gt; close[<span class="tk-n">1</span>] <span class="tk-k">and</span> close[<span class="tk-n">1</span>] &gt; close[<span class="tk-n">2</span>] <span class="tk-k">and</span> close[<span class="tk-n">2</span>] &gt; close[<span class="tk-n">3</span>]
+    <span class="tk-k">float</span> gap  = atrD[<span class="tk-n">1</span>] &gt; <span class="tk-n">0</span> ? (open - close[<span class="tk-n">1</span>]) / atrD[<span class="tk-n">1</span>] : <span class="tk-k">na</span>
+    [trUp[<span class="tk-n">1</span>], trDn[<span class="tk-n">1</span>], close[<span class="tk-n">1</span>] &gt; s200[<span class="tk-n">1</span>], close[<span class="tk-n">1</span>] &lt; s200[<span class="tk-n">1</span>], pos[<span class="tk-n">1</span>] &lt; <span class="tk-n">0.2</span>, pos[<span class="tk-n">1</span>] &gt; <span class="tk-n">0.8</span>, strD[<span class="tk-n">1</span>] &gt; <span class="tk-n">2</span>, strD[<span class="tk-n">1</span>] &lt; -<span class="tk-n">2</span>, nr7[<span class="tk-n">1</span>], ins[<span class="tk-n">1</span>], dSpr[<span class="tk-n">1</span>], dUpt[<span class="tk-n">1</span>], bUp[<span class="tk-n">1</span>], bDn[<span class="tk-n">1</span>], bull[<span class="tk-n">1</span>], bear[<span class="tk-n">1</span>], rv[<span class="tk-n">1</span>] &gt; <span class="tk-n">1.5</span>, rv[<span class="tk-n">1</span>] &lt; <span class="tk-n">0.7</span>, eff[<span class="tk-n">1</span>] &gt; <span class="tk-n">0.3</span>, eff[<span class="tk-n">1</span>] &lt; -<span class="tk-n">0.3</span>, r2[<span class="tk-n">1</span>] &lt; <span class="tk-n">10</span>, r2[<span class="tk-n">1</span>] &gt; <span class="tk-n">90</span>, r14[<span class="tk-n">1</span>] &lt; <span class="tk-n">30</span>, r14[<span class="tk-n">1</span>] &gt; <span class="tk-n">70</span>, dn3[<span class="tk-n">1</span>], up3[<span class="tk-n">1</span>], gap &gt; <span class="tk-n">1</span>, gap &gt; <span class="tk-n">0.25</span> <span class="tk-k">and</span> gap &lt;= <span class="tk-n">1</span>, gap &lt; -<span class="tk-n">0.25</span> <span class="tk-k">and</span> gap &gt;= -<span class="tk-n">1</span>, gap &lt; -<span class="tk-n">1</span>, open &gt; high[<span class="tk-n">1</span>], open &lt; low[<span class="tk-n">1</span>], close[<span class="tk-n">1</span>] / close[<span class="tk-n">21</span>] - <span class="tk-n">1</span>, r2[<span class="tk-n">1</span>], gap, high[<span class="tk-n">1</span>], low[<span class="tk-n">1</span>], open]
+
+<span class="tk-k">string</span> rthId = ticker.modify(syminfo.tickerid, session = session.regular)
+<span class="tk-k">string</span> mktId = ticker.modify(mktSym, session = session.regular)
+[d00, d01, d02, d03, d04, d05, d06, d07, d08, d09, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, ret20, rsi2D, gapD, pdh, pdl, openD] = request.security(rthId, <span class="tk-s">"D"</span>, dayFacts(), lookahead = barmerge.lookahead_on)
+[m00, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31, mRet20, mRsi2, mGap, mPdh, mPdl, mOpen] = request.security(mktId, <span class="tk-s">"D"</span>, dayFacts(), lookahead = barmerge.lookahead_on)
+[mClose, mAboveVwap] = request.security(mktId, timeframe.period, [close, close &gt; ta.vwap(hlc3)])
+
+<span class="tk-k">int</span>  dow = dayofweek(time, NY)
+<span class="tk-k">bool</span> rsUp = <span class="tk-k">not</span> <span class="tk-k">na</span>(ret20) <span class="tk-k">and</span> <span class="tk-k">not</span> <span class="tk-k">na</span>(mRet20) <span class="tk-k">and</span> ret20 - mRet20 &gt; <span class="tk-n">0.05</span>
+<span class="tk-k">bool</span> rsDn = <span class="tk-k">not</span> <span class="tk-k">na</span>(ret20) <span class="tk-k">and</span> <span class="tk-k">not</span> <span class="tk-k">na</span>(mRet20) <span class="tk-k">and</span> ret20 - mRet20 &lt; -<span class="tk-n">0.05</span>
+<span class="tk-c">// same order as research/daily_conditions.py</span>
+<span class="tk-k">array</span>&lt;<span class="tk-k">bool</span>&gt; cD = <span class="tk-k">array</span>.from(d00, d01, d02, d03, d04, d05, d06, d07, d08, d09, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, m00, m01, m02, m03, m20, m21, m26, m29, m27, m28, m24, m25, m06, m07, rsUp, rsDn, dow == dayofweek.monday, dow == dayofweek.friday, dayofmonth(time, NY) &lt;= <span class="tk-n">3</span>)
+
+<span class="tk-c">// ----- 5-minute facts -----</span>
+<span class="tk-k">float</span> atr   = ta.atr(<span class="tk-n">14</span>)
+<span class="tk-k">float</span> ema20 = ta.ema(close, <span class="tk-n">20</span>)
+<span class="tk-k">var</span> <span class="tk-k">float</span> sPV = <span class="tk-n">0.0</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> sV  = <span class="tk-n">0.0</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> sP2 = <span class="tk-n">0.0</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> hod = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> lod = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> orH = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> orL = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> o0  = <span class="tk-k">na</span>
+<span class="tk-k">if</span> dayStart
+    sPV := <span class="tk-n">0.0</span>
+    sV  := <span class="tk-n">0.0</span>
+    sP2 := <span class="tk-n">0.0</span>
+    hod := high
+    lod := low
+    orH := high
+    orL := low
+    o0  := open
+<span class="tk-k">else</span> <span class="tk-k">if</span> rth
+    hod := math.max(hod, high)
+    lod := math.min(lod, low)
+    <span class="tk-k">if</span> barOfDay &lt; <span class="tk-n">3</span>
+        orH := math.max(orH, high)
+        orL := math.min(orL, low)
+sPV += hlc3 * volume
+sV  += volume
+sP2 += hlc3 * hlc3 * volume
+<span class="tk-k">float</span> vwap = sV &gt; <span class="tk-n">0</span> ? sPV / sV : <span class="tk-k">na</span>
+<span class="tk-k">float</span> vsd  = sV &gt; <span class="tk-n">0</span> ? math.sqrt(math.max(sP2 / sV - vwap * vwap, <span class="tk-n">0.0</span>)) : <span class="tk-k">na</span>
+<span class="tk-k">float</span> z    = vsd &gt; <span class="tk-n">0</span> ? (close - vwap) / vsd : <span class="tk-k">na</span>
+<span class="tk-k">float</span> pos  = hod &gt; lod ? (close - lod) / (hod - lod) : <span class="tk-k">na</span>
+<span class="tk-k">bool</span>  aOR  = rth <span class="tk-k">and</span> barOfDay &gt;= <span class="tk-n">3</span>
+<span class="tk-k">float</span> hh   = ta.highest(high, <span class="tk-n">12</span>)[<span class="tk-n">1</span>]
+<span class="tk-k">float</span> ll   = ta.lowest(low, <span class="tk-n">12</span>)[<span class="tk-n">1</span>]
+<span class="tk-k">float</span> rng  = high - low
+<span class="tk-k">float</span> eff6 = math.sum(volume * math.sign(close - open), <span class="tk-n">6</span>) / math.sum(volume, <span class="tk-n">6</span>)
+<span class="tk-k">float</span> rsi2 = ta.rsi(close, <span class="tk-n">2</span>)
+
+<span class="tk-c">// Volume against the same time of day over the last 10 sessions</span>
+type VolHist
+    <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; cum
+    <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; bar
+
+<span class="tk-k">var</span> map&lt;<span class="tk-k">int</span>, VolHist&gt; vh = map.new&lt;<span class="tk-k">int</span>, VolHist&gt;()
+<span class="tk-k">var</span> <span class="tk-k">float</span> cumV = <span class="tk-n">0.0</span>
+<span class="tk-k">if</span> dayStart
+    cumV := <span class="tk-n">0.0</span>
+cumV += volume
+<span class="tk-k">float</span> avgCum = <span class="tk-k">na</span>
+<span class="tk-k">float</span> avgBar = <span class="tk-k">na</span>
+<span class="tk-k">if</span> map.contains(vh, barOfDay)
+    VolHist hv = map.get(vh, barOfDay)
+    <span class="tk-k">if</span> <span class="tk-k">array</span>.size(hv.cum) &gt;= <span class="tk-n">5</span>
+        avgCum := <span class="tk-k">array</span>.avg(hv.cum)
+        avgBar := <span class="tk-k">array</span>.avg(hv.bar)
+<span class="tk-k">float</span> rvol = avgCum &gt; <span class="tk-n">0</span> ? cumV / avgCum : <span class="tk-k">na</span>
+<span class="tk-k">float</span> vrel = avgBar &gt; <span class="tk-n">0</span> ? volume / avgBar : <span class="tk-k">na</span>
+<span class="tk-k">if</span> rth <span class="tk-k">and</span> barstate.isconfirmed
+    <span class="tk-k">if</span> <span class="tk-k">not</span> map.contains(vh, barOfDay)
+        map.put(vh, barOfDay, VolHist.new(<span class="tk-k">array</span>.new&lt;<span class="tk-k">float</span>&gt;(), <span class="tk-k">array</span>.new&lt;<span class="tk-k">float</span>&gt;()))
+    VolHist hw = map.get(vh, barOfDay)
+    <span class="tk-k">array</span>.push(hw.cum, cumV)
+    <span class="tk-k">array</span>.push(hw.bar, volume)
+    <span class="tk-k">if</span> <span class="tk-k">array</span>.size(hw.cum) &gt; <span class="tk-n">10</span>
+        <span class="tk-k">array</span>.shift(hw.cum)
+        <span class="tk-k">array</span>.shift(hw.bar)
+
+<span class="tk-k">bool</span> sweepLo = (low &lt; ll <span class="tk-k">and</span> close &gt; ll) <span class="tk-k">or</span> (aOR <span class="tk-k">and</span> low &lt; orL <span class="tk-k">and</span> close &gt; orL) <span class="tk-k">or</span> (low &lt; pdl <span class="tk-k">and</span> close &gt; pdl)
+<span class="tk-k">bool</span> sweepHi = (high &gt; hh <span class="tk-k">and</span> close &lt; hh) <span class="tk-k">or</span> (aOR <span class="tk-k">and</span> high &gt; orH <span class="tk-k">and</span> close &lt; orH) <span class="tk-k">or</span> (high &gt; pdh <span class="tk-k">and</span> close &lt; pdh)
+<span class="tk-k">bool</span> itUp  = close &gt; vwap <span class="tk-k">and</span> ema20 &gt; ema20[<span class="tk-n">3</span>]
+<span class="tk-k">bool</span> itDn  = close &lt; vwap <span class="tk-k">and</span> ema20 &lt; ema20[<span class="tk-n">3</span>]
+<span class="tk-k">bool</span> zLo2  = z &lt; -<span class="tk-n">2</span>
+<span class="tk-k">bool</span> disc  = pos &lt; <span class="tk-n">1.0</span> / <span class="tk-n">3</span>
+<span class="tk-k">bool</span> sprg  = sweepLo <span class="tk-k">or</span> sweepLo[<span class="tk-n">1</span>] <span class="tk-k">or</span> sweepLo[<span class="tk-n">2</span>]
+<span class="tk-k">bool</span> upth  = sweepHi <span class="tk-k">or</span> sweepHi[<span class="tk-n">1</span>] <span class="tk-k">or</span> sweepHi[<span class="tk-n">2</span>]
+<span class="tk-k">bool</span> bosU  = close &gt; hh
+<span class="tk-k">bool</span> bosD  = close &lt; ll
+<span class="tk-k">bool</span> rvHi  = rvol &gt; <span class="tk-n">1.5</span>
+<span class="tk-k">float</span> rsDay = o0 &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> mOpen &gt; <span class="tk-n">0</span> ? (close / o0 - <span class="tk-n">1</span>) - (mClose / mOpen - <span class="tk-n">1</span>) : <span class="tk-k">na</span>
+<span class="tk-k">bool</span> fear  = (mRsi2 &lt;= <span class="tk-n">10</span> <span class="tk-k">or</span> mGap &lt;= -<span class="tk-n">1</span>) <span class="tk-k">and</span> <span class="tk-k">not</span> (mGap &gt;= <span class="tk-n">1</span>)
+<span class="tk-c">// same order as research/conditions.py</span>
+<span class="tk-k">array</span>&lt;<span class="tk-k">bool</span>&gt; c5 = <span class="tk-k">array</span>.from(d00, d01, itUp, itDn, zLo2, z &gt;= -<span class="tk-n">2</span> <span class="tk-k">and</span> z &lt; -<span class="tk-n">1</span>, z &gt; <span class="tk-n">1</span> <span class="tk-k">and</span> z &lt;= <span class="tk-n">2</span>, z &gt; <span class="tk-n">2</span>, disc, pos &gt; <span class="tk-n">2.0</span> / <span class="tk-n">3</span>, aOR <span class="tk-k">and</span> close &gt; orH, aOR <span class="tk-k">and</span> close &lt; orL, close &gt; pdh, close &lt; pdl, close - ema20 &gt; <span class="tk-n">3</span> * atr, ema20 - close &gt; <span class="tk-n">3</span> * atr, ta.highest(high, <span class="tk-n">12</span>) - ta.lowest(low, <span class="tk-n">12</span>) &lt; <span class="tk-n">3</span> * atr, sprg, upth, bosU, bosD, close &gt; open <span class="tk-k">and</span> rng &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (close - low) &gt;= <span class="tk-n">0.75</span> * rng, close &lt; open <span class="tk-k">and</span> rng &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (high - close) &gt;= <span class="tk-n">0.75</span> * rng, rvol &lt; <span class="tk-n">0.8</span>, rvHi, vrel &gt;= <span class="tk-n">3</span>, eff6 &gt; <span class="tk-n">0.3</span>, eff6 &lt; -<span class="tk-n">0.3</span>, rsi2 &lt; <span class="tk-n">10</span>, rsi2 &gt; <span class="tk-n">90</span>, rsDay &gt; <span class="tk-n">0.005</span>, rsDay &lt; -<span class="tk-n">0.005</span>, mAboveVwap, fear, mGap &gt;= <span class="tk-n">1</span>, gapD &gt; <span class="tk-n">1</span>, gapD &lt; -<span class="tk-n">1</span>, nyMin &lt; <span class="tk-n">630</span>, nyMin &gt;= <span class="tk-n">720</span> <span class="tk-k">and</span> nyMin &lt; <span class="tk-n">840</span>, nyMin &gt;= <span class="tk-n">840</span>, sprg <span class="tk-k">and</span> itUp, sprg <span class="tk-k">and</span> disc, bosU <span class="tk-k">and</span> rvHi, zLo2 <span class="tk-k">and</span> d00, upth <span class="tk-k">and</span> itDn, bosD <span class="tk-k">and</span> rvHi)
+
+<span class="tk-c">// ----- Expected R -----</span>
+<span class="tk-k">float</span> dayL = D0_L
+<span class="tk-k">float</span> dayS = D0_S
+<span class="tk-k">for</span> i = <span class="tk-n">0</span> to <span class="tk-n">50</span>
+    <span class="tk-k">if</span> <span class="tk-k">array</span>.get(cD, i)
+        dayL += <span class="tk-k">array</span>.get(D_L, i)
+        dayS += <span class="tk-k">array</span>.get(D_S, i)
+<span class="tk-k">float</span> fiveL = <span class="tk-n">0.0</span>
+<span class="tk-k">float</span> fiveS = <span class="tk-n">0.0</span>
+<span class="tk-k">for</span> i = <span class="tk-n">0</span> to <span class="tk-n">45</span>
+    <span class="tk-k">if</span> <span class="tk-k">array</span>.get(c5, i)
+        fiveL += <span class="tk-k">array</span>.get(P_L, i)
+        fiveS += <span class="tk-k">array</span>.get(P_S, i)
+<span class="tk-k">float</span> risk  = STOP_ATR * atr
+<span class="tk-k">float</span> costR = risk &gt; <span class="tk-n">0</span> ? <span class="tk-n">2</span> * (slipCents + slipPct / <span class="tk-n">100</span> * close) / risk : <span class="tk-k">na</span>
+<span class="tk-k">float</span> eL    = A_L + K_L * dayL + fiveL - costR
+<span class="tk-k">float</span> eS    = A_S + K_S * dayS + fiveS - costR
+
+<span class="tk-c">// ----- Helpers -----</span>
+<span class="tk-k">float</span> riskUsd = acct * riskPct / <span class="tk-n">100</span>
+
+px(<span class="tk-k">float</span> p) =&gt;
+    str.tostring(p, format.mintick)
+
+sgn(<span class="tk-k">float</span> x) =&gt;
+    <span class="tk-k">na</span>(x) ? <span class="tk-s">"-"</span> : (x &gt;= <span class="tk-n">0</span> ? <span class="tk-s">"+"</span> : <span class="tk-s">""</span>) + str.tostring(x, <span class="tk-s">"0.00"</span>)
+
+qtyFor(<span class="tk-k">float</span> r) =&gt;
+    <span class="tk-k">float</span> byRisk = r &gt; <span class="tk-n">0</span> ? riskUsd / (r * syminfo.pointvalue) : <span class="tk-n">0.0</span>
+    <span class="tk-k">float</span> byCash = close &gt; <span class="tk-n">0</span> ? acct * maxPosPct / <span class="tk-n">100</span> / (close * syminfo.pointvalue) : <span class="tk-n">0.0</span>
+    math.max(<span class="tk-n">1.0</span>, math.floor(math.min(byRisk, byCash)))
+
+jsonIn(<span class="tk-k">string</span> act, <span class="tk-k">float</span> q, <span class="tk-k">float</span> stp, <span class="tk-k">float</span> tgt, <span class="tk-k">float</span> e) =&gt;
+    <span class="tk-s">'{"v":2,"ticker":"'</span> + syminfo.ticker + <span class="tk-s">'","action":"'</span> + act + <span class="tk-s">'","qty":'</span> + str.tostring(q, <span class="tk-s">"0"</span>) + <span class="tk-s">',"price":'</span> + px(close) + <span class="tk-s">',"stop":'</span> + px(stp) + <span class="tk-s">',"target":'</span> + px(tgt) + <span class="tk-s">',"edge":'</span> + str.tostring(e, <span class="tk-s">"0.000"</span>) + <span class="tk-s">'}'</span>
+
+jsonOut(<span class="tk-k">string</span> why, <span class="tk-k">float</span> p) =&gt;
+    <span class="tk-s">'{"v":2,"ticker":"'</span> + syminfo.ticker + <span class="tk-s">'","action":"exit","reason":"'</span> + why + <span class="tk-s">'","price":'</span> + px(p) + <span class="tk-s">'}'</span>
+
+bitsNow() =&gt;
+    <span class="tk-k">string</span> b = <span class="tk-s">""</span>
+    <span class="tk-k">for</span> i = <span class="tk-n">0</span> to <span class="tk-n">45</span>
+        b += <span class="tk-k">array</span>.get(c5, i) ? <span class="tk-s">"1"</span> : <span class="tk-s">"0"</span>
+    b
+
+<span class="tk-c">// Biggest contributions among the conditions that are true</span>
+reasons(<span class="tk-k">array</span>&lt;<span class="tk-k">bool</span>&gt; flags, <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; pts, <span class="tk-k">array</span>&lt;<span class="tk-k">string</span>&gt; names, <span class="tk-k">int</span> n) =&gt;
+    <span class="tk-k">string</span> out = <span class="tk-s">""</span>
+    <span class="tk-k">array</span>&lt;<span class="tk-k">int</span>&gt; used = <span class="tk-k">array</span>.new&lt;<span class="tk-k">int</span>&gt;()
+    <span class="tk-k">for</span> k = <span class="tk-n">1</span> to n
+        <span class="tk-k">float</span> best = <span class="tk-n">0.0</span>
+        <span class="tk-k">int</span>   bi   = -<span class="tk-n">1</span>
+        <span class="tk-k">for</span> i = <span class="tk-n">0</span> to <span class="tk-k">array</span>.size(pts) - <span class="tk-n">1</span>
+            <span class="tk-k">float</span> v = <span class="tk-k">array</span>.get(pts, i)
+            <span class="tk-k">if</span> <span class="tk-k">array</span>.get(flags, i) <span class="tk-k">and</span> math.abs(v) &gt; math.abs(best) <span class="tk-k">and</span> <span class="tk-k">not</span> <span class="tk-k">array</span>.includes(used, i)
+                best := v
+                bi   := i
+        <span class="tk-k">if</span> bi &gt;= <span class="tk-n">0</span>
+            <span class="tk-k">array</span>.push(used, bi)
+            out += (out == <span class="tk-s">""</span> ? <span class="tk-s">""</span> : <span class="tk-s">", "</span>) + <span class="tk-k">array</span>.get(names, bi) + <span class="tk-s">" "</span> + sgn(best)
+    out == <span class="tk-s">""</span> ? <span class="tk-s">"none"</span> : out
+
+<span class="tk-c">// ----- Orders -----</span>
+<span class="tk-k">bool</span> flat    = strategy.position_size == <span class="tk-n">0</span>
+<span class="tk-k">bool</span> canIn   = intra <span class="tk-k">and</span> entryOk <span class="tk-k">and</span> flat <span class="tk-k">and</span> <span class="tk-k">not</span> eodBar <span class="tk-k">and</span> risk &gt; <span class="tk-n">0</span>
+<span class="tk-k">bool</span> buySig  = mode == <span class="tk-s">"Trade"</span> <span class="tk-k">and</span> canIn <span class="tk-k">and</span> eL &gt;= minEdge
+<span class="tk-k">bool</span> shSig   = mode == <span class="tk-s">"Trade"</span> <span class="tk-k">and</span> canIn <span class="tk-k">and</span> allowShort <span class="tk-k">and</span> <span class="tk-k">not</span> buySig <span class="tk-k">and</span> eS &gt;= minEdge
+<span class="tk-k">int</span>  seed    = dayofmonth(time, NY) * <span class="tk-n">37</span> + month(time, NY) * <span class="tk-n">11</span> + year(time, NY) + str.length(syminfo.ticker) * <span class="tk-n">7</span>
+<span class="tk-k">bool</span> mSlot   = barOfDay == <span class="tk-n">3</span> + seed % <span class="tk-n">27</span> <span class="tk-k">or</span> barOfDay == <span class="tk-n">30</span> + (seed * <span class="tk-n">13</span>) % <span class="tk-n">36</span>
+<span class="tk-k">bool</span> mLong   = mode == <span class="tk-s">"Measure long"</span> <span class="tk-k">and</span> canIn <span class="tk-k">and</span> mSlot
+<span class="tk-k">bool</span> mShort  = mode == <span class="tk-s">"Measure short"</span> <span class="tk-k">and</span> canIn <span class="tk-k">and</span> mSlot
+
+<span class="tk-k">var</span> <span class="tk-k">float</span> tRisk  = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> tEdge  = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> tStop  = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> tTgt   = <span class="tk-k">na</span>
+<span class="tk-k">var</span> <span class="tk-k">float</span> tEntry = <span class="tk-k">na</span>
+<span class="tk-k">string</span> note = <span class="tk-s">""</span>
+
+<span class="tk-k">if</span> buySig <span class="tk-k">or</span> mLong
+    <span class="tk-k">float</span> q   = qtyFor(risk)
+    <span class="tk-k">float</span> stp = close - risk
+    <span class="tk-k">float</span> tgt = close + TARGET_R * risk
+    <span class="tk-k">string</span> cm = mLong ? <span class="tk-s">"M|L|"</span> + str.tostring(risk, <span class="tk-s">"0.0000"</span>) + <span class="tk-s">"|"</span> + str.tostring(dayL, <span class="tk-s">"0.0000"</span>) + <span class="tk-s">"|"</span> + bitsNow() : <span class="tk-s">"BUY "</span> + sgn(eL) + <span class="tk-s">"R"</span>
+    tRisk  := risk
+    tEdge  := eL
+    tStop  := stp
+    tTgt   := tgt
+    tEntry := close
+    strategy.entry(<span class="tk-s">"BUY"</span>, strategy.long, qty = q, comment = cm, alert_message = jsonIn(<span class="tk-s">"buy"</span>, q, stp, tgt, eL))
+    strategy.exit(<span class="tk-s">"SELL"</span>, from_entry = <span class="tk-s">"BUY"</span>, stop = stp, limit = tgt, comment_profit = <span class="tk-s">"SELL target"</span>, comment_loss = <span class="tk-s">"SELL stop"</span>, alert_profit = jsonOut(<span class="tk-s">"target"</span>, tgt), alert_loss = jsonOut(<span class="tk-s">"stop"</span>, stp))
+    <span class="tk-k">if</span> buySig
+        note := syminfo.ticker + <span class="tk-s">": BUY "</span> + str.tostring(q, <span class="tk-s">"0"</span>) + <span class="tk-s">" at "</span> + px(close) + <span class="tk-s">" - stop "</span> + px(stp) + <span class="tk-s">" - target "</span> + px(tgt) + <span class="tk-s">" - expected "</span> + sgn(eL) + <span class="tk-s">"R"</span>
+
+<span class="tk-k">if</span> shSig <span class="tk-k">or</span> mShort
+    <span class="tk-k">float</span> q   = qtyFor(risk)
+    <span class="tk-k">float</span> stp = close + risk
+    <span class="tk-k">float</span> tgt = close - TARGET_R * risk
+    <span class="tk-k">string</span> cm = mShort ? <span class="tk-s">"M|S|"</span> + str.tostring(risk, <span class="tk-s">"0.0000"</span>) + <span class="tk-s">"|"</span> + str.tostring(dayS, <span class="tk-s">"0.0000"</span>) + <span class="tk-s">"|"</span> + bitsNow() : <span class="tk-s">"SHORT "</span> + sgn(eS) + <span class="tk-s">"R"</span>
+    tRisk  := risk
+    tEdge  := eS
+    tStop  := stp
+    tTgt   := tgt
+    tEntry := close
+    strategy.entry(<span class="tk-s">"SHORT"</span>, strategy.short, qty = q, comment = cm, alert_message = jsonIn(<span class="tk-s">"short"</span>, q, stp, tgt, eS))
+    strategy.exit(<span class="tk-s">"COVER"</span>, from_entry = <span class="tk-s">"SHORT"</span>, stop = stp, limit = tgt, comment_profit = <span class="tk-s">"COVER target"</span>, comment_loss = <span class="tk-s">"COVER stop"</span>, alert_profit = jsonOut(<span class="tk-s">"target"</span>, tgt), alert_loss = jsonOut(<span class="tk-s">"stop"</span>, stp))
+    <span class="tk-k">if</span> shSig
+        note := syminfo.ticker + <span class="tk-s">": SHORT "</span> + str.tostring(q, <span class="tk-s">"0"</span>) + <span class="tk-s">" at "</span> + px(close) + <span class="tk-s">" - stop "</span> + px(stp) + <span class="tk-s">" - target "</span> + px(tgt) + <span class="tk-s">" - expected "</span> + sgn(eS) + <span class="tk-s">"R"</span>
+
+<span class="tk-k">if</span> eodBar <span class="tk-k">and</span> strategy.position_size != <span class="tk-n">0</span>
+    strategy.close_all(comment = strategy.position_size &gt; <span class="tk-n">0</span> ? <span class="tk-s">"SELL 3:55"</span> : <span class="tk-s">"COVER 3:55"</span>, alert_message = jsonOut(<span class="tk-s">"eod"</span>, close))
+
+<span class="tk-c">// ----- Results on this chart -----</span>
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; rAll = <span class="tk-k">array</span>.new&lt;<span class="tk-k">float</span>&gt;()
+<span class="tk-k">var</span> <span class="tk-k">int</span> seen = <span class="tk-n">0</span>
+<span class="tk-k">if</span> strategy.closedtrades &gt; seen
+    <span class="tk-k">int</span>   k  = strategy.closedtrades - <span class="tk-n">1</span>
+    <span class="tk-k">float</span> ep = strategy.closedtrades.entry_price(k)
+    <span class="tk-k">float</span> xp = strategy.closedtrades.exit_price(k)
+    <span class="tk-k">bool</span>  lg = strategy.closedtrades.size(k) &gt; <span class="tk-n">0</span>
+    <span class="tk-k">float</span> r  = tRisk &gt; <span class="tk-n">0</span> ? (lg ? xp - ep : ep - xp) / tRisk : <span class="tk-n">0.0</span>
+    <span class="tk-k">array</span>.push(rAll, r)
+    <span class="tk-k">if</span> mode == <span class="tk-s">"Trade"</span>
+        label.new(strategy.closedtrades.exit_bar_index(k), <span class="tk-n">0.0</span>, (lg ? <span class="tk-s">"SELL "</span> : <span class="tk-s">"COVER "</span>) + sgn(r) + <span class="tk-s">"R"</span>, yloc = lg ? yloc.abovebar : yloc.belowbar, style = lg ? label.style_label_down : label.style_label_up, <span class="tk-k">color</span> = r &gt; <span class="tk-n">0</span> ? cBuy : r &lt; <span class="tk-n">0</span> ? cSell : cMute, textcolor = <span class="tk-k">color</span>.white, size = size.small)
+        note := (note == <span class="tk-s">""</span> ? <span class="tk-s">""</span> : note + <span class="tk-s">" | "</span>) + syminfo.ticker + <span class="tk-s">": "</span> + (lg ? <span class="tk-s">"SELL "</span> : <span class="tk-s">"COVER "</span>) + <span class="tk-s">"at "</span> + px(xp) + <span class="tk-s">" "</span> + sgn(r) + <span class="tk-s">"R"</span>
+    seen := strategy.closedtrades
+
+<span class="tk-k">if</span> buySig
+    label.new(bar_index, <span class="tk-n">0.0</span>, <span class="tk-s">"BUY "</span> + sgn(eL) + <span class="tk-s">"R"</span>, yloc = yloc.belowbar, style = label.style_label_up, <span class="tk-k">color</span> = cBuy, textcolor = <span class="tk-k">color</span>.white, size = size.normal)
+<span class="tk-k">if</span> shSig
+    label.new(bar_index, <span class="tk-n">0.0</span>, <span class="tk-s">"SHORT "</span> + sgn(eS) + <span class="tk-s">"R"</span>, yloc = yloc.abovebar, style = label.style_label_down, <span class="tk-k">color</span> = cSell, textcolor = <span class="tk-k">color</span>.white, size = size.normal)
+<span class="tk-k">if</span> note != <span class="tk-s">""</span>
+    alert(note, alert.freq_once_per_bar_close)
+
+<span class="tk-k">bool</span> inTrade = strategy.position_size != <span class="tk-n">0</span>
+plot(inTrade ? tStop : <span class="tk-k">na</span>, <span class="tk-s">"Stop"</span>, cSell, <span class="tk-n">2</span>, plot.style_linebr)
+plot(inTrade ? tTgt : <span class="tk-k">na</span>, <span class="tk-s">"Target"</span>, cBuy, <span class="tk-n">2</span>, plot.style_linebr)
+plot(inTrade ? tEntry : <span class="tk-k">na</span>, <span class="tk-s">"Entry"</span>, cMute, <span class="tk-n">1</span>, plot.style_linebr)
+plot(eL, <span class="tk-s">"Expected R long"</span>, display = display.data_window)
+plot(eS, <span class="tk-s">"Expected R short"</span>, display = display.data_window)
+
+<span class="tk-c">// ----- Status panel -----</span>
+posOf(<span class="tk-k">string</span> p) =&gt;
+    <span class="tk-k">switch</span> p
+        <span class="tk-s">"Top left"</span>     =&gt; position.top_left
+        <span class="tk-s">"Bottom left"</span>  =&gt; position.bottom_left
+        <span class="tk-s">"Bottom right"</span> =&gt; position.bottom_right
+        =&gt; position.top_right
+
+<span class="tk-k">string</span> tSize = <span class="tk-k">switch</span> panelSize
+    <span class="tk-s">"Tiny"</span>   =&gt; size.tiny
+    <span class="tk-s">"Normal"</span> =&gt; size.normal
+    =&gt; size.small
+
+<span class="tk-k">var</span> <span class="tk-k">table</span> panel = <span class="tk-k">table</span>.new(posOf(panelPos), <span class="tk-n">2</span>, <span class="tk-n">9</span>, bgcolor = <span class="tk-k">color</span>.new(chart.bg_color, <span class="tk-n">5</span>), border_color = <span class="tk-k">color</span>.new(chart.fg_color, <span class="tk-n">85</span>), border_width = <span class="tk-n">1</span>)
+
+row(<span class="tk-k">int</span> r, <span class="tk-k">string</span> k, <span class="tk-k">string</span> v, <span class="tk-k">color</span> vc) =&gt;
+    <span class="tk-k">table</span>.cell(panel, <span class="tk-n">0</span>, r, k, text_color = <span class="tk-k">color</span>.new(chart.fg_color, <span class="tk-n">35</span>), text_size = tSize, text_halign = text.align_left)
+    <span class="tk-k">table</span>.cell(panel, <span class="tk-n">1</span>, r, v, text_color = vc, text_size = tSize, text_halign = text.align_left)
+
+<span class="tk-k">if</span> barstate.islast <span class="tk-k">and</span> showPanel
+    <span class="tk-k">color</span> fg = chart.fg_color
+    row(<span class="tk-n">0</span>, <span class="tk-s">"Edge Reader"</span>, syminfo.ticker + <span class="tk-s">" - "</span> + timeframe.period + (intra ? <span class="tk-s">" min"</span> : <span class="tk-s">""</span>) + (mode == <span class="tk-s">"Trade"</span> ? <span class="tk-s">""</span> : <span class="tk-s">" - "</span> + str.upper(mode)), fg)
+    <span class="tk-k">if</span> <span class="tk-k">not</span> intra
+        row(<span class="tk-n">1</span>, <span class="tk-s">"Status"</span>, <span class="tk-s">"Open a 5-minute chart"</span>, cSell)
+    <span class="tk-k">else</span>
+        <span class="tk-k">string</span> sig = strategy.position_size &gt; <span class="tk-n">0</span> ? <span class="tk-s">"IN A LONG - entry "</span> + px(tEntry) + <span class="tk-s">", stop "</span> + px(tStop) + <span class="tk-s">", target "</span> + px(tTgt) : strategy.position_size &lt; <span class="tk-n">0</span> ? <span class="tk-s">"IN A SHORT - entry "</span> + px(tEntry) + <span class="tk-s">", stop "</span> + px(tStop) + <span class="tk-s">", target "</span> + px(tTgt) : <span class="tk-k">not</span> rth <span class="tk-k">or</span> <span class="tk-k">not</span> entryOk ? <span class="tk-s">"WAIT - entries 9:45 AM to 3:30 PM"</span> : eL &gt;= minEdge ? <span class="tk-s">"BUY"</span> : allowShort <span class="tk-k">and</span> eS &gt;= minEdge ? <span class="tk-s">"SHORT"</span> : <span class="tk-s">"WAIT - no edge above "</span> + sgn(minEdge) + <span class="tk-s">"R"</span>
+        row(<span class="tk-n">1</span>, <span class="tk-s">"Signal"</span>, sig, strategy.position_size != <span class="tk-n">0</span> <span class="tk-k">or</span> eL &gt;= minEdge ? cBuy : fg)
+        row(<span class="tk-n">2</span>, <span class="tk-s">"Long"</span>, sgn(eL) + <span class="tk-s">"R expected (needs "</span> + sgn(minEdge) + <span class="tk-s">")"</span>, eL &gt;= minEdge ? cBuy : eL &lt; <span class="tk-n">0</span> ? cSell : fg)
+        row(<span class="tk-n">3</span>, <span class="tk-s">"Short"</span>, sgn(eS) + <span class="tk-s">"R expected"</span> + (allowShort ? <span class="tk-s">""</span> : <span class="tk-s">" (shorts off)"</span>), allowShort <span class="tk-k">and</span> eS &gt;= minEdge ? cBuy : fg)
+        row(<span class="tk-n">4</span>, <span class="tk-s">"Day, for longs"</span>, reasons(cD, D_L, D_NAMES, <span class="tk-n">3</span>), fg)
+        <span class="tk-k">bool</span> any5 = <span class="tk-k">array</span>.max(P_L) != <span class="tk-n">0</span> <span class="tk-k">or</span> <span class="tk-k">array</span>.min(P_L) != <span class="tk-n">0</span>
+        row(<span class="tk-n">5</span>, <span class="tk-s">"5-min, for longs"</span>, any5 ? reasons(c5, P_L, P_NAMES, <span class="tk-n">3</span>) : <span class="tk-s">"no 5-minute evidence yet - see Measure"</span>, any5 ? fg : cMute)
+        row(<span class="tk-n">6</span>, <span class="tk-s">"Costs"</span>, <span class="tk-s">"-"</span> + str.tostring(costR, <span class="tk-s">"0.00"</span>) + <span class="tk-s">"R a trade at this price and ATR"</span>, fg)
+        <span class="tk-k">int</span>   n  = <span class="tk-k">array</span>.size(rAll)
+        <span class="tk-k">float</span> av = n &gt; <span class="tk-n">0</span> ? <span class="tk-k">array</span>.avg(rAll) : <span class="tk-k">na</span>
+        <span class="tk-k">int</span>   w  = <span class="tk-n">0</span>
+        <span class="tk-k">for</span> x <span class="tk-k">in</span> rAll
+            <span class="tk-k">if</span> x &gt; <span class="tk-n">0</span>
+                w += <span class="tk-n">1</span>
+        row(<span class="tk-n">7</span>, <span class="tk-s">"This chart"</span>, n == <span class="tk-n">0</span> ? <span class="tk-s">"no trades yet"</span> : str.tostring(n) + <span class="tk-s">" trades - "</span> + str.tostring(<span class="tk-n">100.0</span> * w / n, <span class="tk-s">"0"</span>) + <span class="tk-s">"% won - avg "</span> + sgn(av) + <span class="tk-s">"R"</span>, <span class="tk-k">na</span>(av) ? fg : av &gt; <span class="tk-n">0</span> ? cBuy : cSell)
+        row(<span class="tk-n">8</span>, <span class="tk-s">"Evidence"</span>, PTS_NOTE, cMute)</code></pre></div>
+  <div class="code"><div class="codebar"><div><div class="file">Edge_Radar.pine</div><div class="meta">indicator · 217 lines</div></div>
+    <div class="btns"><button type="button" class="expand">Expand</button><button type="button" class="primary copy">Copy</button></div></div>
+<pre><code><span class="tk-c">//@version=6</span>
+<span class="tk-c">// Edge Radar - today's expected R for up to 15 stocks, ranked, from the same evidence as Edge Reader</span>
+<span class="tk-c">//</span>
+<span class="tk-c">// Uses the daily part of Edge Reader's points (11 years of daily data) and each stock's own</span>
+<span class="tk-c">// slippage cost at its current price and 5-minute ATR. It does not include the 5-minute points,</span>
+<span class="tk-c">// so open the stock's chart with Edge Reader before acting. Put it on any 5-minute chart (SPY).</span>
+<span class="tk-c">// Educational tool, not financial advice.</span>
+indicator(<span class="tk-s">"Edge Radar"</span>, overlay = <span class="tk-k">true</span>)
+
+<span class="tk-k">string</span> G1 = <span class="tk-s">"Stocks"</span>
+<span class="tk-k">int</span>    nSym = input.<span class="tk-k">int</span>(<span class="tk-n">15</span>, <span class="tk-s">"How many stocks"</span>, minval = <span class="tk-n">1</span>, maxval = <span class="tk-n">15</span>, group = G1)
+<span class="tk-k">string</span> s01  = input.symbol(<span class="tk-s">"NASDAQ:NVDA"</span>, <span class="tk-s">"1"</span>, group = G1)
+<span class="tk-k">string</span> s02  = input.symbol(<span class="tk-s">"NASDAQ:TSLA"</span>, <span class="tk-s">"2"</span>, group = G1)
+<span class="tk-k">string</span> s03  = input.symbol(<span class="tk-s">"NASDAQ:AMD"</span>, <span class="tk-s">"3"</span>, group = G1)
+<span class="tk-k">string</span> s04  = input.symbol(<span class="tk-s">"NASDAQ:META"</span>, <span class="tk-s">"4"</span>, group = G1)
+<span class="tk-k">string</span> s05  = input.symbol(<span class="tk-s">"NASDAQ:AMZN"</span>, <span class="tk-s">"5"</span>, group = G1)
+<span class="tk-k">string</span> s06  = input.symbol(<span class="tk-s">"NASDAQ:AAPL"</span>, <span class="tk-s">"6"</span>, group = G1)
+<span class="tk-k">string</span> s07  = input.symbol(<span class="tk-s">"NASDAQ:MSFT"</span>, <span class="tk-s">"7"</span>, group = G1)
+<span class="tk-k">string</span> s08  = input.symbol(<span class="tk-s">"NASDAQ:GOOGL"</span>, <span class="tk-s">"8"</span>, group = G1)
+<span class="tk-k">string</span> s09  = input.symbol(<span class="tk-s">"NASDAQ:AVGO"</span>, <span class="tk-s">"9"</span>, group = G1)
+<span class="tk-k">string</span> s10  = input.symbol(<span class="tk-s">"NASDAQ:PLTR"</span>, <span class="tk-s">"10"</span>, group = G1)
+<span class="tk-k">string</span> s11  = input.symbol(<span class="tk-s">"NASDAQ:COIN"</span>, <span class="tk-s">"11"</span>, group = G1)
+<span class="tk-k">string</span> s12  = input.symbol(<span class="tk-s">"NASDAQ:MU"</span>, <span class="tk-s">"12"</span>, group = G1)
+<span class="tk-k">string</span> s13  = input.symbol(<span class="tk-s">"NASDAQ:NFLX"</span>, <span class="tk-s">"13"</span>, group = G1)
+<span class="tk-k">string</span> s14  = input.symbol(<span class="tk-s">"NYSE:UBER"</span>, <span class="tk-s">"14"</span>, group = G1)
+<span class="tk-k">string</span> s15  = input.symbol(<span class="tk-s">"NYSE:JPM"</span>, <span class="tk-s">"15"</span>, group = G1)
+
+<span class="tk-k">string</span> G2 = <span class="tk-s">"Same settings as Edge Reader"</span>
+<span class="tk-k">float</span>  minEdge   = input.<span class="tk-k">float</span>(<span class="tk-n">0.05</span>, <span class="tk-s">"Edge needed for a signal (R)"</span>, step = <span class="tk-n">0.01</span>, group = G2)
+<span class="tk-k">float</span>  slipCents = input.<span class="tk-k">float</span>(<span class="tk-n">0.01</span>, <span class="tk-s">"Slippage per fill ($ per share)"</span>, minval = <span class="tk-n">0</span>, step = <span class="tk-n">0.005</span>, group = G2)
+<span class="tk-k">float</span>  slipPct   = input.<span class="tk-k">float</span>(<span class="tk-n">0.01</span>, <span class="tk-s">"Slippage per fill (% of price)"</span>, minval = <span class="tk-n">0</span>, step = <span class="tk-n">0.005</span>, group = G2)
+<span class="tk-k">string</span> mktSym    = input.symbol(<span class="tk-s">"AMEX:SPY"</span>, <span class="tk-s">"Market"</span>, group = G2)
+
+<span class="tk-k">string</span> G3 = <span class="tk-s">"Display"</span>
+<span class="tk-k">string</span> panelPos  = input.<span class="tk-k">string</span>(<span class="tk-s">"Top right"</span>, <span class="tk-s">"Table position"</span>, options = [<span class="tk-s">"Top right"</span>, <span class="tk-s">"Top left"</span>, <span class="tk-s">"Bottom right"</span>, <span class="tk-s">"Bottom left"</span>], group = G3)
+<span class="tk-k">string</span> panelSize = input.<span class="tk-k">string</span>(<span class="tk-s">"Small"</span>, <span class="tk-s">"Text size"</span>, options = [<span class="tk-s">"Tiny"</span>, <span class="tk-s">"Small"</span>, <span class="tk-s">"Normal"</span>], group = G3)
+
+<span class="tk-k">color</span> cBuy  = <span class="tk-n">#26a69a</span>
+<span class="tk-k">color</span> cSell = <span class="tk-n">#ef5350</span>
+<span class="tk-k">color</span> cMute = <span class="tk-n">#9e9e9e</span>
+
+<span class="tk-c">// POINTS-BEGIN - written by research/points.py (refit.py); edit the numbers there, not here</span>
+<span class="tk-k">string</span> PTS_NOTE = <span class="tk-s">"day points: 2015-2025 daily data; 5-minute points: none yet (run Measure)"</span>
+<span class="tk-k">float</span> A_L = <span class="tk-n">0.0089</span>
+<span class="tk-k">float</span> K_L = <span class="tk-n">0.0846</span>
+<span class="tk-k">float</span> D0_L = -<span class="tk-n">0.2156</span>
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; D_L = <span class="tk-k">array</span>.from(<span class="tk-n">0.0010</span>, <span class="tk-n">0.0294</span>, <span class="tk-n">0.0647</span>, <span class="tk-n">0.0573</span>, -<span class="tk-n">0.0022</span>, <span class="tk-n">0.0145</span>, <span class="tk-n">0.0252</span>, <span class="tk-n">0.0093</span>, <span class="tk-n">0.0079</span>, <span class="tk-n">0.0169</span>, <span class="tk-n">0.0045</span>, <span class="tk-n">0.0330</span>, -<span class="tk-n">0.0130</span>, <span class="tk-n">0.0155</span>, <span class="tk-n">0.0008</span>, <span class="tk-n">0.0100</span>, -<span class="tk-n">0.0235</span>, -<span class="tk-n">0.0002</span>, -<span class="tk-n">0.0169</span>, -<span class="tk-n">0.0048</span>, -<span class="tk-n">0.0072</span>, -<span class="tk-n">0.0179</span>, <span class="tk-n">0.0697</span>, -<span class="tk-n">0.0460</span>, <span class="tk-n">0.0183</span>, <span class="tk-n">0.0062</span>, -<span class="tk-n">0.0024</span>, <span class="tk-n">0.0014</span>, <span class="tk-n">0.0273</span>, <span class="tk-n">0.0370</span>, <span class="tk-n">0.0294</span>, <span class="tk-n">0.0165</span>, <span class="tk-n">0.0016</span>, -<span class="tk-n">0.0269</span>, <span class="tk-n">0.0577</span>, <span class="tk-n">0.1192</span>, -<span class="tk-n">0.0003</span>, <span class="tk-n">0.0045</span>, -<span class="tk-n">0.2388</span>, <span class="tk-n">0.0417</span>, -<span class="tk-n">0.0158</span>, <span class="tk-n">0.0131</span>, <span class="tk-n">0.0764</span>, <span class="tk-n">0.0286</span>, -<span class="tk-n">0.0244</span>, <span class="tk-n">0.0294</span>, <span class="tk-n">0.0218</span>, -<span class="tk-n">0.0265</span>, <span class="tk-n">0.0943</span>, -<span class="tk-n">0.0030</span>, <span class="tk-n">0.0308</span>)
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; P_L = <span class="tk-k">array</span>.from(<span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>)
+<span class="tk-k">float</span> A_S = <span class="tk-n">0.0315</span>
+<span class="tk-k">float</span> K_S = <span class="tk-n">0.2931</span>
+<span class="tk-k">float</span> D0_S = -<span class="tk-n">0.1648</span>
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; D_S = <span class="tk-k">array</span>.from(-<span class="tk-n">0.0036</span>, -<span class="tk-n">0.0159</span>, <span class="tk-n">0.0674</span>, <span class="tk-n">0.0597</span>, -<span class="tk-n">0.0001</span>, -<span class="tk-n">0.0376</span>, -<span class="tk-n">0.0201</span>, -<span class="tk-n">0.0031</span>, <span class="tk-n">0.0053</span>, -<span class="tk-n">0.0123</span>, -<span class="tk-n">0.0012</span>, -<span class="tk-n">0.0188</span>, <span class="tk-n">0.0349</span>, -<span class="tk-n">0.0048</span>, <span class="tk-n">0.0135</span>, -<span class="tk-n">0.0036</span>, <span class="tk-n">0.0181</span>, -<span class="tk-n">0.0383</span>, <span class="tk-n">0.0070</span>, <span class="tk-n">0.0048</span>, -<span class="tk-n">0.0006</span>, -<span class="tk-n">0.0056</span>, -<span class="tk-n">0.0658</span>, -<span class="tk-n">0.0363</span>, -<span class="tk-n">0.0042</span>, <span class="tk-n">0.0192</span>, -<span class="tk-n">0.0323</span>, <span class="tk-n">0.0121</span>, -<span class="tk-n">0.0107</span>, -<span class="tk-n">0.0447</span>, -<span class="tk-n">0.0153</span>, -<span class="tk-n">0.0083</span>, <span class="tk-n">0.0095</span>, <span class="tk-n">0.0219</span>, <span class="tk-n">0.0496</span>, <span class="tk-n">0.0121</span>, -<span class="tk-n">0.0022</span>, -<span class="tk-n">0.0015</span>, <span class="tk-n">0.2434</span>, -<span class="tk-n">0.0546</span>, <span class="tk-n">0.0068</span>, -<span class="tk-n">0.0199</span>, -<span class="tk-n">0.0720</span>, -<span class="tk-n">0.0162</span>, <span class="tk-n">0.0260</span>, -<span class="tk-n">0.0240</span>, <span class="tk-n">0.0059</span>, <span class="tk-n">0.0427</span>, -<span class="tk-n">0.0949</span>, <span class="tk-n">0.0031</span>, -<span class="tk-n">0.0320</span>)
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; P_S = <span class="tk-k">array</span>.from(<span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>, <span class="tk-n">0.0000</span>)
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">string</span>&gt; D_NAMES = <span class="tk-k">array</span>.from(<span class="tk-s">"stock in an uptrend"</span>, <span class="tk-s">"stock in a downtrend"</span>, <span class="tk-s">"above its 200-day average"</span>, <span class="tk-s">"below its 200-day average"</span>, <span class="tk-s">"near its 20-day low"</span>, <span class="tk-s">"near its 20-day high"</span>, <span class="tk-s">"stretched above its 20-day average"</span>, <span class="tk-s">"stretched below its 20-day average"</span>, <span class="tk-s">"narrowest day in 7"</span>, <span class="tk-s">"inside day yesterday"</span>, <span class="tk-s">"yesterday swept a low and reclaimed it"</span>, <span class="tk-s">"yesterday swept a high and failed"</span>, <span class="tk-s">"broke its 20-day high"</span>, <span class="tk-s">"broke its 20-day low"</span>, <span class="tk-s">"strong green day yesterday"</span>, <span class="tk-s">"strong red day yesterday"</span>, <span class="tk-s">"heavy volume yesterday"</span>, <span class="tk-s">"light volume yesterday"</span>, <span class="tk-s">"buyers led the last 5 days"</span>, <span class="tk-s">"sellers led the last 5 days"</span>, <span class="tk-s">"daily RSI(2) oversold"</span>, <span class="tk-s">"daily RSI(2) overbought"</span>, <span class="tk-s">"daily RSI(14) under 30"</span>, <span class="tk-s">"daily RSI(14) over 70"</span>, <span class="tk-s">"3 down days in a row"</span>, <span class="tk-s">"3 up days in a row"</span>, <span class="tk-s">"gapped up over 1 ATR"</span>, <span class="tk-s">"gapped up"</span>, <span class="tk-s">"gapped down"</span>, <span class="tk-s">"gapped down over 1 ATR"</span>, <span class="tk-s">"opened above yesterday's high"</span>, <span class="tk-s">"opened below yesterday's low"</span>, <span class="tk-s">"SPY in an uptrend"</span>, <span class="tk-s">"SPY in a downtrend"</span>, <span class="tk-s">"SPY above its 200-day"</span>, <span class="tk-s">"SPY below its 200-day"</span>, <span class="tk-s">"SPY oversold (RSI 2)"</span>, <span class="tk-s">"SPY overbought (RSI 2)"</span>, <span class="tk-s">"SPY gapped up over 1 ATR"</span>, <span class="tk-s">"SPY gapped down over 1 ATR"</span>, <span class="tk-s">"SPY gapped up"</span>, <span class="tk-s">"SPY gapped down"</span>, <span class="tk-s">"SPY down 3 days in a row"</span>, <span class="tk-s">"SPY up 3 days in a row"</span>, <span class="tk-s">"SPY stretched up"</span>, <span class="tk-s">"SPY stretched down"</span>, <span class="tk-s">"stronger than SPY over 20 days"</span>, <span class="tk-s">"weaker than SPY over 20 days"</span>, <span class="tk-s">"Monday"</span>, <span class="tk-s">"Friday"</span>, <span class="tk-s">"turn of the month"</span>)
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">string</span>&gt; P_NAMES = <span class="tk-k">array</span>.from(<span class="tk-s">"daily uptrend"</span>, <span class="tk-s">"daily downtrend"</span>, <span class="tk-s">"intraday uptrend"</span>, <span class="tk-s">"intraday downtrend"</span>, <span class="tk-s">"over 2 sd below VWAP"</span>, <span class="tk-s">"1-2 sd below VWAP"</span>, <span class="tk-s">"1-2 sd above VWAP"</span>, <span class="tk-s">"over 2 sd above VWAP"</span>, <span class="tk-s">"lower third of the day"</span>, <span class="tk-s">"upper third of the day"</span>, <span class="tk-s">"above the opening range"</span>, <span class="tk-s">"below the opening range"</span>, <span class="tk-s">"above yesterday's high"</span>, <span class="tk-s">"below yesterday's low"</span>, <span class="tk-s">"stretched far above the EMA"</span>, <span class="tk-s">"stretched far below the EMA"</span>, <span class="tk-s">"tight range (accumulation)"</span>, <span class="tk-s">"low swept and reclaimed"</span>, <span class="tk-s">"high swept and rejected"</span>, <span class="tk-s">"broke the last hour's high"</span>, <span class="tk-s">"broke the last hour's low"</span>, <span class="tk-s">"strong green candle"</span>, <span class="tk-s">"strong red candle"</span>, <span class="tk-s">"quiet volume"</span>, <span class="tk-s">"in play (1.5x volume)"</span>, <span class="tk-s">"climax volume candle"</span>, <span class="tk-s">"buyers in control"</span>, <span class="tk-s">"sellers in control"</span>, <span class="tk-s">"5-min RSI(2) oversold"</span>, <span class="tk-s">"5-min RSI(2) overbought"</span>, <span class="tk-s">"stronger than SPY today"</span>, <span class="tk-s">"weaker than SPY today"</span>, <span class="tk-s">"SPY above VWAP"</span>, <span class="tk-s">"market fear day"</span>, <span class="tk-s">"market euphoria day"</span>, <span class="tk-s">"gapped up over 1 ATR"</span>, <span class="tk-s">"gapped down over 1 ATR"</span>, <span class="tk-s">"first hour"</span>, <span class="tk-s">"lunch hours"</span>, <span class="tk-s">"afternoon"</span>, <span class="tk-s">"spring in an uptrend"</span>, <span class="tk-s">"spring at a discount"</span>, <span class="tk-s">"breakout with volume"</span>, <span class="tk-s">"deep dip in a daily uptrend"</span>, <span class="tk-s">"upthrust in a downtrend"</span>, <span class="tk-s">"breakdown with volume"</span>)
+<span class="tk-c">// POINTS-END</span>
+
+<span class="tk-k">string</span> NY = <span class="tk-s">"America/New_York"</span>
+
+bit(<span class="tk-k">bool</span> x, <span class="tk-k">int</span> i) =&gt;
+    x ? math.pow(<span class="tk-n">2</span>, i) : <span class="tk-n">0.0</span>
+
+has(<span class="tk-k">float</span> m, <span class="tk-k">int</span> i) =&gt;
+    math.floor(m / math.pow(<span class="tk-n">2</span>, i)) % <span class="tk-n">2</span> == <span class="tk-n">1</span>
+
+<span class="tk-c">// A stock's 32 daily facts known at the open, packed into two numbers (same facts as Edge Reader)</span>
+dayMask() =&gt;
+    <span class="tk-k">float</span> atrD = ta.sma(ta.tr(<span class="tk-k">true</span>), <span class="tk-n">14</span>)
+    <span class="tk-k">float</span> s20  = ta.sma(close, <span class="tk-n">20</span>)
+    <span class="tk-k">float</span> s50  = ta.sma(close, <span class="tk-n">50</span>)
+    <span class="tk-k">float</span> s200 = ta.sma(close, <span class="tk-n">200</span>)
+    <span class="tk-k">float</span> hi20 = ta.highest(high, <span class="tk-n">20</span>)
+    <span class="tk-k">float</span> lo20 = ta.lowest(low, <span class="tk-n">20</span>)
+    <span class="tk-k">float</span> rngD = high - low
+    <span class="tk-k">float</span> eff  = math.sum(volume * math.sign(close - open), <span class="tk-n">5</span>) / math.sum(volume, <span class="tk-n">5</span>)
+    <span class="tk-k">float</span> r2   = ta.rsi(close, <span class="tk-n">2</span>)
+    <span class="tk-k">float</span> r14  = ta.rsi(close, <span class="tk-n">14</span>)
+    <span class="tk-k">float</span> pos  = hi20 &gt; lo20 ? (close - lo20) / (hi20 - lo20) : <span class="tk-k">na</span>
+    <span class="tk-k">float</span> strD = atrD &gt; <span class="tk-n">0</span> ? (close - s20) / atrD : <span class="tk-k">na</span>
+    <span class="tk-k">float</span> rv   = volume / ta.sma(volume, <span class="tk-n">20</span>)
+    <span class="tk-k">bool</span>  trUp = close &gt; s20 <span class="tk-k">and</span> s20 &gt; s50
+    <span class="tk-k">bool</span>  trDn = close &lt; s20 <span class="tk-k">and</span> s20 &lt; s50
+    <span class="tk-k">bool</span>  nr7  = rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> rngD == ta.lowest(rngD, <span class="tk-n">7</span>)
+    <span class="tk-k">bool</span>  ins  = high &lt; high[<span class="tk-n">1</span>] <span class="tk-k">and</span> low &gt; low[<span class="tk-n">1</span>]
+    <span class="tk-k">bool</span>  dSpr = low &lt; low[<span class="tk-n">1</span>] <span class="tk-k">and</span> close &gt; low[<span class="tk-n">1</span>] <span class="tk-k">and</span> rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (close - low) &gt;= <span class="tk-n">0.6</span> * rngD
+    <span class="tk-k">bool</span>  dUpt = high &gt; high[<span class="tk-n">1</span>] <span class="tk-k">and</span> close &lt; high[<span class="tk-n">1</span>] <span class="tk-k">and</span> rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (high - close) &gt;= <span class="tk-n">0.6</span> * rngD
+    <span class="tk-k">bool</span>  bUp  = close &gt; hi20[<span class="tk-n">1</span>]
+    <span class="tk-k">bool</span>  bDn  = close &lt; lo20[<span class="tk-n">1</span>]
+    <span class="tk-k">bool</span>  bull = close &gt; open <span class="tk-k">and</span> rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (close - low) &gt;= <span class="tk-n">0.75</span> * rngD
+    <span class="tk-k">bool</span>  bear = close &lt; open <span class="tk-k">and</span> rngD &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> (high - close) &gt;= <span class="tk-n">0.75</span> * rngD
+    <span class="tk-k">bool</span>  dn3  = close &lt; close[<span class="tk-n">1</span>] <span class="tk-k">and</span> close[<span class="tk-n">1</span>] &lt; close[<span class="tk-n">2</span>] <span class="tk-k">and</span> close[<span class="tk-n">2</span>] &lt; close[<span class="tk-n">3</span>]
+    <span class="tk-k">bool</span>  up3  = close &gt; close[<span class="tk-n">1</span>] <span class="tk-k">and</span> close[<span class="tk-n">1</span>] &gt; close[<span class="tk-n">2</span>] <span class="tk-k">and</span> close[<span class="tk-n">2</span>] &gt; close[<span class="tk-n">3</span>]
+    <span class="tk-k">float</span> gap  = atrD[<span class="tk-n">1</span>] &gt; <span class="tk-n">0</span> ? (open - close[<span class="tk-n">1</span>]) / atrD[<span class="tk-n">1</span>] : <span class="tk-k">na</span>
+    <span class="tk-k">float</span> m1 = bit(trUp[<span class="tk-n">1</span>], <span class="tk-n">0</span>) + bit(trDn[<span class="tk-n">1</span>], <span class="tk-n">1</span>) + bit(close[<span class="tk-n">1</span>] &gt; s200[<span class="tk-n">1</span>], <span class="tk-n">2</span>) + bit(close[<span class="tk-n">1</span>] &lt; s200[<span class="tk-n">1</span>], <span class="tk-n">3</span>) + bit(pos[<span class="tk-n">1</span>] &lt; <span class="tk-n">0.2</span>, <span class="tk-n">4</span>) + bit(pos[<span class="tk-n">1</span>] &gt; <span class="tk-n">0.8</span>, <span class="tk-n">5</span>) + bit(strD[<span class="tk-n">1</span>] &gt; <span class="tk-n">2</span>, <span class="tk-n">6</span>) + bit(strD[<span class="tk-n">1</span>] &lt; -<span class="tk-n">2</span>, <span class="tk-n">7</span>) + bit(nr7[<span class="tk-n">1</span>], <span class="tk-n">8</span>) + bit(ins[<span class="tk-n">1</span>], <span class="tk-n">9</span>) + bit(dSpr[<span class="tk-n">1</span>], <span class="tk-n">10</span>) + bit(dUpt[<span class="tk-n">1</span>], <span class="tk-n">11</span>) + bit(bUp[<span class="tk-n">1</span>], <span class="tk-n">12</span>) + bit(bDn[<span class="tk-n">1</span>], <span class="tk-n">13</span>) + bit(bull[<span class="tk-n">1</span>], <span class="tk-n">14</span>) + bit(bear[<span class="tk-n">1</span>], <span class="tk-n">15</span>)
+    <span class="tk-k">float</span> m2 = bit(rv[<span class="tk-n">1</span>] &gt; <span class="tk-n">1.5</span>, <span class="tk-n">0</span>) + bit(rv[<span class="tk-n">1</span>] &lt; <span class="tk-n">0.7</span>, <span class="tk-n">1</span>) + bit(eff[<span class="tk-n">1</span>] &gt; <span class="tk-n">0.3</span>, <span class="tk-n">2</span>) + bit(eff[<span class="tk-n">1</span>] &lt; -<span class="tk-n">0.3</span>, <span class="tk-n">3</span>) + bit(r2[<span class="tk-n">1</span>] &lt; <span class="tk-n">10</span>, <span class="tk-n">4</span>) + bit(r2[<span class="tk-n">1</span>] &gt; <span class="tk-n">90</span>, <span class="tk-n">5</span>) + bit(r14[<span class="tk-n">1</span>] &lt; <span class="tk-n">30</span>, <span class="tk-n">6</span>) + bit(r14[<span class="tk-n">1</span>] &gt; <span class="tk-n">70</span>, <span class="tk-n">7</span>) + bit(dn3[<span class="tk-n">1</span>], <span class="tk-n">8</span>) + bit(up3[<span class="tk-n">1</span>], <span class="tk-n">9</span>) + bit(gap &gt; <span class="tk-n">1</span>, <span class="tk-n">10</span>) + bit(gap &gt; <span class="tk-n">0.25</span> <span class="tk-k">and</span> gap &lt;= <span class="tk-n">1</span>, <span class="tk-n">11</span>) + bit(gap &lt; -<span class="tk-n">0.25</span> <span class="tk-k">and</span> gap &gt;= -<span class="tk-n">1</span>, <span class="tk-n">12</span>) + bit(gap &lt; -<span class="tk-n">1</span>, <span class="tk-n">13</span>) + bit(open &gt; high[<span class="tk-n">1</span>], <span class="tk-n">14</span>) + bit(open &lt; low[<span class="tk-n">1</span>], <span class="tk-n">15</span>)
+    [m1, m2, close[<span class="tk-n">1</span>] / close[<span class="tk-n">21</span>] - <span class="tk-n">1</span>]
+
+fact(<span class="tk-k">float</span> m1, <span class="tk-k">float</span> m2, <span class="tk-k">int</span> j) =&gt;
+    j &lt; <span class="tk-n">16</span> ? has(m1, j) : has(m2, j - <span class="tk-n">16</span>)
+
+rid(<span class="tk-k">string</span> s) =&gt;
+    ticker.modify(s, session = session.regular)
+
+[mm1, mm2, mRet] = request.security(rid(mktSym), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+<span class="tk-k">int</span>  dow = dayofweek(time, NY)
+<span class="tk-k">bool</span> mon = dow == dayofweek.monday
+<span class="tk-k">bool</span> fri = dow == dayofweek.friday
+<span class="tk-k">bool</span> tom = dayofmonth(time, NY) &lt;= <span class="tk-n">3</span>
+<span class="tk-c">// which of SPY's facts are the 14 market conditions, in Edge Reader's order</span>
+<span class="tk-k">var</span> <span class="tk-k">array</span>&lt;<span class="tk-k">int</span>&gt; MKT = <span class="tk-k">array</span>.from(<span class="tk-n">0</span>, <span class="tk-n">1</span>, <span class="tk-n">2</span>, <span class="tk-n">3</span>, <span class="tk-n">20</span>, <span class="tk-n">21</span>, <span class="tk-n">26</span>, <span class="tk-n">29</span>, <span class="tk-n">27</span>, <span class="tk-n">28</span>, <span class="tk-n">24</span>, <span class="tk-n">25</span>, <span class="tk-n">6</span>, <span class="tk-n">7</span>)
+
+<span class="tk-c">// Day score for one side, and its biggest reason</span>
+score(<span class="tk-k">float</span> m1, <span class="tk-k">float</span> m2, <span class="tk-k">float</span> ret, <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt; pts, <span class="tk-k">float</span> base) =&gt;
+    <span class="tk-k">float</span> s    = base
+    <span class="tk-k">float</span> best = <span class="tk-n">0.0</span>
+    <span class="tk-k">int</span>   bi   = -<span class="tk-n">1</span>
+    <span class="tk-k">for</span> j = <span class="tk-n">0</span> to <span class="tk-n">50</span>
+        <span class="tk-k">bool</span> isOn = j &lt; <span class="tk-n">32</span> ? fact(m1, m2, j) : j &lt; <span class="tk-n">46</span> ? fact(mm1, mm2, <span class="tk-k">array</span>.get(MKT, j - <span class="tk-n">32</span>)) : j == <span class="tk-n">46</span> ? ret - mRet &gt; <span class="tk-n">0.05</span> : j == <span class="tk-n">47</span> ? ret - mRet &lt; -<span class="tk-n">0.05</span> : j == <span class="tk-n">48</span> ? mon : j == <span class="tk-n">49</span> ? fri : tom
+        <span class="tk-k">if</span> isOn
+            <span class="tk-k">float</span> v = <span class="tk-k">array</span>.get(pts, j)
+            s += v
+            <span class="tk-k">if</span> math.abs(v) &gt; math.abs(best)
+                best := v
+                bi   := j
+    [s, bi &lt; <span class="tk-n">0</span> ? <span class="tk-s">"-"</span> : <span class="tk-k">array</span>.get(D_NAMES, bi) + <span class="tk-s">" "</span> + (best &gt;= <span class="tk-n">0</span> ? <span class="tk-s">"+"</span> : <span class="tk-s">""</span>) + str.tostring(best, <span class="tk-s">"0.00"</span>)]
+
+costR(<span class="tk-k">float</span> c, <span class="tk-k">float</span> atr5) =&gt;
+    atr5 &gt; <span class="tk-n">0</span> ? <span class="tk-n">2</span> * (slipCents + slipPct / <span class="tk-n">100</span> * c) / (<span class="tk-n">1.5</span> * atr5) : <span class="tk-k">na</span>
+
+[a01, b01, r01] = request.security(rid(s01), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a02, b02, r02] = request.security(rid(s02), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a03, b03, r03] = request.security(rid(s03), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a04, b04, r04] = request.security(rid(s04), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a05, b05, r05] = request.security(rid(s05), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a06, b06, r06] = request.security(rid(s06), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a07, b07, r07] = request.security(rid(s07), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a08, b08, r08] = request.security(rid(s08), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a09, b09, r09] = request.security(rid(s09), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a10, b10, r10] = request.security(rid(s10), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a11, b11, r11] = request.security(rid(s11), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a12, b12, r12] = request.security(rid(s12), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a13, b13, r13] = request.security(rid(s13), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a14, b14, r14] = request.security(rid(s14), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[a15, b15, r15] = request.security(rid(s15), <span class="tk-s">"D"</span>, dayMask(), lookahead = barmerge.lookahead_on)
+[c01, t01] = request.security(rid(s01), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c02, t02] = request.security(rid(s02), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c03, t03] = request.security(rid(s03), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c04, t04] = request.security(rid(s04), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c05, t05] = request.security(rid(s05), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c06, t06] = request.security(rid(s06), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c07, t07] = request.security(rid(s07), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c08, t08] = request.security(rid(s08), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c09, t09] = request.security(rid(s09), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c10, t10] = request.security(rid(s10), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c11, t11] = request.security(rid(s11), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c12, t12] = request.security(rid(s12), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c13, t13] = request.security(rid(s13), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c14, t14] = request.security(rid(s14), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+[c15, t15] = request.security(rid(s15), timeframe.period, [close, ta.atr(<span class="tk-n">14</span>)])
+
+<span class="tk-c">// ----- Table -----</span>
+posOf(<span class="tk-k">string</span> p) =&gt;
+    <span class="tk-k">switch</span> p
+        <span class="tk-s">"Top left"</span>     =&gt; position.top_left
+        <span class="tk-s">"Bottom left"</span>  =&gt; position.bottom_left
+        <span class="tk-s">"Bottom right"</span> =&gt; position.bottom_right
+        =&gt; position.top_right
+
+<span class="tk-k">string</span> tSize = <span class="tk-k">switch</span> panelSize
+    <span class="tk-s">"Tiny"</span>   =&gt; size.tiny
+    <span class="tk-s">"Normal"</span> =&gt; size.normal
+    =&gt; size.small
+
+<span class="tk-k">var</span> <span class="tk-k">table</span> tbl = <span class="tk-k">table</span>.new(posOf(panelPos), <span class="tk-n">4</span>, <span class="tk-n">17</span>, bgcolor = <span class="tk-k">color</span>.new(chart.bg_color, <span class="tk-n">5</span>), border_color = <span class="tk-k">color</span>.new(chart.fg_color, <span class="tk-n">85</span>), border_width = <span class="tk-n">1</span>)
+
+cell(<span class="tk-k">int</span> c, <span class="tk-k">int</span> r, <span class="tk-k">string</span> t, <span class="tk-k">color</span> tc) =&gt;
+    <span class="tk-k">table</span>.cell(tbl, c, r, t, text_color = tc, text_size = tSize, text_halign = text.align_left)
+
+nameOf(<span class="tk-k">string</span> s) =&gt;
+    <span class="tk-k">int</span> p = str.pos(s, <span class="tk-s">":"</span>)
+    <span class="tk-k">na</span>(p) ? s : str.substring(s, p + <span class="tk-n">1</span>)
+
+sgn(<span class="tk-k">float</span> x) =&gt;
+    <span class="tk-k">na</span>(x) ? <span class="tk-s">"-"</span> : (x &gt;= <span class="tk-n">0</span> ? <span class="tk-s">"+"</span> : <span class="tk-s">""</span>) + str.tostring(x, <span class="tk-s">"0.00"</span>)
+
+<span class="tk-k">if</span> barstate.islast
+    <span class="tk-k">array</span>&lt;<span class="tk-k">string</span>&gt; syms = <span class="tk-k">array</span>.from(s01, s02, s03, s04, s05, s06, s07, s08, s09, s10, s11, s12, s13, s14, s15)
+    <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt;  m1s  = <span class="tk-k">array</span>.from(a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11, a12, a13, a14, a15)
+    <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt;  m2s  = <span class="tk-k">array</span>.from(b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15)
+    <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt;  rets = <span class="tk-k">array</span>.from(r01, r02, r03, r04, r05, r06, r07, r08, r09, r10, r11, r12, r13, r14, r15)
+    <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt;  cls  = <span class="tk-k">array</span>.from(c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11, c12, c13, c14, c15)
+    <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt;  atrs = <span class="tk-k">array</span>.from(t01, t02, t03, t04, t05, t06, t07, t08, t09, t10, t11, t12, t13, t14, t15)
+    <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt;  eLs  = <span class="tk-k">array</span>.new&lt;<span class="tk-k">float</span>&gt;()
+    <span class="tk-k">array</span>&lt;<span class="tk-k">float</span>&gt;  eSs  = <span class="tk-k">array</span>.new&lt;<span class="tk-k">float</span>&gt;()
+    <span class="tk-k">array</span>&lt;<span class="tk-k">string</span>&gt; why  = <span class="tk-k">array</span>.new&lt;<span class="tk-k">string</span>&gt;()
+    <span class="tk-k">for</span> i = <span class="tk-n">0</span> to nSym - <span class="tk-n">1</span>
+        [sL, wL] = score(<span class="tk-k">array</span>.get(m1s, i), <span class="tk-k">array</span>.get(m2s, i), <span class="tk-k">array</span>.get(rets, i), D_L, D0_L)
+        [sS, wS] = score(<span class="tk-k">array</span>.get(m1s, i), <span class="tk-k">array</span>.get(m2s, i), <span class="tk-k">array</span>.get(rets, i), D_S, D0_S)
+        <span class="tk-k">float</span> cost = costR(<span class="tk-k">array</span>.get(cls, i), <span class="tk-k">array</span>.get(atrs, i))
+        <span class="tk-k">array</span>.push(eLs, nz(A_L + K_L * sL - cost, -<span class="tk-n">9.0</span>))
+        <span class="tk-k">array</span>.push(eSs, A_S + K_S * sS - cost)
+        <span class="tk-k">array</span>.push(why, wL)
+    <span class="tk-k">array</span>&lt;<span class="tk-k">int</span>&gt; rank = <span class="tk-k">array</span>.sort_indices(eLs, order.descending)
+    cell(<span class="tk-n">0</span>, <span class="tk-n">0</span>, <span class="tk-s">"Edge Radar"</span>, chart.fg_color)
+    cell(<span class="tk-n">1</span>, <span class="tk-n">0</span>, <span class="tk-s">"Long R"</span>, chart.fg_color)
+    cell(<span class="tk-n">2</span>, <span class="tk-n">0</span>, <span class="tk-s">"Short R"</span>, chart.fg_color)
+    cell(<span class="tk-n">3</span>, <span class="tk-n">0</span>, <span class="tk-s">"Main reason (long), needs "</span> + sgn(minEdge), chart.fg_color)
+    <span class="tk-k">for</span> r = <span class="tk-n">0</span> to nSym - <span class="tk-n">1</span>
+        <span class="tk-k">int</span>   i  = <span class="tk-k">array</span>.get(rank, r)
+        <span class="tk-k">float</span> eL = <span class="tk-k">array</span>.get(eLs, i)
+        <span class="tk-k">float</span> eS = <span class="tk-k">array</span>.get(eSs, i)
+        cell(<span class="tk-n">0</span>, r + <span class="tk-n">1</span>, nameOf(<span class="tk-k">array</span>.get(syms, i)), chart.fg_color)
+        cell(<span class="tk-n">1</span>, r + <span class="tk-n">1</span>, eL &lt;= -<span class="tk-n">9.0</span> ? <span class="tk-s">"-"</span> : sgn(eL), eL &gt;= minEdge ? cBuy : eL &lt; <span class="tk-n">0</span> ? cSell : chart.fg_color)
+        cell(<span class="tk-n">2</span>, r + <span class="tk-n">1</span>, sgn(eS), eS &gt;= minEdge ? cBuy : cMute)
+        cell(<span class="tk-n">3</span>, r + <span class="tk-n">1</span>, <span class="tk-k">array</span>.get(why, i), cMute)
+    cell(<span class="tk-n">0</span>, nSym + <span class="tk-n">1</span>, <span class="tk-s">"Daily part only"</span>, cMute)
+    cell(<span class="tk-n">3</span>, nSym + <span class="tk-n">1</span>, <span class="tk-s">"after each stock's slippage; open Edge Reader for the full reading"</span>, cMute)</code></pre></div>
+  <div class="code"><div class="codebar"><div><div class="file">DT_Volume.pine</div><div class="meta">indicator · optional · 33 lines</div></div>
+    <div class="btns"><button type="button" class="expand">Expand</button><button type="button" class="primary copy">Copy</button></div></div>
+<pre><code><span class="tk-c">//@version=6</span>
+<span class="tk-c">// ======================================================================</span>
+<span class="tk-c">//  DT Volume - volume columns that light up on spikes</span>
+<span class="tk-c">//  Replaces the built-in Volume indicator. Faded bars are ordinary volume;</span>
+<span class="tk-c">//  full-color bars traded at least Nx the recent average (institutional</span>
+<span class="tk-c">//  participation; Aziz and Bellafiore look for it on breakouts).</span>
+<span class="tk-c">//  Educational tool. Not financial advice.</span>
+<span class="tk-c">// ======================================================================</span>
+indicator(<span class="tk-s">"DT Volume"</span>, format = format.volume)
+
+<span class="tk-k">int</span>   avgLen = input.<span class="tk-k">int</span>(<span class="tk-n">20</span>, <span class="tk-s">"Average length"</span>, minval = <span class="tk-n">1</span>)
+<span class="tk-k">float</span> spikeX = input.<span class="tk-k">float</span>(<span class="tk-n">1.5</span>, <span class="tk-s">"Spike threshold (x average)"</span>, minval = <span class="tk-n">1</span>, step = <span class="tk-n">0.1</span>, tooltip = <span class="tk-s">"Bars at or above this multiple of the average are drawn in full color."</span>)
+<span class="tk-k">color</span> cUp    = input.<span class="tk-k">color</span>(<span class="tk-n">#26a69a</span>, <span class="tk-s">"Up"</span>, inline = <span class="tk-s">"c"</span>)
+<span class="tk-k">color</span> cDn    = input.<span class="tk-k">color</span>(<span class="tk-n">#ef5350</span>, <span class="tk-s">"Down"</span>, inline = <span class="tk-s">"c"</span>)
+<span class="tk-k">color</span> cAvg   = input.<span class="tk-k">color</span>(<span class="tk-n">#f5a623</span>, <span class="tk-s">"Average"</span>, inline = <span class="tk-s">"c"</span>)
+
+<span class="tk-k">float</span> v     = nz(volume)
+<span class="tk-k">float</span> vAvg  = ta.sma(v, avgLen)
+<span class="tk-k">bool</span>  up    = close &gt;= open
+<span class="tk-k">bool</span>  spike = <span class="tk-k">not</span> <span class="tk-k">na</span>(vAvg) <span class="tk-k">and</span> vAvg &gt; <span class="tk-n">0</span> <span class="tk-k">and</span> v &gt;= spikeX * vAvg
+<span class="tk-k">color</span> col   = spike ? (up ? cUp : cDn) : <span class="tk-k">color</span>.new(up ? cUp : cDn, <span class="tk-n">65</span>)
+
+plot(v, <span class="tk-s">"Volume"</span>, col, style = plot.style_columns)
+plot(vAvg, <span class="tk-s">"Average"</span>, cAvg, <span class="tk-n">1</span>)
+plot(vAvg * spikeX, <span class="tk-s">"Spike threshold"</span>, <span class="tk-k">color</span>.new(cAvg, <span class="tk-n">70</span>), <span class="tk-n">1</span>, display = display.none)
+
+<span class="tk-k">bool</span> spikeUp = spike <span class="tk-k">and</span> up
+<span class="tk-k">bool</span> spikeDn = spike <span class="tk-k">and</span> <span class="tk-k">not</span> up
+<span class="tk-k">if</span> spike
+    alert(syminfo.ticker + <span class="tk-s">" "</span> + timeframe.period + <span class="tk-s">": volume spike "</span> + str.tostring(v / vAvg, <span class="tk-s">"0.0"</span>) + <span class="tk-s">"x average on a "</span> + (up ? <span class="tk-s">"green"</span> : <span class="tk-s">"red"</span>) + <span class="tk-s">" bar - last "</span> + str.tostring(close, format.mintick), alert.freq_once_per_bar_close)
+
+alertcondition(spikeUp, <span class="tk-s">"Volume spike on up bar"</span>, <span class="tk-s">"{{ticker}} {{interval}}: volume spike on an up bar at {{close}}"</span>)
+alertcondition(spikeDn, <span class="tk-s">"Volume spike on down bar"</span>, <span class="tk-s">"{{ticker}} {{interval}}: volume spike on a down bar at {{close}}"</span>)</code></pre></div>
+  <p class="muted">Compile error? Send me the message and the line number the editor highlights.</p>
+</section>
+
+<section id="alerts">
+  <h2>Alerts</h2>
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Alert</th><th>Condition</th><th>Send to</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Orders</strong>, on each stock's 5-minute chart</td><td>Edge Reader → Order fills only. Message exactly <span class="mono">{{strategy.order.alert_message}}</span></td><td>Webhook URL (the bridge)</td></tr>
+      <tr><td><strong>Phone</strong>, same charts</td><td>Edge Reader → alert() function calls only</td><td>App notification: BUY, SELL and SHORT in plain words</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">Alerts run on TradingView's servers, so they fire with the app closed. Set them to expire as late as your plan allows.</p>
+</section>
+
+<section id="execute">
+  <h2>Execute</h2>
+  <div class="grid2">
+    <div><h3>By hand</h3>
+      <ol class="steps">
+        <li><div><p>Tap the BUY notification. It names the shares, stop and target.</p></div></li>
+        <li><div><p>Long-press the chart and tap <strong>+</strong> to create an order with your connected moomoo account.</p></div></li>
+        <li><div><p>Buy, Limit, at the alert price, with <strong>Take profit</strong> and <strong>Stop loss</strong> turned on.</p></div></li>
+        <li><div><p>At 3:55 PM, close anything still open.</p></div></li>
+      </ol>
+    </div>
+    <div><h3>With the bridge</h3>
+      <p>A small program on a computer that stays on places the Orders alerts in moomoo through OpenAPI.</p>
+      <ul>
+        <li>Refuses anything below your minimum expected R.</li>
+        <li>Limit entries that never chase more than 0.15%.</li>
+        <li>A stop at moomoo the moment shares fill.</li>
+        <li>Closes everything at 3:55 PM by its own clock.</li>
+        <li>3 open positions at most; stops for the day at −3R; shorts off unless you allow them.</li>
+      </ul>
+      <p>Dry run first, then paper, then live and small: <a href="https://github.com/sclerostin/claudina/tree/claude/eloquent-goodall-yg43d0/tradingview/moomoo_bridge">moomoo_bridge/README.md</a>.</p>
+    </div>
+  </div>
+</section>
+
+<section id="settings">
+  <h2>Settings</h2>
+  <div class="tablewrap"><table class="data">
+    <thead><tr><th>Setting</th><th>Default</th><th>Notes</th></tr></thead>
+    <tbody>
+      <tr><td>Mode</td><td class="n">Trade</td><td>Measure long / Measure short only for Deep Backtesting</td></tr>
+      <tr><td>Minimum expected R</td><td class="n">+0.05</td><td>After costs. Lowering it gives more signals with less edge</td></tr>
+      <tr><td>Allow shorts</td><td class="n">off</td><td>Shorts lost money in most years of the daily test</td></tr>
+      <tr><td>Slippage per fill</td><td class="n">$0.01 + 0.01%</td><td>Set to what you actually get; it moves every expected R</td></tr>
+      <tr><td>Stop and target</td><td class="n">1.5 ATR, 2R</td><td>Fixed: the evidence was measured with these</td></tr>
+      <tr><td>Risk per trade</td><td class="n">0.5%</td><td>0.25–1% is the usual range (Tharp, Elder)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<footer>
+  <p>Files on your GitHub branch <span class="mono">claude/eloquent-goodall-yg43d0</span>: <span class="mono">tradingview/pine/</span> (scripts), <span class="mono">tradingview/moomoo_bridge/</span> (automation), <span class="mono">tradingview/research/</span> (the method, its tests and refit.py).</p>
+  <p>Educational tool, not financial advice. Most day traders lose money: fewer than 1% of Taiwanese day traders were predictably profitable (Barber, Lee, Liu &amp; Odean, 2014). Paper trade first and keep risk small.</p>
+</footer>
+</div>
+
+<script>
+(function () {
+  document.querySelectorAll(".code").forEach(function (box) {
+    var code = box.querySelector("code"), copy = box.querySelector(".copy"), expand = box.querySelector(".expand");
+    expand.addEventListener("click", function () {
+      var open = box.classList.toggle("open");
+      expand.textContent = open ? "Collapse" : "Expand";
+    });
+    copy.addEventListener("click", function () {
+      var done = function () { copy.textContent = "Copied"; setTimeout(function () { copy.textContent = "Copy"; }, 1800); };
+      var fallback = function () {
+        var r = document.createRange(); r.selectNodeContents(code);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+        copy.textContent = "Selected: tap Copy";
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(code.textContent).then(done, fallback);
+      else fallback();
+    });
+  });
+
+  // Calibration columns: realized R by predicted tenth, out of sample 2017-2026 (research/method_results.txt)
+  var vals = [-0.048, -0.048, -0.034, -0.033, -0.045, -0.031, -0.033, -0.029, -0.004, 0.034];
+  var svg = document.getElementById("calsvg"), tip = document.getElementById("caltip"), fig = document.getElementById("calib");
+  var NS = "http://www.w3.org/2000/svg", W = 640, H = 260, L = 56, R = 12, T = 22, B = 44;
+  var lo = -0.06, hi = 0.04, ticks = [-0.06, -0.04, -0.02, 0, 0.02, 0.04];
+  var y = function (v) { return T + (hi - v) / (hi - lo) * (H - T - B); };
+  var band = (W - L - R) / vals.length, bw = Math.min(24, band * 0.6);
+  var css = getComputedStyle(document.documentElement), c = function (n) { return css.getPropertyValue(n).trim(); };
+  function el(name, attrs, text) {
+    var e = document.createElementNS(NS, name);
+    for (var k in attrs) e.setAttribute(k, attrs[k]);
+    if (text != null) e.textContent = text;
+    svg.appendChild(e); return e;
+  }
+  var fmt = function (v) { return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(2); };
+  var fmt3 = function (v) { return (v > 0 ? "+" : v < 0 ? "−" : "") + Math.abs(v).toFixed(3); };
+  ticks.forEach(function (t) {
+    el("line", { x1: L, x2: W - R, y1: y(t), y2: y(t), stroke: t === 0 ? c("--ink-2") : c("--grid"), "stroke-width": 1 });
+    el("text", { x: L - 8, y: y(t) + 4, "text-anchor": "end", fill: c("--ink-2"), "font-size": 11, "font-family": "IBM Plex Mono, monospace" }, fmt(t) + "R");
+  });
+  function colPath(x, v) {                       // 4px rounded at the data end, square at the zero baseline
+    var y0 = y(0), y1 = y(v), w = bw, r = Math.min(4, Math.abs(y1 - y0)), s = v >= 0 ? 1 : -1;
+    return "M" + x + "," + y0 + "V" + (y1 + s * r) + "Q" + x + "," + y1 + " " + (x + r) + "," + y1 + "H" + (x + w - r) +
+      "Q" + (x + w) + "," + y1 + " " + (x + w) + "," + (y1 + s * r) + "V" + y0 + "Z";
+  }
+  var rows = document.getElementById("caltable");
+  vals.forEach(function (v, i) {
+    var cx = L + band * (i + 0.5);
+    el("path", { d: colPath(cx - bw / 2, v), fill: c("--accent") });
+    el("text", { x: cx, y: H - 24, "text-anchor": "middle", fill: c("--ink-2"), "font-size": 11, "font-family": "IBM Plex Mono, monospace" }, String(i + 1));
+    var hit = el("rect", { x: L + band * i, y: T, width: band, height: H - T - B, fill: "transparent" });
+    var label = "Tenth " + (i + 1) + (i === 0 ? " (rated worst)" : i === 9 ? " (rated best)" : "") + ": " + fmt3(v) + "R";
+    var show = function () {
+      var box = svg.getBoundingClientRect(), k = box.width / W, fb = fig.getBoundingClientRect();
+      tip.textContent = label; tip.hidden = false;
+      tip.style.left = Math.max(60, Math.min(fb.width - 60, box.left - fb.left + cx * k)) + "px";
+      tip.style.top = (box.top - fb.top + Math.min(y(v), y(0)) * k - 6) + "px";
+    };
+    hit.addEventListener("mouseenter", show); hit.addEventListener("click", show);
+    hit.addEventListener("mouseleave", function () { tip.hidden = true; });
+    var tr = document.createElement("tr");
+    tr.innerHTML = "<td>" + (i + 1) + "</td><td class=\"n\">" + fmt3(v) + "R</td>";
+    rows.appendChild(tr);
+  });
+  el("text", { x: L + band * 9.5, y: y(0.034) - 8, "text-anchor": "middle", fill: c("--ink"), "font-size": 12, "font-weight": 600, "font-family": "IBM Plex Sans, sans-serif" }, "+0.03R");
+  el("text", { x: L + band * 0.5, y: y(-0.048) + 16, "text-anchor": "middle", fill: c("--ink"), "font-size": 12, "font-weight": 600, "font-family": "IBM Plex Sans, sans-serif" }, "−0.05R");
+  el("text", { x: (L + W - R) / 2, y: H - 4, "text-anchor": "middle", fill: c("--ink-2"), "font-size": 11, "font-family": "IBM Plex Sans, sans-serif" }, "tenth of stock-days by expected value (1 = rated worst)");
+})();
+</script>

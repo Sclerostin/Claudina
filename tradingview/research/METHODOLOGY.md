@@ -33,6 +33,7 @@ conditions don't carry enough information to pay for a 2R day trade.
 5. **Textbook baseline.** The same conditions with +1/−1 points straight from the books, nothing fitted.
 
 `method_study.py` reproduces every number below; its output is in `method_results.txt`.
+What ships from it is described at the end.
 
 ## Findings
 
@@ -93,3 +94,38 @@ The daily reading picks better days in both halves (about +0.05R), but slippage 
   (one daily-ATR-based trade a day), or with better fills on the most liquid stocks.
 - **Different questions for the method.** Stocks in play from a full-market scan, and short horizons
   with hedging, weren't testable with this data.
+
+## What ships: Edge Reader
+
+`pine/Edge_Reader.pine` implements the method on any 5-minute chart:
+
+    expected R = A + K x day score + (5-minute points of the conditions that are true) - slippage in R
+    day score  = D0 + (daily points of the daily conditions that are true)
+
+- **Daily points:** fitted on 2015–2025 only, so 2026 stays unseen by them.
+- **A and K:** fitted on 2026's 5-minute trades. These are the only two numbers that have seen 2026.
+- **5-minute points:** start at **zero**, because no 5-minute weighting held up out of sample.
+- **Slippage:** computed on every candle from your settings ($0.01 + 0.01% per fill by default) and
+  the trade's risk.
+
+With these starting points, expected R on 2026's candles ranged from about −0.32R to +0.01R for longs
+(at most +0.05R for shorts). So at the default minimum of +0.05R the engine signals almost never.
+That is the honest reading of this evidence.
+
+**The learning loop.** In Measure mode, the strategy takes up to two trades a day at set times
+whatever the conditions, and writes each trade's risk, day score and 46 condition bits into the
+trade's signal name. `refit.py` reads the List of Trades CSV exports from TradingView's Deep
+Backtesting and fits new points. It walk-forward tests them by year, and writes them into both
+Pine scripts (through `points.json` and `points.py`) only if the out-of-sample deciles line up
+(correlation ≥ 0.5) and the best tenth beats the average by at least 2 standard errors.
+
+The loop was tested two ways:
+
+| Test | Result |
+|---|---|
+| A planted +0.5R effect in synthetic trades | found and adopted |
+| Pure noise, 5 runs | rejected all 5 |
+| Measure trades simulated from this study's 2026 data (14,570 per side, 47 stocks) | rejected: out-of-sample correlation −0.86 (longs) and −0.79 (shorts), with the best tenth 2.4 and 3.0 standard errors *below* average |
+
+`test_refit.py` holds the first two tests. The third was a run of `refit.py --by month` on Measure-style
+trades built from this study's 2026 candles (same set times, same condition bits).

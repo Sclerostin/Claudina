@@ -1,0 +1,217 @@
+//@version=6
+// Edge Radar - today's expected R for up to 15 stocks, ranked, from the same evidence as Edge Reader
+//
+// Uses the daily part of Edge Reader's points (11 years of daily data) and each stock's own
+// slippage cost at its current price and 5-minute ATR. It does not include the 5-minute points,
+// so open the stock's chart with Edge Reader before acting. Put it on any 5-minute chart (SPY).
+// Educational tool, not financial advice.
+indicator("Edge Radar", overlay = true)
+
+string G1 = "Stocks"
+int    nSym = input.int(15, "How many stocks", minval = 1, maxval = 15, group = G1)
+string s01  = input.symbol("NASDAQ:NVDA", "1", group = G1)
+string s02  = input.symbol("NASDAQ:TSLA", "2", group = G1)
+string s03  = input.symbol("NASDAQ:AMD", "3", group = G1)
+string s04  = input.symbol("NASDAQ:META", "4", group = G1)
+string s05  = input.symbol("NASDAQ:AMZN", "5", group = G1)
+string s06  = input.symbol("NASDAQ:AAPL", "6", group = G1)
+string s07  = input.symbol("NASDAQ:MSFT", "7", group = G1)
+string s08  = input.symbol("NASDAQ:GOOGL", "8", group = G1)
+string s09  = input.symbol("NASDAQ:AVGO", "9", group = G1)
+string s10  = input.symbol("NASDAQ:PLTR", "10", group = G1)
+string s11  = input.symbol("NASDAQ:COIN", "11", group = G1)
+string s12  = input.symbol("NASDAQ:MU", "12", group = G1)
+string s13  = input.symbol("NASDAQ:NFLX", "13", group = G1)
+string s14  = input.symbol("NYSE:UBER", "14", group = G1)
+string s15  = input.symbol("NYSE:JPM", "15", group = G1)
+
+string G2 = "Same settings as Edge Reader"
+float  minEdge   = input.float(0.05, "Edge needed for a signal (R)", step = 0.01, group = G2)
+float  slipCents = input.float(0.01, "Slippage per fill ($ per share)", minval = 0, step = 0.005, group = G2)
+float  slipPct   = input.float(0.01, "Slippage per fill (% of price)", minval = 0, step = 0.005, group = G2)
+string mktSym    = input.symbol("AMEX:SPY", "Market", group = G2)
+
+string G3 = "Display"
+string panelPos  = input.string("Top right", "Table position", options = ["Top right", "Top left", "Bottom right", "Bottom left"], group = G3)
+string panelSize = input.string("Small", "Text size", options = ["Tiny", "Small", "Normal"], group = G3)
+
+color cBuy  = #26a69a
+color cSell = #ef5350
+color cMute = #9e9e9e
+
+// POINTS-BEGIN - written by research/points.py (refit.py); edit the numbers there, not here
+string PTS_NOTE = "day points: 2015-2025 daily data; 5-minute points: none yet (run Measure)"
+float A_L = 0.0089
+float K_L = 0.0846
+float D0_L = -0.2156
+var array<float> D_L = array.from(0.0010, 0.0294, 0.0647, 0.0573, -0.0022, 0.0145, 0.0252, 0.0093, 0.0079, 0.0169, 0.0045, 0.0330, -0.0130, 0.0155, 0.0008, 0.0100, -0.0235, -0.0002, -0.0169, -0.0048, -0.0072, -0.0179, 0.0697, -0.0460, 0.0183, 0.0062, -0.0024, 0.0014, 0.0273, 0.0370, 0.0294, 0.0165, 0.0016, -0.0269, 0.0577, 0.1192, -0.0003, 0.0045, -0.2388, 0.0417, -0.0158, 0.0131, 0.0764, 0.0286, -0.0244, 0.0294, 0.0218, -0.0265, 0.0943, -0.0030, 0.0308)
+var array<float> P_L = array.from(0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000)
+float A_S = 0.0315
+float K_S = 0.2931
+float D0_S = -0.1648
+var array<float> D_S = array.from(-0.0036, -0.0159, 0.0674, 0.0597, -0.0001, -0.0376, -0.0201, -0.0031, 0.0053, -0.0123, -0.0012, -0.0188, 0.0349, -0.0048, 0.0135, -0.0036, 0.0181, -0.0383, 0.0070, 0.0048, -0.0006, -0.0056, -0.0658, -0.0363, -0.0042, 0.0192, -0.0323, 0.0121, -0.0107, -0.0447, -0.0153, -0.0083, 0.0095, 0.0219, 0.0496, 0.0121, -0.0022, -0.0015, 0.2434, -0.0546, 0.0068, -0.0199, -0.0720, -0.0162, 0.0260, -0.0240, 0.0059, 0.0427, -0.0949, 0.0031, -0.0320)
+var array<float> P_S = array.from(0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000)
+var array<string> D_NAMES = array.from("stock in an uptrend", "stock in a downtrend", "above its 200-day average", "below its 200-day average", "near its 20-day low", "near its 20-day high", "stretched above its 20-day average", "stretched below its 20-day average", "narrowest day in 7", "inside day yesterday", "yesterday swept a low and reclaimed it", "yesterday swept a high and failed", "broke its 20-day high", "broke its 20-day low", "strong green day yesterday", "strong red day yesterday", "heavy volume yesterday", "light volume yesterday", "buyers led the last 5 days", "sellers led the last 5 days", "daily RSI(2) oversold", "daily RSI(2) overbought", "daily RSI(14) under 30", "daily RSI(14) over 70", "3 down days in a row", "3 up days in a row", "gapped up over 1 ATR", "gapped up", "gapped down", "gapped down over 1 ATR", "opened above yesterday's high", "opened below yesterday's low", "SPY in an uptrend", "SPY in a downtrend", "SPY above its 200-day", "SPY below its 200-day", "SPY oversold (RSI 2)", "SPY overbought (RSI 2)", "SPY gapped up over 1 ATR", "SPY gapped down over 1 ATR", "SPY gapped up", "SPY gapped down", "SPY down 3 days in a row", "SPY up 3 days in a row", "SPY stretched up", "SPY stretched down", "stronger than SPY over 20 days", "weaker than SPY over 20 days", "Monday", "Friday", "turn of the month")
+var array<string> P_NAMES = array.from("daily uptrend", "daily downtrend", "intraday uptrend", "intraday downtrend", "over 2 sd below VWAP", "1-2 sd below VWAP", "1-2 sd above VWAP", "over 2 sd above VWAP", "lower third of the day", "upper third of the day", "above the opening range", "below the opening range", "above yesterday's high", "below yesterday's low", "stretched far above the EMA", "stretched far below the EMA", "tight range (accumulation)", "low swept and reclaimed", "high swept and rejected", "broke the last hour's high", "broke the last hour's low", "strong green candle", "strong red candle", "quiet volume", "in play (1.5x volume)", "climax volume candle", "buyers in control", "sellers in control", "5-min RSI(2) oversold", "5-min RSI(2) overbought", "stronger than SPY today", "weaker than SPY today", "SPY above VWAP", "market fear day", "market euphoria day", "gapped up over 1 ATR", "gapped down over 1 ATR", "first hour", "lunch hours", "afternoon", "spring in an uptrend", "spring at a discount", "breakout with volume", "deep dip in a daily uptrend", "upthrust in a downtrend", "breakdown with volume")
+// POINTS-END
+
+string NY = "America/New_York"
+
+bit(bool x, int i) =>
+    x ? math.pow(2, i) : 0.0
+
+has(float m, int i) =>
+    math.floor(m / math.pow(2, i)) % 2 == 1
+
+// A stock's 32 daily facts known at the open, packed into two numbers (same facts as Edge Reader)
+dayMask() =>
+    float atrD = ta.sma(ta.tr(true), 14)
+    float s20  = ta.sma(close, 20)
+    float s50  = ta.sma(close, 50)
+    float s200 = ta.sma(close, 200)
+    float hi20 = ta.highest(high, 20)
+    float lo20 = ta.lowest(low, 20)
+    float rngD = high - low
+    float eff  = math.sum(volume * math.sign(close - open), 5) / math.sum(volume, 5)
+    float r2   = ta.rsi(close, 2)
+    float r14  = ta.rsi(close, 14)
+    float pos  = hi20 > lo20 ? (close - lo20) / (hi20 - lo20) : na
+    float strD = atrD > 0 ? (close - s20) / atrD : na
+    float rv   = volume / ta.sma(volume, 20)
+    bool  trUp = close > s20 and s20 > s50
+    bool  trDn = close < s20 and s20 < s50
+    bool  nr7  = rngD > 0 and rngD == ta.lowest(rngD, 7)
+    bool  ins  = high < high[1] and low > low[1]
+    bool  dSpr = low < low[1] and close > low[1] and rngD > 0 and (close - low) >= 0.6 * rngD
+    bool  dUpt = high > high[1] and close < high[1] and rngD > 0 and (high - close) >= 0.6 * rngD
+    bool  bUp  = close > hi20[1]
+    bool  bDn  = close < lo20[1]
+    bool  bull = close > open and rngD > 0 and (close - low) >= 0.75 * rngD
+    bool  bear = close < open and rngD > 0 and (high - close) >= 0.75 * rngD
+    bool  dn3  = close < close[1] and close[1] < close[2] and close[2] < close[3]
+    bool  up3  = close > close[1] and close[1] > close[2] and close[2] > close[3]
+    float gap  = atrD[1] > 0 ? (open - close[1]) / atrD[1] : na
+    float m1 = bit(trUp[1], 0) + bit(trDn[1], 1) + bit(close[1] > s200[1], 2) + bit(close[1] < s200[1], 3) + bit(pos[1] < 0.2, 4) + bit(pos[1] > 0.8, 5) + bit(strD[1] > 2, 6) + bit(strD[1] < -2, 7) + bit(nr7[1], 8) + bit(ins[1], 9) + bit(dSpr[1], 10) + bit(dUpt[1], 11) + bit(bUp[1], 12) + bit(bDn[1], 13) + bit(bull[1], 14) + bit(bear[1], 15)
+    float m2 = bit(rv[1] > 1.5, 0) + bit(rv[1] < 0.7, 1) + bit(eff[1] > 0.3, 2) + bit(eff[1] < -0.3, 3) + bit(r2[1] < 10, 4) + bit(r2[1] > 90, 5) + bit(r14[1] < 30, 6) + bit(r14[1] > 70, 7) + bit(dn3[1], 8) + bit(up3[1], 9) + bit(gap > 1, 10) + bit(gap > 0.25 and gap <= 1, 11) + bit(gap < -0.25 and gap >= -1, 12) + bit(gap < -1, 13) + bit(open > high[1], 14) + bit(open < low[1], 15)
+    [m1, m2, close[1] / close[21] - 1]
+
+fact(float m1, float m2, int j) =>
+    j < 16 ? has(m1, j) : has(m2, j - 16)
+
+rid(string s) =>
+    ticker.modify(s, session = session.regular)
+
+[mm1, mm2, mRet] = request.security(rid(mktSym), "D", dayMask(), lookahead = barmerge.lookahead_on)
+int  dow = dayofweek(time, NY)
+bool mon = dow == dayofweek.monday
+bool fri = dow == dayofweek.friday
+bool tom = dayofmonth(time, NY) <= 3
+// which of SPY's facts are the 14 market conditions, in Edge Reader's order
+var array<int> MKT = array.from(0, 1, 2, 3, 20, 21, 26, 29, 27, 28, 24, 25, 6, 7)
+
+// Day score for one side, and its biggest reason
+score(float m1, float m2, float ret, array<float> pts, float base) =>
+    float s    = base
+    float best = 0.0
+    int   bi   = -1
+    for j = 0 to 50
+        bool isOn = j < 32 ? fact(m1, m2, j) : j < 46 ? fact(mm1, mm2, array.get(MKT, j - 32)) : j == 46 ? ret - mRet > 0.05 : j == 47 ? ret - mRet < -0.05 : j == 48 ? mon : j == 49 ? fri : tom
+        if isOn
+            float v = array.get(pts, j)
+            s += v
+            if math.abs(v) > math.abs(best)
+                best := v
+                bi   := j
+    [s, bi < 0 ? "-" : array.get(D_NAMES, bi) + " " + (best >= 0 ? "+" : "") + str.tostring(best, "0.00")]
+
+costR(float c, float atr5) =>
+    atr5 > 0 ? 2 * (slipCents + slipPct / 100 * c) / (1.5 * atr5) : na
+
+[a01, b01, r01] = request.security(rid(s01), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a02, b02, r02] = request.security(rid(s02), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a03, b03, r03] = request.security(rid(s03), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a04, b04, r04] = request.security(rid(s04), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a05, b05, r05] = request.security(rid(s05), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a06, b06, r06] = request.security(rid(s06), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a07, b07, r07] = request.security(rid(s07), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a08, b08, r08] = request.security(rid(s08), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a09, b09, r09] = request.security(rid(s09), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a10, b10, r10] = request.security(rid(s10), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a11, b11, r11] = request.security(rid(s11), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a12, b12, r12] = request.security(rid(s12), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a13, b13, r13] = request.security(rid(s13), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a14, b14, r14] = request.security(rid(s14), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[a15, b15, r15] = request.security(rid(s15), "D", dayMask(), lookahead = barmerge.lookahead_on)
+[c01, t01] = request.security(rid(s01), timeframe.period, [close, ta.atr(14)])
+[c02, t02] = request.security(rid(s02), timeframe.period, [close, ta.atr(14)])
+[c03, t03] = request.security(rid(s03), timeframe.period, [close, ta.atr(14)])
+[c04, t04] = request.security(rid(s04), timeframe.period, [close, ta.atr(14)])
+[c05, t05] = request.security(rid(s05), timeframe.period, [close, ta.atr(14)])
+[c06, t06] = request.security(rid(s06), timeframe.period, [close, ta.atr(14)])
+[c07, t07] = request.security(rid(s07), timeframe.period, [close, ta.atr(14)])
+[c08, t08] = request.security(rid(s08), timeframe.period, [close, ta.atr(14)])
+[c09, t09] = request.security(rid(s09), timeframe.period, [close, ta.atr(14)])
+[c10, t10] = request.security(rid(s10), timeframe.period, [close, ta.atr(14)])
+[c11, t11] = request.security(rid(s11), timeframe.period, [close, ta.atr(14)])
+[c12, t12] = request.security(rid(s12), timeframe.period, [close, ta.atr(14)])
+[c13, t13] = request.security(rid(s13), timeframe.period, [close, ta.atr(14)])
+[c14, t14] = request.security(rid(s14), timeframe.period, [close, ta.atr(14)])
+[c15, t15] = request.security(rid(s15), timeframe.period, [close, ta.atr(14)])
+
+// ----- Table -----
+posOf(string p) =>
+    switch p
+        "Top left"     => position.top_left
+        "Bottom left"  => position.bottom_left
+        "Bottom right" => position.bottom_right
+        => position.top_right
+
+string tSize = switch panelSize
+    "Tiny"   => size.tiny
+    "Normal" => size.normal
+    => size.small
+
+var table tbl = table.new(posOf(panelPos), 4, 17, bgcolor = color.new(chart.bg_color, 5), border_color = color.new(chart.fg_color, 85), border_width = 1)
+
+cell(int c, int r, string t, color tc) =>
+    table.cell(tbl, c, r, t, text_color = tc, text_size = tSize, text_halign = text.align_left)
+
+nameOf(string s) =>
+    int p = str.pos(s, ":")
+    na(p) ? s : str.substring(s, p + 1)
+
+sgn(float x) =>
+    na(x) ? "-" : (x >= 0 ? "+" : "") + str.tostring(x, "0.00")
+
+if barstate.islast
+    array<string> syms = array.from(s01, s02, s03, s04, s05, s06, s07, s08, s09, s10, s11, s12, s13, s14, s15)
+    array<float>  m1s  = array.from(a01, a02, a03, a04, a05, a06, a07, a08, a09, a10, a11, a12, a13, a14, a15)
+    array<float>  m2s  = array.from(b01, b02, b03, b04, b05, b06, b07, b08, b09, b10, b11, b12, b13, b14, b15)
+    array<float>  rets = array.from(r01, r02, r03, r04, r05, r06, r07, r08, r09, r10, r11, r12, r13, r14, r15)
+    array<float>  cls  = array.from(c01, c02, c03, c04, c05, c06, c07, c08, c09, c10, c11, c12, c13, c14, c15)
+    array<float>  atrs = array.from(t01, t02, t03, t04, t05, t06, t07, t08, t09, t10, t11, t12, t13, t14, t15)
+    array<float>  eLs  = array.new<float>()
+    array<float>  eSs  = array.new<float>()
+    array<string> why  = array.new<string>()
+    for i = 0 to nSym - 1
+        [sL, wL] = score(array.get(m1s, i), array.get(m2s, i), array.get(rets, i), D_L, D0_L)
+        [sS, wS] = score(array.get(m1s, i), array.get(m2s, i), array.get(rets, i), D_S, D0_S)
+        float cost = costR(array.get(cls, i), array.get(atrs, i))
+        array.push(eLs, nz(A_L + K_L * sL - cost, -9.0))
+        array.push(eSs, A_S + K_S * sS - cost)
+        array.push(why, wL)
+    array<int> rank = array.sort_indices(eLs, order.descending)
+    cell(0, 0, "Edge Radar", chart.fg_color)
+    cell(1, 0, "Long R", chart.fg_color)
+    cell(2, 0, "Short R", chart.fg_color)
+    cell(3, 0, "Main reason (long), needs " + sgn(minEdge), chart.fg_color)
+    for r = 0 to nSym - 1
+        int   i  = array.get(rank, r)
+        float eL = array.get(eLs, i)
+        float eS = array.get(eSs, i)
+        cell(0, r + 1, nameOf(array.get(syms, i)), chart.fg_color)
+        cell(1, r + 1, eL <= -9.0 ? "-" : sgn(eL), eL >= minEdge ? cBuy : eL < 0 ? cSell : chart.fg_color)
+        cell(2, r + 1, sgn(eS), eS >= minEdge ? cBuy : cMute)
+        cell(3, r + 1, array.get(why, i), cMute)
+    cell(0, nSym + 1, "Daily part only", cMute)
+    cell(3, nSym + 1, "after each stock's slippage; open Edge Reader for the full reading", cMute)

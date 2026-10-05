@@ -1,0 +1,390 @@
+//@version=6
+// Edge Reader - reads the chart's conditions and says BUY, SELL or WAIT from measured evidence
+//
+// On every 5-minute candle it checks 51 daily-chart conditions and 46 five-minute conditions from
+// the day-trading literature (trend, location against VWAP and key levels, Wyckoff / ICT phase,
+// volume, momentum, the market, time of day). Each condition carries points measured from data.
+// The points add up to the expected R of a trade from this candle: stop 1.5 ATR, target 2R, out
+// by 3:55 PM, after slippage. BUY when the long expectation clears your minimum edge. SELL closes
+// the trade (target, stop or 3:55 PM). SHORT, if you switch shorts on, works the same way.
+//
+// Evidence today: the daily points come from 11 years of data (2015-2025) and rank days correctly
+// out of sample, but the edge is small. No 5-minute weighting survived out-of-sample testing, so
+// the 5-minute points start at zero. Expect WAIT most of the time. Measure mode collects your own
+// years of evidence with Deep Backtesting; research/refit.py turns it into new points.
+// Educational tool, not financial advice.
+strategy("Edge Reader", overlay = true, initial_capital = 25000, process_orders_on_close = true, pyramiding = 0, margin_long = 25, margin_short = 25, slippage = 2, use_bar_magnifier = true, max_labels_count = 500)
+
+// ----- Inputs -----
+string G1 = "Signals"
+string mode       = input.string("Trade", "Mode", options = ["Trade", "Measure long", "Measure short"], group = G1, tooltip = "Trade: signals from the evidence. Measure: for Deep Backtesting only. Takes up to two trades a day at set times, whatever the conditions, and writes the conditions into each trade's signal name so refit.py can learn from them.")
+float  minEdge    = input.float(0.05, "Signal when expected R after costs is at least", step = 0.01, group = G1, tooltip = "Expected R already has slippage taken off. 0.05 leaves a margin for error.")
+bool   allowShort = input.bool(false, "Allow shorts", group = G1)
+
+string G2 = "Costs"
+float slipCents = input.float(0.01, "Slippage per fill ($ per share)", minval = 0, step = 0.005, group = G2)
+float slipPct   = input.float(0.01, "Slippage per fill (% of price)", minval = 0, step = 0.005, group = G2)
+
+string G3 = "Market"
+string mktSym = input.symbol("AMEX:SPY", "Market", group = G3)
+
+string G4 = "Risk"
+float acct      = input.float(25000, "Account size ($)", minval = 0, group = G4)
+float riskPct   = input.float(0.5, "Risk per trade (% of account)", minval = 0.05, maxval = 5, step = 0.05, group = G4)
+float maxPosPct = input.float(100, "Largest position (% of account)", minval = 1, maxval = 400, group = G4)
+
+string G5 = "Display"
+bool   showPanel = input.bool(true, "Status panel", group = G5)
+string panelPos  = input.string("Top right", "Panel position", options = ["Top right", "Top left", "Bottom right", "Bottom left"], group = G5)
+string panelSize = input.string("Small", "Panel text size", options = ["Tiny", "Small", "Normal"], group = G5)
+
+float STOP_ATR = 1.5
+float TARGET_R = 2.0
+color cBuy  = #26a69a
+color cSell = #ef5350
+color cMute = #9e9e9e
+color cWarn = #ffca28
+
+// POINTS-BEGIN - written by research/points.py (refit.py); edit the numbers there, not here
+string PTS_NOTE = "day points: 2015-2025 daily data; 5-minute points: none yet (run Measure)"
+float A_L = 0.0089
+float K_L = 0.0846
+float D0_L = -0.2156
+var array<float> D_L = array.from(0.0010, 0.0294, 0.0647, 0.0573, -0.0022, 0.0145, 0.0252, 0.0093, 0.0079, 0.0169, 0.0045, 0.0330, -0.0130, 0.0155, 0.0008, 0.0100, -0.0235, -0.0002, -0.0169, -0.0048, -0.0072, -0.0179, 0.0697, -0.0460, 0.0183, 0.0062, -0.0024, 0.0014, 0.0273, 0.0370, 0.0294, 0.0165, 0.0016, -0.0269, 0.0577, 0.1192, -0.0003, 0.0045, -0.2388, 0.0417, -0.0158, 0.0131, 0.0764, 0.0286, -0.0244, 0.0294, 0.0218, -0.0265, 0.0943, -0.0030, 0.0308)
+var array<float> P_L = array.from(0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000)
+float A_S = 0.0315
+float K_S = 0.2931
+float D0_S = -0.1648
+var array<float> D_S = array.from(-0.0036, -0.0159, 0.0674, 0.0597, -0.0001, -0.0376, -0.0201, -0.0031, 0.0053, -0.0123, -0.0012, -0.0188, 0.0349, -0.0048, 0.0135, -0.0036, 0.0181, -0.0383, 0.0070, 0.0048, -0.0006, -0.0056, -0.0658, -0.0363, -0.0042, 0.0192, -0.0323, 0.0121, -0.0107, -0.0447, -0.0153, -0.0083, 0.0095, 0.0219, 0.0496, 0.0121, -0.0022, -0.0015, 0.2434, -0.0546, 0.0068, -0.0199, -0.0720, -0.0162, 0.0260, -0.0240, 0.0059, 0.0427, -0.0949, 0.0031, -0.0320)
+var array<float> P_S = array.from(0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000, 0.0000)
+var array<string> D_NAMES = array.from("stock in an uptrend", "stock in a downtrend", "above its 200-day average", "below its 200-day average", "near its 20-day low", "near its 20-day high", "stretched above its 20-day average", "stretched below its 20-day average", "narrowest day in 7", "inside day yesterday", "yesterday swept a low and reclaimed it", "yesterday swept a high and failed", "broke its 20-day high", "broke its 20-day low", "strong green day yesterday", "strong red day yesterday", "heavy volume yesterday", "light volume yesterday", "buyers led the last 5 days", "sellers led the last 5 days", "daily RSI(2) oversold", "daily RSI(2) overbought", "daily RSI(14) under 30", "daily RSI(14) over 70", "3 down days in a row", "3 up days in a row", "gapped up over 1 ATR", "gapped up", "gapped down", "gapped down over 1 ATR", "opened above yesterday's high", "opened below yesterday's low", "SPY in an uptrend", "SPY in a downtrend", "SPY above its 200-day", "SPY below its 200-day", "SPY oversold (RSI 2)", "SPY overbought (RSI 2)", "SPY gapped up over 1 ATR", "SPY gapped down over 1 ATR", "SPY gapped up", "SPY gapped down", "SPY down 3 days in a row", "SPY up 3 days in a row", "SPY stretched up", "SPY stretched down", "stronger than SPY over 20 days", "weaker than SPY over 20 days", "Monday", "Friday", "turn of the month")
+var array<string> P_NAMES = array.from("daily uptrend", "daily downtrend", "intraday uptrend", "intraday downtrend", "over 2 sd below VWAP", "1-2 sd below VWAP", "1-2 sd above VWAP", "over 2 sd above VWAP", "lower third of the day", "upper third of the day", "above the opening range", "below the opening range", "above yesterday's high", "below yesterday's low", "stretched far above the EMA", "stretched far below the EMA", "tight range (accumulation)", "low swept and reclaimed", "high swept and rejected", "broke the last hour's high", "broke the last hour's low", "strong green candle", "strong red candle", "quiet volume", "in play (1.5x volume)", "climax volume candle", "buyers in control", "sellers in control", "5-min RSI(2) oversold", "5-min RSI(2) overbought", "stronger than SPY today", "weaker than SPY today", "SPY above VWAP", "market fear day", "market euphoria day", "gapped up over 1 ATR", "gapped down over 1 ATR", "first hour", "lunch hours", "afternoon", "spring in an uptrend", "spring at a discount", "breakout with volume", "deep dip in a daily uptrend", "upthrust in a downtrend", "breakdown with volume")
+// POINTS-END
+
+// ----- Time, all in New York -----
+string NY     = "America/New_York"
+bool   intra  = timeframe.isintraday
+float  tfMin  = timeframe.in_seconds() / 60.0
+int    nyMin  = hour(time, NY) * 60 + minute(time, NY)
+int    nyDate = year(time, NY) * 10000 + month(time, NY) * 100 + dayofmonth(time, NY)
+bool   rth    = intra and nyMin >= 570 and nyMin < 960
+
+var int curDate  = na
+var int barOfDay = 0
+bool dayStart = rth and (na(curDate) or nyDate != curDate)
+if dayStart
+    curDate  := nyDate
+    barOfDay := 0
+else if rth
+    barOfDay += 1
+bool eodBar  = rth and nyMin + tfMin >= 955
+bool entryOk = rth and barOfDay >= 3 and nyMin < 930
+
+// ----- Daily facts, known at the open (yesterday's candle and today's opening price) -----
+dayFacts() =>
+    float atrD = ta.sma(ta.tr(true), 14)
+    float s20  = ta.sma(close, 20)
+    float s50  = ta.sma(close, 50)
+    float s200 = ta.sma(close, 200)
+    float hi20 = ta.highest(high, 20)
+    float lo20 = ta.lowest(low, 20)
+    float rngD = high - low
+    float eff  = math.sum(volume * math.sign(close - open), 5) / math.sum(volume, 5)
+    float r2   = ta.rsi(close, 2)
+    float r14  = ta.rsi(close, 14)
+    float pos  = hi20 > lo20 ? (close - lo20) / (hi20 - lo20) : na
+    float strD = atrD > 0 ? (close - s20) / atrD : na
+    float rv   = volume / ta.sma(volume, 20)
+    bool  trUp = close > s20 and s20 > s50
+    bool  trDn = close < s20 and s20 < s50
+    bool  nr7  = rngD > 0 and rngD == ta.lowest(rngD, 7)
+    bool  ins  = high < high[1] and low > low[1]
+    bool  dSpr = low < low[1] and close > low[1] and rngD > 0 and (close - low) >= 0.6 * rngD
+    bool  dUpt = high > high[1] and close < high[1] and rngD > 0 and (high - close) >= 0.6 * rngD
+    bool  bUp  = close > hi20[1]
+    bool  bDn  = close < lo20[1]
+    bool  bull = close > open and rngD > 0 and (close - low) >= 0.75 * rngD
+    bool  bear = close < open and rngD > 0 and (high - close) >= 0.75 * rngD
+    bool  dn3  = close < close[1] and close[1] < close[2] and close[2] < close[3]
+    bool  up3  = close > close[1] and close[1] > close[2] and close[2] > close[3]
+    float gap  = atrD[1] > 0 ? (open - close[1]) / atrD[1] : na
+    [trUp[1], trDn[1], close[1] > s200[1], close[1] < s200[1], pos[1] < 0.2, pos[1] > 0.8, strD[1] > 2, strD[1] < -2, nr7[1], ins[1], dSpr[1], dUpt[1], bUp[1], bDn[1], bull[1], bear[1], rv[1] > 1.5, rv[1] < 0.7, eff[1] > 0.3, eff[1] < -0.3, r2[1] < 10, r2[1] > 90, r14[1] < 30, r14[1] > 70, dn3[1], up3[1], gap > 1, gap > 0.25 and gap <= 1, gap < -0.25 and gap >= -1, gap < -1, open > high[1], open < low[1], close[1] / close[21] - 1, r2[1], gap, high[1], low[1], open]
+
+string rthId = ticker.modify(syminfo.tickerid, session = session.regular)
+string mktId = ticker.modify(mktSym, session = session.regular)
+[d00, d01, d02, d03, d04, d05, d06, d07, d08, d09, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, ret20, rsi2D, gapD, pdh, pdl, openD] = request.security(rthId, "D", dayFacts(), lookahead = barmerge.lookahead_on)
+[m00, m01, m02, m03, m04, m05, m06, m07, m08, m09, m10, m11, m12, m13, m14, m15, m16, m17, m18, m19, m20, m21, m22, m23, m24, m25, m26, m27, m28, m29, m30, m31, mRet20, mRsi2, mGap, mPdh, mPdl, mOpen] = request.security(mktId, "D", dayFacts(), lookahead = barmerge.lookahead_on)
+[mClose, mAboveVwap] = request.security(mktId, timeframe.period, [close, close > ta.vwap(hlc3)])
+
+int  dow = dayofweek(time, NY)
+bool rsUp = not na(ret20) and not na(mRet20) and ret20 - mRet20 > 0.05
+bool rsDn = not na(ret20) and not na(mRet20) and ret20 - mRet20 < -0.05
+// same order as research/daily_conditions.py
+array<bool> cD = array.from(d00, d01, d02, d03, d04, d05, d06, d07, d08, d09, d10, d11, d12, d13, d14, d15, d16, d17, d18, d19, d20, d21, d22, d23, d24, d25, d26, d27, d28, d29, d30, d31, m00, m01, m02, m03, m20, m21, m26, m29, m27, m28, m24, m25, m06, m07, rsUp, rsDn, dow == dayofweek.monday, dow == dayofweek.friday, dayofmonth(time, NY) <= 3)
+
+// ----- 5-minute facts -----
+float atr   = ta.atr(14)
+float ema20 = ta.ema(close, 20)
+var float sPV = 0.0
+var float sV  = 0.0
+var float sP2 = 0.0
+var float hod = na
+var float lod = na
+var float orH = na
+var float orL = na
+var float o0  = na
+if dayStart
+    sPV := 0.0
+    sV  := 0.0
+    sP2 := 0.0
+    hod := high
+    lod := low
+    orH := high
+    orL := low
+    o0  := open
+else if rth
+    hod := math.max(hod, high)
+    lod := math.min(lod, low)
+    if barOfDay < 3
+        orH := math.max(orH, high)
+        orL := math.min(orL, low)
+sPV += hlc3 * volume
+sV  += volume
+sP2 += hlc3 * hlc3 * volume
+float vwap = sV > 0 ? sPV / sV : na
+float vsd  = sV > 0 ? math.sqrt(math.max(sP2 / sV - vwap * vwap, 0.0)) : na
+float z    = vsd > 0 ? (close - vwap) / vsd : na
+float pos  = hod > lod ? (close - lod) / (hod - lod) : na
+bool  aOR  = rth and barOfDay >= 3
+float hh   = ta.highest(high, 12)[1]
+float ll   = ta.lowest(low, 12)[1]
+float rng  = high - low
+float eff6 = math.sum(volume * math.sign(close - open), 6) / math.sum(volume, 6)
+float rsi2 = ta.rsi(close, 2)
+
+// Volume against the same time of day over the last 10 sessions
+type VolHist
+    array<float> cum
+    array<float> bar
+
+var map<int, VolHist> vh = map.new<int, VolHist>()
+var float cumV = 0.0
+if dayStart
+    cumV := 0.0
+cumV += volume
+float avgCum = na
+float avgBar = na
+if map.contains(vh, barOfDay)
+    VolHist hv = map.get(vh, barOfDay)
+    if array.size(hv.cum) >= 5
+        avgCum := array.avg(hv.cum)
+        avgBar := array.avg(hv.bar)
+float rvol = avgCum > 0 ? cumV / avgCum : na
+float vrel = avgBar > 0 ? volume / avgBar : na
+if rth and barstate.isconfirmed
+    if not map.contains(vh, barOfDay)
+        map.put(vh, barOfDay, VolHist.new(array.new<float>(), array.new<float>()))
+    VolHist hw = map.get(vh, barOfDay)
+    array.push(hw.cum, cumV)
+    array.push(hw.bar, volume)
+    if array.size(hw.cum) > 10
+        array.shift(hw.cum)
+        array.shift(hw.bar)
+
+bool sweepLo = (low < ll and close > ll) or (aOR and low < orL and close > orL) or (low < pdl and close > pdl)
+bool sweepHi = (high > hh and close < hh) or (aOR and high > orH and close < orH) or (high > pdh and close < pdh)
+bool itUp  = close > vwap and ema20 > ema20[3]
+bool itDn  = close < vwap and ema20 < ema20[3]
+bool zLo2  = z < -2
+bool disc  = pos < 1.0 / 3
+bool sprg  = sweepLo or sweepLo[1] or sweepLo[2]
+bool upth  = sweepHi or sweepHi[1] or sweepHi[2]
+bool bosU  = close > hh
+bool bosD  = close < ll
+bool rvHi  = rvol > 1.5
+float rsDay = o0 > 0 and mOpen > 0 ? (close / o0 - 1) - (mClose / mOpen - 1) : na
+bool fear  = (mRsi2 <= 10 or mGap <= -1) and not (mGap >= 1)
+// same order as research/conditions.py
+array<bool> c5 = array.from(d00, d01, itUp, itDn, zLo2, z >= -2 and z < -1, z > 1 and z <= 2, z > 2, disc, pos > 2.0 / 3, aOR and close > orH, aOR and close < orL, close > pdh, close < pdl, close - ema20 > 3 * atr, ema20 - close > 3 * atr, ta.highest(high, 12) - ta.lowest(low, 12) < 3 * atr, sprg, upth, bosU, bosD, close > open and rng > 0 and (close - low) >= 0.75 * rng, close < open and rng > 0 and (high - close) >= 0.75 * rng, rvol < 0.8, rvHi, vrel >= 3, eff6 > 0.3, eff6 < -0.3, rsi2 < 10, rsi2 > 90, rsDay > 0.005, rsDay < -0.005, mAboveVwap, fear, mGap >= 1, gapD > 1, gapD < -1, nyMin < 630, nyMin >= 720 and nyMin < 840, nyMin >= 840, sprg and itUp, sprg and disc, bosU and rvHi, zLo2 and d00, upth and itDn, bosD and rvHi)
+
+// ----- Expected R -----
+float dayL = D0_L
+float dayS = D0_S
+for i = 0 to 50
+    if array.get(cD, i)
+        dayL += array.get(D_L, i)
+        dayS += array.get(D_S, i)
+float fiveL = 0.0
+float fiveS = 0.0
+for i = 0 to 45
+    if array.get(c5, i)
+        fiveL += array.get(P_L, i)
+        fiveS += array.get(P_S, i)
+float risk  = STOP_ATR * atr
+float costR = risk > 0 ? 2 * (slipCents + slipPct / 100 * close) / risk : na
+float eL    = A_L + K_L * dayL + fiveL - costR
+float eS    = A_S + K_S * dayS + fiveS - costR
+
+// ----- Helpers -----
+float riskUsd = acct * riskPct / 100
+
+px(float p) =>
+    str.tostring(p, format.mintick)
+
+sgn(float x) =>
+    na(x) ? "-" : (x >= 0 ? "+" : "") + str.tostring(x, "0.00")
+
+qtyFor(float r) =>
+    float byRisk = r > 0 ? riskUsd / (r * syminfo.pointvalue) : 0.0
+    float byCash = close > 0 ? acct * maxPosPct / 100 / (close * syminfo.pointvalue) : 0.0
+    math.max(1.0, math.floor(math.min(byRisk, byCash)))
+
+jsonIn(string act, float q, float stp, float tgt, float e) =>
+    '{"v":2,"ticker":"' + syminfo.ticker + '","action":"' + act + '","qty":' + str.tostring(q, "0") + ',"price":' + px(close) + ',"stop":' + px(stp) + ',"target":' + px(tgt) + ',"edge":' + str.tostring(e, "0.000") + '}'
+
+jsonOut(string why, float p) =>
+    '{"v":2,"ticker":"' + syminfo.ticker + '","action":"exit","reason":"' + why + '","price":' + px(p) + '}'
+
+bitsNow() =>
+    string b = ""
+    for i = 0 to 45
+        b += array.get(c5, i) ? "1" : "0"
+    b
+
+// Biggest contributions among the conditions that are true
+reasons(array<bool> flags, array<float> pts, array<string> names, int n) =>
+    string out = ""
+    array<int> used = array.new<int>()
+    for k = 1 to n
+        float best = 0.0
+        int   bi   = -1
+        for i = 0 to array.size(pts) - 1
+            float v = array.get(pts, i)
+            if array.get(flags, i) and math.abs(v) > math.abs(best) and not array.includes(used, i)
+                best := v
+                bi   := i
+        if bi >= 0
+            array.push(used, bi)
+            out += (out == "" ? "" : ", ") + array.get(names, bi) + " " + sgn(best)
+    out == "" ? "none" : out
+
+// ----- Orders -----
+bool flat    = strategy.position_size == 0
+bool canIn   = intra and entryOk and flat and not eodBar and risk > 0
+bool buySig  = mode == "Trade" and canIn and eL >= minEdge
+bool shSig   = mode == "Trade" and canIn and allowShort and not buySig and eS >= minEdge
+int  seed    = dayofmonth(time, NY) * 37 + month(time, NY) * 11 + year(time, NY) + str.length(syminfo.ticker) * 7
+bool mSlot   = barOfDay == 3 + seed % 27 or barOfDay == 30 + (seed * 13) % 36
+bool mLong   = mode == "Measure long" and canIn and mSlot
+bool mShort  = mode == "Measure short" and canIn and mSlot
+
+var float tRisk  = na
+var float tEdge  = na
+var float tStop  = na
+var float tTgt   = na
+var float tEntry = na
+string note = ""
+
+if buySig or mLong
+    float q   = qtyFor(risk)
+    float stp = close - risk
+    float tgt = close + TARGET_R * risk
+    string cm = mLong ? "M|L|" + str.tostring(risk, "0.0000") + "|" + str.tostring(dayL, "0.0000") + "|" + bitsNow() : "BUY " + sgn(eL) + "R"
+    tRisk  := risk
+    tEdge  := eL
+    tStop  := stp
+    tTgt   := tgt
+    tEntry := close
+    strategy.entry("BUY", strategy.long, qty = q, comment = cm, alert_message = jsonIn("buy", q, stp, tgt, eL))
+    strategy.exit("SELL", from_entry = "BUY", stop = stp, limit = tgt, comment_profit = "SELL target", comment_loss = "SELL stop", alert_profit = jsonOut("target", tgt), alert_loss = jsonOut("stop", stp))
+    if buySig
+        note := syminfo.ticker + ": BUY " + str.tostring(q, "0") + " at " + px(close) + " - stop " + px(stp) + " - target " + px(tgt) + " - expected " + sgn(eL) + "R"
+
+if shSig or mShort
+    float q   = qtyFor(risk)
+    float stp = close + risk
+    float tgt = close - TARGET_R * risk
+    string cm = mShort ? "M|S|" + str.tostring(risk, "0.0000") + "|" + str.tostring(dayS, "0.0000") + "|" + bitsNow() : "SHORT " + sgn(eS) + "R"
+    tRisk  := risk
+    tEdge  := eS
+    tStop  := stp
+    tTgt   := tgt
+    tEntry := close
+    strategy.entry("SHORT", strategy.short, qty = q, comment = cm, alert_message = jsonIn("short", q, stp, tgt, eS))
+    strategy.exit("COVER", from_entry = "SHORT", stop = stp, limit = tgt, comment_profit = "COVER target", comment_loss = "COVER stop", alert_profit = jsonOut("target", tgt), alert_loss = jsonOut("stop", stp))
+    if shSig
+        note := syminfo.ticker + ": SHORT " + str.tostring(q, "0") + " at " + px(close) + " - stop " + px(stp) + " - target " + px(tgt) + " - expected " + sgn(eS) + "R"
+
+if eodBar and strategy.position_size != 0
+    strategy.close_all(comment = strategy.position_size > 0 ? "SELL 3:55" : "COVER 3:55", alert_message = jsonOut("eod", close))
+
+// ----- Results on this chart -----
+var array<float> rAll = array.new<float>()
+var int seen = 0
+if strategy.closedtrades > seen
+    int   k  = strategy.closedtrades - 1
+    float ep = strategy.closedtrades.entry_price(k)
+    float xp = strategy.closedtrades.exit_price(k)
+    bool  lg = strategy.closedtrades.size(k) > 0
+    float r  = tRisk > 0 ? (lg ? xp - ep : ep - xp) / tRisk : 0.0
+    array.push(rAll, r)
+    if mode == "Trade"
+        label.new(strategy.closedtrades.exit_bar_index(k), 0.0, (lg ? "SELL " : "COVER ") + sgn(r) + "R", yloc = lg ? yloc.abovebar : yloc.belowbar, style = lg ? label.style_label_down : label.style_label_up, color = r > 0 ? cBuy : r < 0 ? cSell : cMute, textcolor = color.white, size = size.small)
+        note := (note == "" ? "" : note + " | ") + syminfo.ticker + ": " + (lg ? "SELL " : "COVER ") + "at " + px(xp) + " " + sgn(r) + "R"
+    seen := strategy.closedtrades
+
+if buySig
+    label.new(bar_index, 0.0, "BUY " + sgn(eL) + "R", yloc = yloc.belowbar, style = label.style_label_up, color = cBuy, textcolor = color.white, size = size.normal)
+if shSig
+    label.new(bar_index, 0.0, "SHORT " + sgn(eS) + "R", yloc = yloc.abovebar, style = label.style_label_down, color = cSell, textcolor = color.white, size = size.normal)
+if note != ""
+    alert(note, alert.freq_once_per_bar_close)
+
+bool inTrade = strategy.position_size != 0
+plot(inTrade ? tStop : na, "Stop", cSell, 2, plot.style_linebr)
+plot(inTrade ? tTgt : na, "Target", cBuy, 2, plot.style_linebr)
+plot(inTrade ? tEntry : na, "Entry", cMute, 1, plot.style_linebr)
+plot(eL, "Expected R long", display = display.data_window)
+plot(eS, "Expected R short", display = display.data_window)
+
+// ----- Status panel -----
+posOf(string p) =>
+    switch p
+        "Top left"     => position.top_left
+        "Bottom left"  => position.bottom_left
+        "Bottom right" => position.bottom_right
+        => position.top_right
+
+string tSize = switch panelSize
+    "Tiny"   => size.tiny
+    "Normal" => size.normal
+    => size.small
+
+var table panel = table.new(posOf(panelPos), 2, 9, bgcolor = color.new(chart.bg_color, 5), border_color = color.new(chart.fg_color, 85), border_width = 1)
+
+row(int r, string k, string v, color vc) =>
+    table.cell(panel, 0, r, k, text_color = color.new(chart.fg_color, 35), text_size = tSize, text_halign = text.align_left)
+    table.cell(panel, 1, r, v, text_color = vc, text_size = tSize, text_halign = text.align_left)
+
+if barstate.islast and showPanel
+    color fg = chart.fg_color
+    row(0, "Edge Reader", syminfo.ticker + " - " + timeframe.period + (intra ? " min" : "") + (mode == "Trade" ? "" : " - " + str.upper(mode)), fg)
+    if not intra
+        row(1, "Status", "Open a 5-minute chart", cSell)
+    else
+        string sig = strategy.position_size > 0 ? "IN A LONG - entry " + px(tEntry) + ", stop " + px(tStop) + ", target " + px(tTgt) : strategy.position_size < 0 ? "IN A SHORT - entry " + px(tEntry) + ", stop " + px(tStop) + ", target " + px(tTgt) : not rth or not entryOk ? "WAIT - entries 9:45 AM to 3:30 PM" : eL >= minEdge ? "BUY" : allowShort and eS >= minEdge ? "SHORT" : "WAIT - no edge above " + sgn(minEdge) + "R"
+        row(1, "Signal", sig, strategy.position_size != 0 or eL >= minEdge ? cBuy : fg)
+        row(2, "Long", sgn(eL) + "R expected (needs " + sgn(minEdge) + ")", eL >= minEdge ? cBuy : eL < 0 ? cSell : fg)
+        row(3, "Short", sgn(eS) + "R expected" + (allowShort ? "" : " (shorts off)"), allowShort and eS >= minEdge ? cBuy : fg)
+        row(4, "Day, for longs", reasons(cD, D_L, D_NAMES, 3), fg)
+        bool any5 = array.max(P_L) != 0 or array.min(P_L) != 0
+        row(5, "5-min, for longs", any5 ? reasons(c5, P_L, P_NAMES, 3) : "no 5-minute evidence yet - see Measure", any5 ? fg : cMute)
+        row(6, "Costs", "-" + str.tostring(costR, "0.00") + "R a trade at this price and ATR", fg)
+        int   n  = array.size(rAll)
+        float av = n > 0 ? array.avg(rAll) : na
+        int   w  = 0
+        for x in rAll
+            if x > 0
+                w += 1
+        row(7, "This chart", n == 0 ? "no trades yet" : str.tostring(n) + " trades - " + str.tostring(100.0 * w / n, "0") + "% won - avg " + sgn(av) + "R", na(av) ? fg : av > 0 ? cBuy : cSell)
+        row(8, "Evidence", PTS_NOTE, cMute)

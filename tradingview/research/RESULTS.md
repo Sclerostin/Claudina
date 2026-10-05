@@ -1,3 +1,6 @@
+> **Superseded.** This is the earlier study of one setup (the morning AMD pattern). The kit now
+> uses the general method in `METHODOLOGY.md`. The findings below remain valid as research.
+
 # AMD Day Trader research: what the tests showed
 
 **Short version.** Most bullish intraday setups lost money once realistic costs were included,

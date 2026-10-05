@@ -1,4 +1,4 @@
-"""Build AMD_Kit.html: guide_template.html with the Pine scripts embedded.
+"""Build Edge_Kit.html: guide_template.html with the Pine scripts embedded.
 
 The page's Copy buttons copy the text of each code block, so the published page always carries
 exactly what is in pine/.   Run: python3 build_guide.py
@@ -8,7 +8,7 @@ import re
 from pathlib import Path
 
 ROOT = Path(__file__).parent
-SCRIPTS = {"AMD_DAY_TRADER": "AMD_Day_Trader.pine", "AMD_RADAR": "AMD_Radar.pine", "DT_VOLUME": "DT_Volume.pine"}
+SCRIPTS = {"EDGE_READER": "Edge_Reader.pine", "EDGE_RADAR": "Edge_Radar.pine", "DT_VOLUME": "DT_Volume.pine"}
 
 TOKEN = re.compile(
     r'(?P<c>//.*$)'
@@ -37,8 +37,8 @@ def main():
         page = page.replace(f"%%{key}_LINES%%", str(len(lines)))
         page = page.replace(f"%%{key}%%", "\n".join(highlight(x) for x in lines))
     assert "%%" not in page, "unfilled placeholder"
-    (ROOT / "AMD_Kit.html").write_text(page)
-    print("wrote AMD_Kit.html")
+    (ROOT / "Edge_Kit.html").write_text(page)
+    print("wrote Edge_Kit.html")
 
 
 if __name__ == "__main__":

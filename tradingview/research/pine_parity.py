@@ -1,4 +1,6 @@
-"""Check that AMD_Day_Trader.pine's rules match the research simulator, signal for signal.
+"""Check that the (former) AMD_Day_Trader.pine rules match the research simulator, signal for signal.
+
+Part of the superseded AMD study in RESULTS.md; kept so that study stays reproducible.
 
 Re-runs the Pine script's logic line by line in Python: one pass over every 5-minute candle of
 a stock, with `var` state carried across days exactly as Pine does. Then compares its signals
